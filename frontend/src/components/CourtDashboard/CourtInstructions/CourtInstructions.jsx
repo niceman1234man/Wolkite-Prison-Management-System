@@ -1,12 +1,10 @@
-// CourtInstructions.jsx
 import React, { useState } from "react";
-import axios from "axios";
+import axiosInstance from "../../../utils/axiosInstance";
 import { toast } from "react-toastify";
-
+import { useNavigate } from "react-router-dom";
 const CourtInstructions = () => {
-  // Initialize form state with additional fields
+  const navigate=useNavigate();
   const [formData, setFormData] = useState({
-    prisonerId: "",
     prisonerName: "",
     courtCaseNumber: "",
     judgeName: "",
@@ -15,9 +13,11 @@ const CourtInstructions = () => {
     instructions: "",
     hearingDate: new Date().toISOString().substring(0, 10),
     effectiveDate: new Date().toISOString().substring(0, 10),
+    sendDate: new Date().toISOString().substring(0, 10),
   });
+  const [signature, setSignature] = useState(null);
+  const [attachment, setAttachment] = useState(null);
 
-  // Update form data for any input change
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({
@@ -26,27 +26,38 @@ const CourtInstructions = () => {
     }));
   };
 
-  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Retrieve authentication token if needed
       const token = localStorage.getItem("token");
+      const formdata = new FormData();
+      formdata.append("prisonerName", formData.prisonerName);
+      formdata.append("courtCaseNumber", formData.courtCaseNumber);
+      formdata.append("judgeName", formData.judgeName);
+      formdata.append("prisonName", formData.prisonName);
+      formdata.append("verdict", formData.verdict);
+      formdata.append("instructions", formData.instructions);
+      formdata.append("hearingDate", formData.hearingDate);
+      formdata.append("effectiveDate", formData.effectiveDate);
+      formdata.append("sendDate", formData.sendDate);
+      formdata.append("signature", signature);
+      formdata.append("attachment", attachment);
 
-      // Send form data to backend API endpoint
-      const response = await axios.post("http://localhost:5000/api/court/instructions", formData, {
+      // Debugging: Log FormData contents
+      for (let [key, value] of formdata.entries()) {
+        console.log(key, value);
+      }
+
+      const response = await axiosInstance.post("/instruction/add-new", formdata, {
         headers: {
+          "Content-Type": "multipart/form-data",
           Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
         },
       });
 
       if (response.data.success) {
         toast.success("Instruction sent successfully!");
-        // Reset form to default values after successful submission
         setFormData({
-          prisonerId: "",
-          prisonerName: "",
           courtCaseNumber: "",
           judgeName: "",
           prisonName: "",
@@ -54,7 +65,11 @@ const CourtInstructions = () => {
           instructions: "",
           hearingDate: new Date().toISOString().substring(0, 10),
           effectiveDate: new Date().toISOString().substring(0, 10),
+          sendDate: new Date().toISOString().substring(0, 10),
         });
+        setSignature(null); // Reset signature
+        setAttachment(null); // Reset attachment
+        navigate("/court-dashboard/list");
       } else {
         toast.error("Failed to send instruction.");
       }
@@ -68,40 +83,7 @@ const CourtInstructions = () => {
     <div className="p-6 max-w-2xl mx-auto bg-white shadow rounded-md mt-16">
       <h2 className="text-2xl font-bold mb-4 text-center">Court Instruction</h2>
       <form onSubmit={handleSubmit}>
-        {/* Grid for multiple inputs */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Prisoner ID */}
-          <div className="mb-4">
-            <label htmlFor="prisonerId" className="block text-sm font-medium text-gray-700">
-              Prisoner ID
-            </label>
-            <input
-              type="text"
-              id="prisonerId"
-              name="prisonerId"
-              placeholder="Enter prisonerId"
-              value={formData.prisonerId}
-              onChange={handleChange}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
-              required
-            />
-          </div>
-          {/* Prisoner Name */}
-          <div className="mb-4">
-            <label htmlFor="prisonerName" className="block text-sm font-medium text-gray-700">
-              Prisoner Name
-            </label>
-            <input
-              type="text"
-              id="prisonerName"
-              name="prisonerName"
-              placeholder="Enter Prisoner Name"
-              value={formData.prisonerName}
-              onChange={handleChange}
-              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
-              required
-            />
-          </div>
           {/* Court Case Number */}
           <div className="mb-4">
             <label htmlFor="courtCaseNumber" className="block text-sm font-medium text-gray-700">
@@ -130,7 +112,7 @@ const CourtInstructions = () => {
               placeholder="Enter Judge name"
               value={formData.judgeName}
               onChange={handleChange}
-              className="mt-1 block w-full border-gray-300 rounded-b-md shadow-sm"
+              className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
               required
             />
           </div>
@@ -166,7 +148,6 @@ const CourtInstructions = () => {
               <option value="">Select Verdict</option>
               <option value="guilty">Guilty</option>
               <option value="not_guilty">Not Guilty</option>
-              {/* <option value="hung_jury">Hung Jury</option> */}
             </select>
           </div>
           {/* Hearing Date */}
@@ -201,38 +182,40 @@ const CourtInstructions = () => {
           </div>
           {/* Send Date */}
           <div className="mb-4">
-            <label htmlFor="effectiveDate" className="block text-sm font-medium text-gray-700">
+            <label htmlFor="sendDate" className="block text-sm font-medium text-gray-700">
               Send Date
             </label>
             <input
               type="date"
-              id="effectiveDate"
-              name="effectiveDate"
-              value={formData.effectiveDate}
+              id="sendDate"
+              name="sendDate"
+              value={formData.sendDate}
               onChange={handleChange}
               className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
               required
             />
           </div>
+          {/* Reporter Signature */}
           <div>
             <label className="block text-sm font-medium text-gray-700">Reporter Signature</label>
             <input
               type="file"
               name="signature"
               accept="image/*"
-              onChange={handleChange}
+              onChange={(e) => setSignature(e.target.files[0])}
               className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
             />
           </div>
           {/* Attachment */}
           <div className="mb-4">
-            <label htmlFor="effectiveDate" className="block text-sm font-medium text-gray-700">
-             Attachment
+            <label htmlFor="attachment" className="block text-sm font-medium text-gray-700">
+              Attachment
             </label>
             <input
               type="file"
               id="attachment"
-              name="attachment"            
+              name="attachment"
+              onChange={(e) => setAttachment(e.target.files[0])}
               className="mt-1 block w-full border-gray-300 rounded-md shadow-sm"
               required
             />
