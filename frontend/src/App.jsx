@@ -71,6 +71,18 @@ import updateProfile from "./components/profile/updateProfile.jsx";
 import UpdateProfile from "./components/profile/updateProfile.jsx";
 import HelpPage from "./page/helpPage.jsx";
 import SettingPage from './page/settingsPage.jsx'
+import ParoleRequest from "./components/CourtDashboard/CourtInstructions/ParoleRequest.jsx";
+import InstructionList from "./components/CourtDashboard/CourtInstructions/InstructionList.jsx";
+import ViewInstruction from "./components/CourtDashboard/CourtInstructions/ViewInstruction.jsx"
+import EditInstruction from "./components/CourtDashboard/CourtInstructions/EditInstruction.jsx"
+import ViewParole  from "./components/CourtDashboard/CourtInstructions/ViewParole.jsx"
+import WoredaDashboard from "./page/WoredaDashboard";
+import InmateTransferForm from "./components/Woreda/NewTransfer";
+import TransferList from "./components/Woreda/TransferList";
+import ViewTransfer from "./components/Woreda/ViewTransfer";
+import EditTransfer from "./components/Woreda/EditTransfer";
+import UpdateClearance from "./components/Clearance/UpdateClearance";
+import ViewClearance from "./components/Clearance/ViewClearance";
 function App() {
   return (
     <>
@@ -137,10 +149,22 @@ function App() {
           {/*court Dashboard Routes */}
           <Route path="/court-dashboard" element={<CourtDashboard />}>
             <Route index element={<CourtSummary />} />
-            <Route path="parole" element={<Parole />} />
+            <Route path="parole" element={< ParoleRequest/>} />
+            <Route path="list" element={<InstructionList />} />
+            <Route path="view/:id" element={<ViewInstruction />} />
+            <Route path="view-request/:id" element={<ViewParole />} />
+            <Route path="edit/:id" element={<EditInstruction />} />
             {/* {/* <Route path='notices' element={<Notices />} />          */}
             <Route path="courtInstructions" element={<CourtInstructions />} />
             <Route path="settings" element={<Setting />} />
+          </Route>
+      {/*Woreda Dashboard Routes */}
+          <Route path="/woreda-dashboard" element={<WoredaDashboard/>}>
+           <Route path="add" element={<InmateTransferForm/>}/>
+           <Route path="inmates" element={<TransferList/>}/>
+           <Route path="edit/:id" element={<EditTransfer/>}/>
+           <Route path="view/:id" element={<ViewTransfer/>}/>
+           <Route path="setting" element={<Setting />} />
           </Route>
           {/*visitor Dashboard Routes */}
           <Route path="/visitor-dashboard" element={<VisitDashboard />}>
@@ -167,6 +191,8 @@ function App() {
             <Route path="update-profile" element={<UpdateProfile />} />
             <Route path="help" element={<HelpPage />} />
             <Route path="settingsPage" element={<SettingPage />} />
+            <Route path="edit-clearance/:id" element={<UpdateClearance />} />
+            <Route path="view-clearance/:id" element={<ViewClearance />} />
             {/* <Route path="edit-clearance" element={<editClearance />} /> */}
             {/* <Route path='clearance' element={<clearanceLogic />} />  */}
             <Route path="settings" element={<Setting />} />

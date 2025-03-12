@@ -2,23 +2,23 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [react()],
-});
+// export default defineConfig({
+//   plugins: [react()],
+// });
 
 // import { defineConfig } from 'vite';
 // import react from '@vitejs/plugin-react';
 // import path from 'path'; // Needed for resolving aliases
 
 // // https://vite.dev/config/
-// export default defineConfig({
-//   plugins: [react()],
-//   resolve: {
-//     alias: {
-//       // Define an alias for the 'src' folder for cleaner imports
-//       '@': path.resolve(__dirname, './src'),
-//     },
-//   },
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': '/src',
+    },
+  },
+});
 //   server: {
 //     // Optional: Configure the dev server
 //     port: 3000, // Default port for the dev server
