@@ -242,3 +242,19 @@ export const getAllInmates = async (req, res) => {
       res.status(500).json({ message: "Server error" });
     }
   };
+
+  export const deleteInmate = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deletedInmate = await Inmate.findByIdAndDelete(id);
+  
+      if (!deletedInmate) {
+        return res.status(404).json({ message: "Inmate not found" });
+      }
+  
+      res.status(200).json({ message: "Inmate deleted successfully" });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Internal Server Error" });
+    }
+  };

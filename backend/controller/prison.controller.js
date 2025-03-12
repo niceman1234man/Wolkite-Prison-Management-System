@@ -96,3 +96,19 @@ export const getAllPrisons = async (req, res) => {
       res.status(500).json({ message: "Internal Server Error" });
     }
   };
+
+  export const deletePrison = async (req, res) => {
+    try {
+      const { id } = req.params;
+      const deletedPrison = await Prison.findByIdAndDelete(id);
+  
+      if (!deletedPrison) {
+        return res.status(404).json({ message: "Prison not found" });
+      }
+  
+      res.status(200).json({ message: "Prison deleted successfully" });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Internal Server Error" });
+    }
+  };
