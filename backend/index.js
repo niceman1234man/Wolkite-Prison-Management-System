@@ -14,6 +14,8 @@ import path from 'path';
 import dotenv from'dotenv';
 
 import { fileURLToPath } from 'url';
+import { instructionRouter } from './router/instruction.router.js';
+import { transferRouter } from './router/transfer.router.js';
 
 // Define __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -33,6 +35,8 @@ app.use(cors({
  app.use('/prison',prisonRouter);
  app.use('/parole-tracking',paroleRouter);
  app.use('/notice',noticeRouter);
+ app.use('/instruction',instructionRouter);
+ app.use('/transfer',transferRouter);
 //  app.use('/clearance',clearanceRouter);
  app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
  app.use("/clearance", clearanceRoutes);
