@@ -7,4 +7,4 @@ noticeRouter.get("/getAllNotices", authenticateToken, getAllNotices);
 noticeRouter.get("/get-notice/:id", authenticateToken, getNotice);
 noticeRouter.put("/update-notice/:id", authenticateToken, updateNotice);
 noticeRouter.put("/post-notice/:id", authenticateToken, postNotice);
-noticeRouter.put("/delete-notice/:id", authenticateToken, deleteNotice);
+noticeRouter.delete("/delete-notice/:id", authenticateToken, deleteNotice);

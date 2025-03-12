@@ -10,6 +10,6 @@ userRouter.get('/get-user/:id',authenticateToken,getUser);
 userRouter.put('/update-user/:id',upload.single("photo"),authenticateToken,updateUser);
 userRouter.put('/update-password',authenticateToken,updatePassword);
 userRouter.put('/activate-user/:id',authenticateToken,activateUser);
-userRouter.put('/delete-user/:id',authenticateToken,deleteUser);
+userRouter.delete('/delete-user/:id',authenticateToken,deleteUser);
 userRouter.post('/forget',ForgotPassword);
 userRouter.post('/reset/:id/:token', ResetPassword);
