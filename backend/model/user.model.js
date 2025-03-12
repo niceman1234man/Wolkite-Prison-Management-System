@@ -25,6 +25,10 @@ const userSchema=new mongoose.Schema({
         type:String ,
         required:true
     },
+    isactivated:{
+    type:Boolean,
+    default:false,
+    },
     photo:{
         type:String ,
         default:"",

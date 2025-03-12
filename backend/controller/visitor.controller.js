@@ -4,10 +4,8 @@ import { Visitor } from "../model/visitor.model.js";
 export const visitorInformation = async (req, res) => {
   try {
 
-    const {user} = req.user
-   const userId=user._id;
-   
-     console.log(userId)
+    const user= req.user
+   const userId=user.userId;
     if (!userId) {
       return res.status(401).json({ message: "Unauthorized: User ID not found" });
     }

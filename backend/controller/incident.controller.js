@@ -1,20 +1,32 @@
 import { Incident } from "../model/Incident.model.js";
+
+
 export const addnewIncident = async (req, res) => {
   try {
-    const {
-      attachment,
-      description,
-      incidentDate,
-      incidentId,
-      incidentType,
-      inmate,
-      reporter,
-      status,
-    } = req.body;
+    const { description, incidentDate, incidentId, incidentType, inmate, reporter, status } = req.body;
+    const attachment = req.file ? req.file.filename : null;
+
+    // Log file information for debugging
+    console.log(req.file);
+
+    // Validate mandatory fields
     if (!inmate || !reporter || !incidentType) {
-      return res.status(400).json("all fields required");
+      return res.status(400).json({ error: true, message: "All fields (inmate, reporter, incidentType) are required." });
     }
 
+    // Validate if the file was uploaded
+    if (!req.file) {
+      return res.status(400).json({ error: true, message: "Attachment file is required." });
+    }
+
+    // You can add additional file validation here (e.g., file type, size)
+    // Example: Check file type (e.g., only allow images or PDFs)
+    const allowedFileTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+    if (!allowedFileTypes.includes(req.file.mimetype)) {
+      return res.status(400).json({ error: true, message: "Only image and PDF files are allowed." });
+    }
+
+    // Create new incident
     const newIncident = new Incident({
       attachment,
       description,
@@ -25,16 +37,21 @@ export const addnewIncident = async (req, res) => {
       reporter,
       status,
     });
+
+    // Save the incident
     await newIncident.save();
 
     return res.status(201).json({
       error: false,
       message: "New Incident registered successfully",
+      incident: newIncident,
     });
   } catch (error) {
-    console.log(error);
+    console.error(error);
+    return res.status(500).json({ error: true, message: "An error occurred while registering the incident." });
   }
 };
+
 
 export const getAllIncidents = async (req, res) => {
   try {
