@@ -1,5 +1,10 @@
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import { useState } from "react";
+import ConfirmModal from "@/components/Modals/ConfirmModal";
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import axiosInstance from "./axiosInstance";
 
 export const columns = [
   {
@@ -31,17 +36,13 @@ export const columns = [
 ];
 
 export const PrisonButtons = ({ _id, onDelete }) => {
+  const [openDelete, setOpenDelete] = useState(false);
   const navigate = useNavigate();
 
   const handleDelete = async (id) => {
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this prison record?"
-    );
-    if (!confirmDelete) return;
-
     try {
-      const response = await axios.delete(
-        `https://localhost:5000/api/prison/${id}`, // Updated API for prison
+      const response = await axiosInstance.delete(
+        `/prison/delete-prison/${id}`, // Updated API for prison
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -49,9 +50,10 @@ export const PrisonButtons = ({ _id, onDelete }) => {
         }
       );
 
-      if (response.data.success) {
-        alert("Prison deleted successfully.");
+      if (response.data) {
+        toast.success("Prison deleted successfully.");
         onDelete();
+        setOpenDelete(false);
       } else {
         alert("Failed to delete the prison record.");
       }
@@ -71,10 +73,16 @@ export const PrisonButtons = ({ _id, onDelete }) => {
       </button>
       <button
         className="px-3 py-1 bg-red-600 rounded hover:bg-red-700"
-        onClick={() => handleDelete(_id)}
+        onClick={() => setOpenDelete(true)}
       >
         Delete Prison
       </button>
+      <ConfirmModal
+        open={openDelete}
+        setOpen={setOpenDelete}
+        onDelete={() => handleDelete(_id)}
+        message="Do you really want to delete this prison? This action cannot be undone."
+      />
     </div>
   );
 };
