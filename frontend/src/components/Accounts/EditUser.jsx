@@ -3,11 +3,13 @@ import { useNavigate, useParams } from "react-router-dom";
 import axiosInstance from "../../utils/axiosInstance";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { TiArrowBack } from "react-icons/ti";
+import { FaArrowLeft } from "react-icons/fa";
+import { useSelector } from "react-redux";
 
 const EditUser = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
 
   const [photo, setPhoto] = useState(null);
   const [user, setUser] = useState({
@@ -17,13 +19,12 @@ const EditUser = () => {
     email: "",
     gender: "",
     role: "",
-    photo: "", // To store existing profile picture URL
+    photo: "",
   });
 
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Fetch User Details
   useEffect(() => {
     const fetchUser = async () => {
       setLoading(true);
@@ -44,16 +45,13 @@ const EditUser = () => {
     fetchUser();
   }, [id]);
 
-  // Handle Input Change
   const handleChange = (e) => {
     const { name, value } = e.target;
     setUser((prev) => ({ ...prev, [name]: value }));
   };
 
-  // Handle Form Submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     const formData = new FormData();
     formData.append("firstName", user.firstName);
     formData.append("middleName", user.middleName);
@@ -61,7 +59,7 @@ const EditUser = () => {
     formData.append("email", user.email);
     formData.append("role", user.role);
     formData.append("gender", user.gender);
-    if (photo) formData.append("photo", photo); // Only append if user selects new photo
+    if (photo) formData.append("photo", photo);
 
     setSubmitting(true);
     try {
@@ -71,7 +69,7 @@ const EditUser = () => {
 
       if (response.data) {
         toast.success("User updated successfully!");
-        setTimeout(() => navigate("/admin-dashboard/users"), 1500); // Delay navigation for better UX
+        setTimeout(() => navigate("/admin-dashboard/users"), 1500);
       } else {
         toast.error("Failed to update user");
       }
@@ -84,9 +82,16 @@ const EditUser = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
-      <TiArrowBack size={50} onClick={() => navigate(-1)} className="cursor-pointer" />
-      <h2 className="text-2xl font-bold mb-6">Edit User</h2>
+    <div className={`max-w-4xl mx-auto mt-24 bg-white p-8 rounded-md shadow-md transition-all ${isCollapsed ? "ml-20" : "ml-72"}`}>
+      <div className="flex items-center mb-6">
+        <button
+          className="flex items-center text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg shadow-md transition duration-300"
+          onClick={() => navigate(-1)}
+        >
+          <FaArrowLeft className="mr-2 text-lg" /> Back
+        </button>
+        <h2 className="text-2xl font-bold ml-4">Edit User</h2>
+      </div>
 
       {loading ? (
         <div>Loading...</div>
@@ -156,24 +161,6 @@ const EditUser = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">Role</label>
-              <select
-                name="role"
-                value={user.role}
-                onChange={handleChange}
-                className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-                // required
-              >
-                <option value="">Select Role</option>
-                <option value="security">Security Staff</option>
-                <option value="police-officer">Police Officer</option>
-                <option value="inspector">Inspector</option>
-                <option value="court">Court</option>
-              </select>
-            </div>
-
-            {/* Profile Picture Upload */}
-            <div>
               <label className="block text-sm font-medium text-gray-700">Profile Picture</label>
               <input
                 type="file"
@@ -182,32 +169,23 @@ const EditUser = () => {
                 onChange={(e) => setPhoto(e.target.files[0])}
                 className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
               />
-              {/* Show preview if existing photo is available */}
               {user.photo && !photo && (
-                <img
-                  src={user.photo}
-                  alt="Profile Preview"
-                  className="w-24 h-24 object-cover mt-2 rounded-full"
-                />
+                <img src={user.photo} alt="Profile Preview" className="w-24 h-24 object-cover mt-2 rounded-full" />
               )}
-              {/* Show preview if new photo is selected */}
               {photo && (
-                <img
-                  src={URL.createObjectURL(photo)}
-                  alt="New Profile Preview"
-                  className="w-24 h-24 object-cover mt-2 rounded-full"
-                />
+                <img src={URL.createObjectURL(photo)} alt="New Profile Preview" className="w-24 h-24 object-cover mt-2 rounded-full" />
               )}
             </div>
           </div>
 
           <button
-            type="submit"
-            className="w-full mt-6 bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded"
-            disabled={submitting}
-          >
-            {submitting ? "Updating..." : "Edit User"}
-          </button>
+  type="submit"
+  className="w-full mt-6 bg-gradient-to-b from-teal-500 to-teal-700 hover:from-teal-600 hover:to-teal-800 text-white font-bold py-3 px-5 rounded-lg shadow-lg transform active:translate-y-1 transition-all duration-300"
+  disabled={submitting}
+>
+  {submitting ? "Updating..." : "Edit User"}
+</button>
+
         </form>
       )}
     </div>

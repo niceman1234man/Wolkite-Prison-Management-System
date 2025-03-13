@@ -1,7 +1,7 @@
 import axiosInstance from "../../utils/axiosInstance";
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { TiArrowBack } from "react-icons/ti";
+import { FaArrowLeft } from "react-icons/fa";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -63,8 +63,13 @@ const ViewUser = () => {
   }
 
   return (
-    <div className="max-w-3xl mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
-      <TiArrowBack size={50} onClick={() => navigate(-1)} className="cursor-pointer" />
+    <div className="max-w-3xl mx-auto mt-24 bg-white p-8 rounded-md shadow-md">
+      <button
+        className="flex items-center text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg shadow-md transition duration-300"
+        onClick={() => navigate(-1)}
+      >
+        <FaArrowLeft className="mr-2 text-lg" /> Back
+      </button>
       <h2 className="text-2xl font-bold mb-8 text-center">User Account Details</h2>
 
       {user && (
@@ -75,7 +80,7 @@ const ViewUser = () => {
               {console.log(user.photo)}
               <img
                 src={`http://localhost:5000/uploads/${user.photo}`}
-               
+                
                 alt="Profile"
                 className="w-40 h-40 object-cover rounded-full mx-auto"
               />

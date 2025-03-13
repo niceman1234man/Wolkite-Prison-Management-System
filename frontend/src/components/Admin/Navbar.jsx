@@ -2,13 +2,13 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { useSelector } from "react-redux";
 import { getInitials } from "../getNameInitials.js";
-import { FaBell, FaDungeon } from "react-icons/fa"; // Prison Icon
+import { FaBars, FaBell, FaDungeon } from "react-icons/fa"; // Prison Icon
 import { FiSettings, FiHelpCircle, FiLogOut } from "react-icons/fi";
 import { AiOutlineUser } from "react-icons/ai";
 import axiosInstance from "../../utils/axiosInstance.js";
 import "./Navbar.css"; // Import CSS for styling
 
-const Navbar = () => {
+const Navbar = ({ toggleSidebar }) => {
   const navigate = useNavigate();
   const user = useSelector((state) => state.user.user);
   const fullName = user ? `${user.firstName} ${user.middleName}` : "Loading...";
@@ -48,17 +48,25 @@ const Navbar = () => {
   };
 
   return (
-    <div className="navbar">
+    <div className="navbar flex items-center justify-between px-4 py-2 bg-white shadow-md relative">
+      {/* Hamburger Menu (Small Screens) */}
+      <button
+        className="md:hidden text-gray-700 hover:text-gray-900 transition-colors p-2 rounded-lg"
+        onClick={toggleSidebar}
+      >
+        <FaBars size={24} />
+      </button>
+
       {/* Prison Logo and Name */}
-      <div className="navbar-logo flex items-center gap-2">
-        <FaDungeon size={30} className="text-[#31708E] hover:text-[#27596E] transition-colors duration-300" /> 
-        <span className="text-xl font-bold text-[#374151] hover:text-[#1F2937] transition-colors duration-300">
+      <div className="flex items-center gap-2 md:pl-0 pl-12">
+        <FaDungeon size={30} className="text-[#31708E] hover:text-[#27596E] transition-colors duration-300" />
+        <span className="text-xl font-bold text-[#374151] hover:text-[#1F2937] transition-colors duration-300 hidden sm:inline">
           Wolkite Prison
         </span>
       </div>
 
-      {/* Welcome Message */}
-      <p className="navbar-welcome">{`Welcome, ${fullName}`}</p>
+      {/* Welcome Message (Hidden on Small Screens) */}
+      <p className="navbar-welcome hidden md:block">{`Welcome, ${fullName}`}</p>
 
       {/* Right Section */}
       <div className="navbar-right flex items-center gap-4">

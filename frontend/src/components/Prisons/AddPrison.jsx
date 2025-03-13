@@ -3,7 +3,8 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { TiArrowBack } from "react-icons/ti";
+import { FaArrowLeft } from "react-icons/fa";
+import { useSelector } from "react-redux";
 
 const AddPrison = () => {
   const [prisonData, setPrisonData] = useState({
@@ -14,6 +15,7 @@ const AddPrison = () => {
 
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
 
   // Handle input changes
   const handleChange = (e) => {
@@ -42,78 +44,91 @@ const AddPrison = () => {
   };
 
   return (
-    <div className="max-w-lg mx-auto mt-20 bg-white p-8 rounded-md shadow-lg">
-      {/* Back Button */}
-      <button
-        onClick={() => navigate(-1)}
-        className="flex items-center gap-2 text-gray-700 hover:text-gray-900 transition-all mb-4"
+    <div className={`flex flex-col transition-all mt-12 duration-300 ${isCollapsed ? "ml-16" : "ml-64"}`}>
+      {/* Header Section */}
+      <div
+        className={`bg-white shadow-md p-4 fixed top-14 z-20 transition-all duration-300 ml-2 ${isCollapsed ? "left-16 w-[calc(100%-5rem)]" : "left-64 w-[calc(100%-17rem)]"}`}
       >
-        <TiArrowBack size={24} />
-        <span className="text-lg font-semibold">Go Back</span>
-      </button>
+        <div className="flex items-center justify-between">
+          {/* Back Button - Left Aligned */}
+          <button
+            className="flex items-center text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg shadow-md transition duration-300"
+            onClick={() => navigate(-1)}
+          >
+            <FaArrowLeft className="mr-2 text-lg" /> Back
+          </button>
 
-      {/* Form Title */}
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">Add New Prison</h2>
+          {/* Centered Header Title */}
+          <h3 className="text-2xl font-bold text-gray-800 text-center flex-1">Add New Prison</h3>
 
-      {/* Form */}
-      <form onSubmit={handleSubmit}>
-        {/* Prison Name */}
-        <div className="mb-4">
-          <label htmlFor="prison_name" className="block text-sm font-medium text-gray-700">
-            Prison Name
-          </label>
-          <input
-            type="text"
-            name="prison_name"
-            value={prisonData.prison_name}
-            onChange={handleChange}
-            placeholder="Enter prison name"
-            className="mt-1 w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500"
-            required
-          />
+          {/* Empty placeholder for spacing balance */}
+          <div className="w-24" />
         </div>
+      </div>
 
-        {/* Location */}
-        <div className="mb-4">
-          <label htmlFor="location" className="block text-sm font-medium text-gray-700">
-            Location / Woreda
-          </label>
-          <input
-            type="text"
-            name="location"
-            value={prisonData.location}
-            onChange={handleChange}
-            placeholder="Enter location or woreda"
-            className="mt-1 w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500"
-            required
-          />
+      {/* Form Section */}
+      <div className="flex justify-center items-center min-h-screen p-6 mt-2">
+        <div className="max-w-lg w-full bg-white p-8 shadow-lg rounded-md">
+          <form onSubmit={handleSubmit}>
+            {/* Prison Name */}
+            <div className="mb-4">
+              <label htmlFor="prison_name" className="block text-sm font-medium text-gray-700">
+                Prison Name
+              </label>
+              <input
+                type="text"
+                name="prison_name"
+                value={prisonData.prison_name}
+                onChange={handleChange}
+                placeholder="Enter prison name"
+                className="mt-1 w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+                required
+              />
+            </div>
+
+            {/* Location */}
+            <div className="mb-4">
+              <label htmlFor="location" className="block text-sm font-medium text-gray-700">
+                Location / Woreda
+              </label>
+              <input
+                type="text"
+                name="location"
+                value={prisonData.location}
+                onChange={handleChange}
+                placeholder="Enter location or woreda"
+                className="mt-1 w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+                required
+              />
+            </div>
+
+            {/* Description */}
+            <div className="mb-6">
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                Description
+              </label>
+              <textarea
+                name="description"
+                value={prisonData.description}
+                onChange={handleChange}
+                placeholder="Provide details about the prison"
+                className="mt-1 w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+                rows="4"
+                required
+              ></textarea>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
+              disabled={loading}
+            >
+              {loading ? "Adding..." : "Add Prison"}
+            </button>
+          </form>
         </div>
-
-        {/* Description */}
-        <div className="mb-6">
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700">
-            Description
-          </label>
-          <textarea
-            name="description"
-            value={prisonData.description}
-            onChange={handleChange}
-            placeholder="Provide details about the prison"
-            className="mt-1 w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500"
-            rows="4"
-            required
-          ></textarea>
-        </div>
-
-        {/* Submit Button */}
-        <button
-          type="submit"
-          className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-md transition-all duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed"
-          disabled={loading}
-        >
-          {loading ? "Adding..." : "Add Prison"}
-        </button>
-      </form>
+      </div>
     </div>
   );
 };

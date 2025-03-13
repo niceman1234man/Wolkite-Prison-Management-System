@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { TiArrowBack } from "react-icons/ti";
+import { FaArrowLeft } from "react-icons/fa";
 
 const EditPrison = () => {
   const { id } = useParams();
@@ -61,18 +61,18 @@ const EditPrison = () => {
   };
 
   return (
-    <div className="max-w-lg mx-auto mt-20 bg-white p-8 rounded-md shadow-lg">
-      {/* Back Button */}
-      <button
-        onClick={() => navigate(-1)}
-        className="flex items-center gap-2 text-gray-700 hover:text-gray-900 transition-all mb-4"
-      >
-        <TiArrowBack size={24} />
-        <span className="text-lg font-semibold">Go Back</span>
-      </button>
-
-      {/* Form Title */}
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">Update Prison</h2>
+    <div className="max-w-3xl mx-auto mt-20 bg-white p-8 rounded-md shadow-lg">
+      {/* Back Button and Title */}
+      <div className="flex items-center justify-between mb-6">
+        <button
+          className="flex items-center text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg shadow-md transition duration-300"
+          onClick={() => navigate(-1)}
+        >
+          <FaArrowLeft className="mr-2 text-lg" /> Back
+        </button>
+        <h2 className="text-2xl font-bold text-gray-800 text-center flex-1">Update Prison</h2>
+        <div className="w-24" />
+      </div>
 
       {/* Form */}
       <form onSubmit={handleSubmit}>
