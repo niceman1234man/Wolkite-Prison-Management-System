@@ -25,7 +25,7 @@ const [inmates, setInmates] = useState([]);
     } catch (error) {
       console.error("Error fetching inmates:", error);
       alert(error.response?.data?.error || "Failed to fetch inmate data.");
-    } finally {
+    } finally { 
       setLoading(false);
     }
   };

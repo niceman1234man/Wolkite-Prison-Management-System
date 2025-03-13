@@ -4,6 +4,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { FaArrowLeft } from "react-icons/fa";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import ConfirmModal from "../Modals/ConfirmModal";
 
 const ViewUser = () => {
   
@@ -11,6 +12,8 @@ const ViewUser = () => {
   const { id } = useParams();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [openDelete, setOpenDelete] = useState(false);
+const [openActivate, setOpenActivate] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -30,28 +33,30 @@ const ViewUser = () => {
   }, [id]);
 
   const deleteUser = async () => {
-    if (window.confirm("Are you sure you want to delete this user?")) {
+    
       try {
         await axiosInstance.delete(`/user/delete-user/${id}`);
+        setOpenDelete(false);
         toast.success("User deleted successfully!");
         navigate("/admin-dashboard/users");
       } catch (error) {
         toast.error(error.response?.data?.error || "Error deleting user");
       }
     }
-  };
+  
 
   const toggleActivation = async () => {
-    if (window.confirm(`Do you want to ${user.isactivated ? "deactivate" : "activate"} this user account?`)) {
+ 
       try {
         await axiosInstance.put(`/user/activate-user/${id}`, { isactivated: !user.isactivated });
         setUser((prevUser) => ({ ...prevUser, isactivated: !prevUser.isactivated }));
+        setOpenActivate(false);
         toast.success(`User account ${user.isactivated ? "deactivated" : "activated"} successfully!`);
       } catch (error) {
         console.error("API Error:", error.response?.data); 
         toast.error(error.response?.data?.error || "Error updating user status");
       }
-    }
+    
   };
 
   if (loading) {
@@ -98,15 +103,29 @@ const ViewUser = () => {
 
           {/* Action Buttons */}
           <div className="flex space-x-4 mt-6">
-            <button
-              className={`py-2 px-3 rounded font-semibold w-1/2 ${user.isactivated ? "bg-red-400" : "bg-green-600"} text-white`}
-              onClick={toggleActivation}
-            >
-              {user.isactivated ? "Deactivate" : "Activate"}
-            </button>
-            <button className="bg-red-600 text-white py-2 px-3 rounded font-semibold w-1/2" onClick={deleteUser}>
-              Delete
-            </button>
+          <button
+  className={`py-2 px-3 rounded font-semibold w-1/2 ${user.isactivated ? "bg-red-400" : "bg-green-600"} text-white`}
+  onClick={() => setOpenActivate(true)}
+>
+  {user.isactivated ? "Deactivate" : "Activate"}
+</button>
+<ConfirmModal
+  open={openActivate}
+  setOpen={setOpenActivate}
+  onDelete={toggleActivation}
+  message={`Do you want to ${user.isactivated ? "deactivate" : "activate"} this user account?`}
+/>
+
+<button className="bg-red-600 text-white py-2 px-3 rounded font-semibold w-1/2" onClick={() => setOpenDelete(true)}>
+  Delete
+</button>
+<ConfirmModal
+  open={openDelete}
+  setOpen={setOpenDelete}
+  onDelete={deleteUser}
+  message="Do you really want to delete this user? This action cannot be undone."
+/>
+
           </div>
         </>
       )}

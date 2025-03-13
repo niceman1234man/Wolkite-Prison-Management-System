@@ -4,11 +4,13 @@ import axiosInstance from "../../utils/axiosInstance";
 import { toast } from 'react-toastify'; 
 import 'react-toastify/dist/ReactToastify.css'; 
 import { TiArrowBack } from "react-icons/ti";
+import ConfirmModal from "../Modals/ConfirmModal";
 
 const ViewInmate = () => {
   const { id } = useParams();
   const [inmateData, setInmateData] = useState(null);
   const [loading, setLoading] = useState(true);
+   const [openDelete, setOpenDelete] = useState(false);
   const navigate = useNavigate();
   useEffect(() => {
     const fetchInmateDetails = async () => {
@@ -37,14 +39,11 @@ const ViewInmate = () => {
 
 
    const handleDelete = async (id) => {
-      const confirmDelete = window.confirm(
-        "Are you sure you want to delete this inmate record?"
-      );
-      if (!confirmDelete) return;
+    
   
       try {
-        const response = await axios.delete(
-          `https://localhost:5000/api/inmate/${id}`, // Updated API endpoint for inmate
+        const response = await axiosInstance.delete(
+          `/inmate/delete-inmate/${id}`, // Updated API endpoint for inmate
           {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -52,15 +51,18 @@ const ViewInmate = () => {
           }
         );
   
-        if (response.data.success) {
-          alert("Inmate record deleted successfully.");
+        if (response.data) {
+          toast.success("Inmate record deleted successfully.");
           onDelete();
+          setOpenDelete(false)
+          navigate("/securityStaff-dashboard/inmates");
+          
         } else {
-          alert("Failed to delete the inmate record.");
+          toast.error("Failed to delete the inmate record.");
         }
       } catch (error) {
         console.error("Error:", error);
-        alert(error.response?.data?.error || "Error deleting the inmate record.");
+        toast.error(error.response?.data?.error || "Error deleting the inmate record.");
       }
     };
   
@@ -236,10 +238,16 @@ const ViewInmate = () => {
         </button>
         <button
         className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mr-4"
-        onClick={() => handleDelete(id)}
+        onClick={() => setOpenDelete(true)}
       >
         Delete
       </button>
+        <ConfirmModal
+                    open={openDelete}
+                    setOpen={setOpenDelete}
+                    onDelete={() => handleDelete(id)}
+                    message="Do you really want to delete this Inmate? This action cannot be undone."
+                  />
       </div>
     </div>
   );

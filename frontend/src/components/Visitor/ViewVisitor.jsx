@@ -5,11 +5,13 @@ import { TiArrowBack } from "react-icons/ti";
 import { useNavigate } from "react-router-dom";
 import { toast } from 'react-toastify'; 
 import 'react-toastify/dist/ReactToastify.css'; 
+import ConfirmModal from "../Modals/ConfirmModal";
 const ViewVisitor = () => {
   const navigate=useNavigate();
   const { id } = useParams();
   const [visitor, setVisitor] = useState(null);
  const [error, setError] = useState(null);
+  const [openDelete, setOpenDelete] = useState(false);
   const deleteVisitor=async()=>{
     try {
       const confirm=window.confirm("Are you sure to delete this Visitor ?")
@@ -100,7 +102,13 @@ const ViewVisitor = () => {
               </div>
             </div>
           </div>
-          <button className="bg-red-600 text-white py-2  px-3 rounded font-semibold w-[70px]" onClick={deleteVisitor}>delete</button>
+          <button className="bg-red-600 text-white py-2  px-3 rounded font-semibold w-[70px]" onClick={()=>setOpenDelete(true)}>delete</button>
+          <ConfirmModal
+            open={openDelete}
+            setOpen={setOpenDelete}
+            onDelete={deleteVisitor}
+            message="Do you really want to delete this Visitor? This action cannot be undone."
+          />
           <button className="bg-yellow-600 text-white py-2  px-3 rounded font-semibold w-[70px] ml-5" >Restrict</button>
         </div>
       ) : (

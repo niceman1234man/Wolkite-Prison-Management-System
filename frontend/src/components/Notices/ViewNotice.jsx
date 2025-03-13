@@ -5,12 +5,15 @@ import { FaArrowLeft } from "react-icons/fa"; // Back Icon
 import { toast } from "react-toastify";
 import axiosInstance from "../../utils/axiosInstance";
 import "react-toastify/dist/ReactToastify.css";
+import ConfirmModal from "../Modals/ConfirmModal";
 
 const ViewNotice = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const [notice, setNotice] = useState(null);
   const [loading, setLoading] = useState(true);
+    const [openDelete, setOpenDelete] = useState(false);
+  const [openActivate, setOpenActivate] = useState(false);
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
 
   useEffect(() => {
@@ -121,17 +124,28 @@ const ViewNotice = () => {
                     className={`w-1/2 py-2 px-3 rounded ${
                       notice.isPosted ? "bg-red-400 hover:bg-red-500" : "bg-green-600 hover:bg-green-700"
                     } text-white transition`}
-                    onClick={toggleActivation}
+                    onClick={()=>setOpenActivate(true)}
                   >
                     {notice.isPosted ? "Remove Post" : "Post"}
                   </button>
-
+                    <ConfirmModal
+                      open={openActivate}
+                      setOpen={setOpenActivate}
+                      onDelete={toggleActivation}
+                      message={`Do you want to ${notice.isPosted ? "Remove Post" : "Post"} this post?`}
+                    />
                   <button
                     className="w-1/2 bg-red-600 hover:bg-red-700 text-white py-2 px-3 rounded transition"
-                    onClick={deleteNotice}
+                    onClick={()=>setOpenDelete(true)}
                   >
                     Delete
                   </button>
+                  <ConfirmModal
+                    open={openDelete}
+                    setOpen={setOpenDelete}
+                    onDelete={deleteNotice}
+                    message="Do you really want to delete this post? This action cannot be undone."
+                  />
                 </div>
               </>
             )}

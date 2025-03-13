@@ -4,12 +4,14 @@ import { useParams, useNavigate } from "react-router-dom";
 import { TiArrowBack } from "react-icons/ti";
 import { toast } from 'react-toastify';
 import ParoleRejectModal from "./ParoleRejectModal";
+import ConfirmModal from "@/components/Modals/ConfirmModal";
 
 const ViewParole = () => {
   const { id } = useParams();
   const [inmateData, setInmateData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false); // Manage modal state
+  const [openAccept, setOpenAccept] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -45,6 +47,10 @@ const ViewParole = () => {
     return <div>No data available</div>;
   }
 
+  const acceptParole=()=>{
+    return
+  }
+
   return (
     <div className="max-w-5xl mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
       <TiArrowBack size={50} onClick={() => navigate(-1)} className="cursor-pointer"/>
@@ -62,11 +68,17 @@ const ViewParole = () => {
 
       <div className="mt-6">
         <button
-          onClick={() => navigate(`/inmates/update/${id}`)} 
+          onClick={() => setOpenAccept(true)} 
           className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded mr-4"
         >
           Accept
         </button>
+          <ConfirmModal
+                            open={openAccept}
+                            setOpen={setOpenAccept}
+                            onDelete={acceptParole}
+                            message="Do you really want to Accept this Parol?"
+                          />
         <button 
           className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
           onClick={() => setIsRejectModalOpen(true)}

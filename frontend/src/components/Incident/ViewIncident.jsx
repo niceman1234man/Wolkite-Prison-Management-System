@@ -4,24 +4,25 @@ import { useParams } from "react-router-dom";
 import { TiArrowBack } from "react-icons/ti";
 import { useNavigate } from "react-router-dom";
 import { toast } from 'react-toastify';  // Import toast
-
+import ConfirmModal from "../Modals/ConfirmModal";
 const ViewIncident = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const [incident, setIncident] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+   const [openDelete, setOpenDelete] = useState(false);
 
   const deleteIncident = async () => {
     try {
-      const confirm = window.confirm("Are you sure you want to delete this Incident?");
-      if (confirm) {
+     
         const deletedIncident = await axiosInstance.delete(`/incidents/delete-incident/${id}`);
         if (deletedIncident) {
           toast.success("Incident deleted successfully!");
+          setOpenDelete(false)
           navigate("/admin-dashboard/incidents");  // Ensure you redirect to the correct page
         }
-      }
+      
     } catch (error) {
       setError(error.response?.data?.error || "Error deleting incident");
     }
@@ -113,10 +114,16 @@ const ViewIncident = () => {
           <div className="flex justify-end mt-6">
             <button
               className="bg-red-600 text-white py-2 px-3 rounded font-semibold w-[70px]"
-              onClick={deleteIncident}
+              onClick={()=>setOpenDelete(true)}
             >
               Delete
             </button>
+               <ConfirmModal
+                        open={openDelete}
+                        setOpen={setOpenDelete}
+                        onDelete={deleteIncident}
+                        message="Do you really want to delete this Incident? This action cannot be undone."
+                      />
           </div>
         </>
       ) : (

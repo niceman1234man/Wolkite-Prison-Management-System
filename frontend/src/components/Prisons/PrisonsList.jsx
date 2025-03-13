@@ -31,8 +31,10 @@ const PrisonsList = () => {
   const [prisons, setPrisons] = useState([]);
   const [filteredPrisons, setFilteredPrisons] = useState([]);
   const [loading, setLoading] = useState(false);
+  
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
   const navigate = useNavigate();
+
 
   useEffect(() => {
     const fetchPrisons = async () => {
