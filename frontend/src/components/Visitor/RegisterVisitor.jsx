@@ -10,7 +10,25 @@ const RegisterVisitor = () => {
   const [formData, setFormData] = useState({});
   const navigate = useNavigate();
   const user = useSelector((state) => state.user.user);
+const [inmates, setInmates] = useState([]);
+  const [loading, setLoading] = useState(false); 
 
+  const fetchInmates = async () => {
+    setLoading(true);
+    try {
+      const response = await axiosInstance.get("/inmates/allInmates");
+      if (response.data?.inmates) {
+        setInmates(response.data.inmates); // Fixed incorrect variable usage
+      } else {
+        console.error("Invalid API response:", response);
+      }
+    } catch (error) {
+      console.error("Error fetching inmates:", error);
+      alert(error.response?.data?.error || "Failed to fetch inmate data.");
+    } finally {
+      setLoading(false);
+    }
+  };
   useEffect(() => {
     const getVisitor = async () => {
       try {
@@ -34,6 +52,7 @@ const RegisterVisitor = () => {
     };
 
     getVisitor();
+    fetchInmates();
   }, [user]); // Add user as a dependency
 
   const handleChange = (e) => {
@@ -107,14 +126,20 @@ const RegisterVisitor = () => {
 
           <div>
             <label className="block text-sm font-bold text-gray-700">Inmate Name</label>
-            <input
-              type="text"
+            <select
               name="inmate"
-              value={formData.inmate}
+              value={formData.inmate || ""}
               onChange={handleChange}
               className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
               required
-            />
+            >
+              <option value="">Select Inmate</option>
+              {inmates.map((inmate) => (
+                <option key={inmate._id} value={inmate.fullName}>
+                  {inmate.fullName}
+                </option>
+              ))}
+            </select>
           </div>
 
           <div>

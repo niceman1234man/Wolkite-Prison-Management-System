@@ -101,6 +101,7 @@ const ViewVisitor = () => {
             </div>
           </div>
           <button className="bg-red-600 text-white py-2  px-3 rounded font-semibold w-[70px]" onClick={deleteVisitor}>delete</button>
+          <button className="bg-yellow-600 text-white py-2  px-3 rounded font-semibold w-[70px] ml-5" >Restrict</button>
         </div>
       ) : (
         <div>Loading...</div>

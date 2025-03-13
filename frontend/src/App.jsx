@@ -119,6 +119,9 @@ function App() {
             <Route path="incident-details/:id" element={<ViewIncident />} />
             <Route path="edit-incident/:id" element={<UpdateIncident />} />
             <Route path="status/:_id" element={<InmateBehaviorGraph />} />
+            <Route path="update-profile" element={<UpdateProfile />} />
+            <Route path="help" element={<HelpPage />} />
+            <Route path="settingsPage" element={<SettingPage />} />
           </Route>
 
           {/* Admin Dashboard Routes */}
@@ -130,6 +133,9 @@ function App() {
             <Route path="edit/:id" element={<EditUser />} />
             <Route path="users/:id" element={<ViewUser />} />
             <Route path="setting" element={<Setting />} />
+            <Route path="update-profile" element={<UpdateProfile />} />
+            <Route path="help" element={<HelpPage />} />
+            <Route path="settingsPage" element={<SettingPage />} />
             <Route path="reports" element={<AccountReport />} />
           </Route>
 
@@ -143,6 +149,9 @@ function App() {
             <Route path="update-notice/:id" element={<UpdateNotice />} />
             <Route path="view-notice/:id" element={<ViewNotice />} />
             <Route path="settings" element={<Setting />} />
+            <Route path="update-profile" element={<UpdateProfile />} />
+            <Route path="help" element={<HelpPage />} />
+            <Route path="settingsPage" element={<SettingPage />} />
             <Route path="add-prison" element={<AddPrison />} />
           </Route>
 
@@ -156,6 +165,9 @@ function App() {
             <Route path="edit/:id" element={<EditInstruction />} />
             {/* {/* <Route path='notices' element={<Notices />} />          */}
             <Route path="courtInstructions" element={<CourtInstructions />} />
+            <Route path="update-profile" element={<UpdateProfile />} />
+            <Route path="help" element={<HelpPage />} />
+            <Route path="settingsPage" element={<SettingPage />} />
             <Route path="settings" element={<Setting />} />
           </Route>
       {/*Woreda Dashboard Routes */}
@@ -165,6 +177,9 @@ function App() {
            <Route path="edit/:id" element={<EditTransfer/>}/>
            <Route path="view/:id" element={<ViewTransfer/>}/>
            <Route path="setting" element={<Setting />} />
+           <Route path="update-profile" element={<UpdateProfile />} />
+            <Route path="help" element={<HelpPage />} />
+            <Route path="settingsPage" element={<SettingPage />} />
           </Route>
           {/*visitor Dashboard Routes */}
           <Route path="/visitor-dashboard" element={<VisitDashboard />}>
@@ -172,6 +187,9 @@ function App() {
             <Route path="schedule" element={<RegisterVisitor />} />
             {/* {/* <Route path='notices' element={<Notices />} />          */}
             <Route path="visit-history" element={<VisitorHistoryView />} />
+            <Route path="update-profile" element={<UpdateProfile />} />
+            <Route path="help" element={<HelpPage />} />
+            <Route path="settingsPage" element={<SettingPage />} />
             <Route path="setting" element={<Setting />} />
           </Route>
 
