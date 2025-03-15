@@ -6,7 +6,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { useSelector } from "react-redux";
 import { TiArrowBack } from "react-icons/ti";
 
-const RegisterVisitor = () => {
+const RegisterVisitor = ({setOpen}) => {
   const [formData, setFormData] = useState({});
   const navigate = useNavigate();
   const user = useSelector((state) => state.user.user);
@@ -74,6 +74,7 @@ const [inmates, setInmates] = useState([]);
 
       if (response.data) {
         toast.success("Visitor Information Registered Successfully!");
+        setOpen(false)
         navigate("/policeOfficer-dashboard/visitors");
       }
     } catch (error) {
@@ -83,8 +84,8 @@ const [inmates, setInmates] = useState([]);
   };
 
   return (
-    <div className="max-w-4xl mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
-      <TiArrowBack size={50} onClick={() => navigate(-1)} className="cursor-pointer" />
+    <div className="w-full mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
+     
       <h2 className="text-2xl font-bold mb-6 text-center">Register Visitor</h2>
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

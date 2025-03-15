@@ -4,11 +4,15 @@ import DataTable from "react-data-table-component";
 import { columns, UserButtons } from "../../utils/VisitorHelper.jsx";
 import axiosInstance from "../../utils/axiosInstance.js";
 import { useSelector } from "react-redux";
+import AddModal from "../Modals/AddModal.jsx";
+import RegisterVisitor from "./RegisterVisitor.jsx";
 
 const List = () => {
   const [visitors, setVisitors] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [open,setOpen]=useState(false);
+ 
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
 
   useEffect(() => {
@@ -78,12 +82,15 @@ const List = () => {
             placeholder="Search visitors..."
             className="px-3 py-2 border rounded-md w-full sm:w-64 text-sm"
           />
-          <Link
-            to="/policeOfficer-dashboard/add"
+          <button
+            onClick={()=>setOpen(true)}
             className="px-3 py-2 bg-teal-600 text-white rounded-md text-center w-full sm:w-auto text-sm"
           >
             Add New Visitor
-          </Link>
+          </button>
+          <AddModal open={open} setOpen={setOpen}>
+          <RegisterVisitor setOpen={setOpen} />
+        </AddModal>
         </div>
       </div>
 

@@ -5,7 +5,7 @@ import { toast } from "react-toastify"; // Import toast
 import "react-toastify/dist/ReactToastify.css"; // Import toast CSS
 import { TiArrowBack } from "react-icons/ti";
 
-const Add = () => {
+const Add = ({setOpen}) => {
   const [formData, setFormData] = useState({});
   const [attachment, setAttachment] = useState(null); // Changed to null
   const navigate = useNavigate(); // Initialize navigate hook
@@ -46,6 +46,7 @@ const Add = () => {
         toast.success("New Incident Registered Successfully!");
         setFormData({}); // Reset form after successful submission
         setAttachment(null); // Clear the attachment state
+        setOpen(false)
         navigate("/policeOfficer-dashboard/incident"); // Redirect after adding
       }
     } catch (error) {
@@ -62,12 +63,8 @@ const Add = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
-      <TiArrowBack
-        size={50}
-        onClick={() => navigate(-1)}
-        className="cursor-pointer"
-      />
+    <div className="w-full mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
+      
       <h2 className="text-2xl font-bold mb-6">Add New Incident</h2>
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

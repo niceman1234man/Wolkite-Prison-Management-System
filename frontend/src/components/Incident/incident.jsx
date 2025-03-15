@@ -4,11 +4,14 @@ import DataTable from "react-data-table-component";
 import axiosInstance from "../../utils/axiosInstance";
 import { useDispatch } from "react-redux";
 import { setIncident } from "../../redux/incidentSlice";
+import AddModal from "../Modals/AddModal";
+import Add from "./Add";
 const Incident = () => {
   const dispatch=useDispatch();
   const [incidents, setIncidents] = useState([]);
   const [filteredIncidents, setFilteredIncidents] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
+    const [open,setOpen]=useState(false);
 
   // Fetch Incidents
   useEffect(() => {
@@ -108,12 +111,16 @@ const Incident = () => {
           value={searchQuery}
           onChange={filterByInput}
         />
-        <Link
-          to="/policeOfficer-dashboard/add-incident"
+        <button
+          
           className="px-4 py-2 bg-teal-600 rounded text-white"
+          onClick={()=>setOpen(true)}
         >
           Add New Incident
-        </Link>
+        </button>
+        <AddModal open={open} setOpen={setOpen}>
+          <Add setOpen={setOpen} />
+        </AddModal>
       </div>
 
       {/* Filter Buttons */}
