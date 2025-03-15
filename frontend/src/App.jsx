@@ -134,7 +134,6 @@ function App() {
             <Route index element={<AdminSummary />} />
             <Route path="CreateAccount" element={<CreateUserAccount />} />
             <Route path="users" element={<ListofUsers />} />
-            <Route path="add-user" element={<AddUser />} />
             <Route path="edit/:id" element={<EditUser />} />
             <Route path="users/:id" element={<ViewUser />} />
             <Route path="setting" element={<Setting />} />
