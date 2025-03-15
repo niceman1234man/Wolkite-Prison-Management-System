@@ -4,6 +4,7 @@ import DataTable from "react-data-table-component";
 import { useDispatch, useSelector } from "react-redux";
 import axiosInstance from "../../utils/axiosInstance";
 import { setIncident } from "../../redux/incidentSlice";
+<<<<<<< HEAD
 import { FaArrowLeft, FaSearch } from "react-icons/fa"; 
 
 const customStyles = {
@@ -27,6 +28,10 @@ const customStyles = {
   },
 };
 
+=======
+import AddModal from "../Modals/AddModal";
+import Add from "./Add";
+>>>>>>> 9841893fad09bcad182335094d042e0d90feb385
 const Incident = () => {
   const dispatch = useDispatch();
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed); // Get sidebar state from Redux
@@ -35,7 +40,11 @@ const Incident = () => {
   const [incidents, setIncidents] = useState([]);
   const [filteredIncidents, setFilteredIncidents] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
+<<<<<<< HEAD
   const [loading, setLoading] = useState(false);
+=======
+    const [open,setOpen]=useState(false);
+>>>>>>> 9841893fad09bcad182335094d042e0d90feb385
 
   // Fetch Incidents
   useEffect(() => {
@@ -153,6 +162,65 @@ const Incident = () => {
           )}
         </div>
       </div>
+<<<<<<< HEAD
+=======
+
+      {/* Search & Add Incident */}
+      <div className="flex justify-between items-center mb-4">
+        <input
+          type="text"
+          placeholder="Search by Incident ID"
+          className="px-4 py-2 border rounded-md"
+          value={searchQuery}
+          onChange={filterByInput}
+        />
+        <button
+          
+          className="px-4 py-2 bg-teal-600 rounded text-white"
+          onClick={()=>setOpen(true)}
+        >
+          Add New Incident
+        </button>
+        <AddModal open={open} setOpen={setOpen}>
+          <Add setOpen={setOpen} />
+        </AddModal>
+      </div>
+
+      {/* Filter Buttons */}
+      <div className="flex justify-end space-x-2 mb-4">
+        <button
+          className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+          onClick={resetFilters}
+        >
+          All
+        </button>
+        <button
+          className="px-3 py-1 bg-yellow-600 text-white rounded-md hover:bg-yellow-700"
+          onClick={() => filterByButton("Pending")}
+        >
+          Pending
+        </button>
+        <button
+          className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700"
+          onClick={() => filterByButton("Resolved")}
+        >
+          Resolved
+        </button>
+        <button
+          className="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700"
+          onClick={() => filterByButton("Escalated")}
+        >
+          Escalated
+        </button>
+      </div>
+
+      {/* Incident Table */}
+      {filteredIncidents.length === 0 ? (
+        <p className="text-center text-gray-500">No incidents found.</p>
+      ) : (
+        <DataTable columns={columns} data={filteredIncidents} pagination />
+      )}
+>>>>>>> 9841893fad09bcad182335094d042e0d90feb385
     </div>
   );
 };

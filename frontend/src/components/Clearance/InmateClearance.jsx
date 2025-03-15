@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import axiosInstance from "../../utils/axiosInstance";
 import { TiArrowBack } from "react-icons/ti";
 
-const InmateClearance = () => {
+const InmateClearance = ({setOpen}) => {
   const { inmateId } = useParams();
   const navigate = useNavigate();
 
@@ -70,6 +70,7 @@ const InmateClearance = () => {
       });
       if (response.data) {
         alert("Clearance processed successfully.");
+        setOpen(false)
         setFormData({
           date: new Date().toISOString().substring(0, 10),
           reason: "",
@@ -90,8 +91,8 @@ const InmateClearance = () => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
-      <TiArrowBack size={50} onClick={() => navigate(-1)} className="cursor-pointer" />
+    <div className="w-full mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
+      
       <h2 className="text-2xl font-bold mb-6 text-center">Process Inmate Clearance</h2>
       {errorMessage && <div className="text-red-600 mb-4">{errorMessage}</div>}
       <form onSubmit={handleSubmit}>

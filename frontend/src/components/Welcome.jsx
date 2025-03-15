@@ -35,11 +35,11 @@ function Welcome() {
       <header className="bg-green-600 text-white flex justify-between items-center px-5 py-4 shadow-md">
         <h1 className="font-bold text-lg">Prison Management System</h1>
         <div className="flex space-x-6 items-center">
-          <Link to='/register' className="hover:underline">Registor Visitor </Link>
-          <select className="bg-slate-500 text-white rounded px-2 h-8" onChange={handleLanguage}>
+          <Link to='/register' className="hover:underline">Registor as Visitor </Link>
+          {/* <select className="bg-slate-500 text-white rounded px-2 h-8" onChange={handleLanguage}>
             <option value="english">English</option>
             <option value="amharic">አማርኛ</option>
-          </select>
+          </select> */}
           <Link to="/login" className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded">{label.login}</Link>
         </div>
       </header>

@@ -50,6 +50,38 @@ const SecurityStaffSidebar = () => {
 
         {/* Sidebar Navigation Links */}
         <nav className="mt-4 space-y-1 px-2">
+          {[
+            { to: "/securityStaff-dashboard", icon: <FaTachometerAlt />, label: "Dashboard", exact: true },
+            { to: "/securityStaff-dashboard/inmates", icon: <FaUsers />, label: "Inmates" },
+            { to: "/securityStaff-dashboard/reports", icon: <FaChartBar />, label: "Reports" },
+            { to: "/securityStaff-dashboard/clearance", icon: <FaClipboardCheck />, label: "Clearance" },
+            { to: "/securityStaff-dashboard/parole", icon: <FaClipboardCheck />, label: "Parole" },
+            { to: "/securityStaff-dashboard/woreda", icon: <FaCogs />, label: "Woreda" },
+            { to: "/securityStaff-dashboard/court", icon: <FaCogs />, label: "Court" }
+          ].map((item, index) => (
+            <NavLink
+              key={index}
+              to={item.to}
+              end={item.exact}  // Ensures only exact route matches
+              className={({ isActive }) =>
+                `relative flex items-center p-2 rounded-lg hover:bg-teal-600 transition-colors ${
+                  isActive ? "bg-teal-600" : ""
+                } ${isCollapsed ? "justify-center" : "justify-start"}`
+              }
+              onMouseEnter={() => setHovered(index)}
+              onMouseLeave={() => setHovered(null)}
+            >
+              {item.icon}
+              {!isCollapsed && <span className="ml-3">{item.label}</span>}
+
+              {/* Tooltip when sidebar is collapsed */}
+              {isCollapsed && hovered === index && (
+                <span className="absolute left-16 bg-gray-700 text-white text-sm px-2 py-1 rounded-md shadow-md">
+                  {item.label}
+                </span>
+              )}
+            </NavLink>
+          ))}
           <NavLink
             to="/securityStaff-dashboard"
             className={({ isActive }) =>

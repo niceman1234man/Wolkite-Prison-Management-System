@@ -4,11 +4,14 @@ import DataTable from "react-data-table-component";
 import { columns, UserButtons } from "../../utils/UserHelper.jsx";
 import axiosInstance from "../../utils/axiosInstance.js";
 import { useSelector } from "react-redux";
+import AddModal from "../Modals/AddModal.jsx";
+import AddUser from "./Add.jsx";
 
 const List = () => {
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
 
   useEffect(() => {
@@ -63,7 +66,11 @@ const List = () => {
   };
 
   return (
-    <div className={`p-4 md:p-6 mt-12 transition-all duration-300 ${isCollapsed ? "ml-16" : "ml-64"}`}>
+    <div
+      className={`p-4 md:p-6 mt-12 transition-all duration-300 ${
+        isCollapsed ? "ml-16" : "ml-64"
+      }`}
+    >
       {/* Title */}
       <div className="text-center mb-4">
         <h3 className="text-xl md:text-2xl font-bold">Manage Users</h3>
@@ -77,12 +84,15 @@ const List = () => {
           placeholder="Search users..."
           className="px-3 py-2 border rounded-md w-full sm:w-64 text-sm"
         />
-        <Link
-          to="/admin-dashboard/add-user"
+        <button
           className="px-3 py-2 bg-teal-600 text-white rounded-md text-center w-full sm:w-auto text-sm"
+          onClick={() => setOpen(true)}
         >
           Add New User
-        </Link>
+        </button>
+        <AddModal open={open} setOpen={setOpen}>
+          <AddUser setOpen={setOpen} />
+        </AddModal>
       </div>
 
       {/* Data Table */}

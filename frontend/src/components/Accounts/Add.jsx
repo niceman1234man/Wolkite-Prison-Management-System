@@ -5,7 +5,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { useNavigate } from "react-router-dom";
 import { TiArrowBack } from "react-icons/ti";
 
-const AddUser = () => {
+const AddUser = ({setOpen}) => {
   const [photo,setPhoto]=useState("");
   const navigate = useNavigate();
 
@@ -58,6 +58,7 @@ const AddUser = () => {
       if (response.data && response.data.accessToken) {
         localStorage.setItem("token", response.data.accessToken);
         toast.success("User Registered Successfully!");
+        setOpen(false)
         navigate("/admin-dashboard/users");
       }
     } catch (error) {
@@ -66,8 +67,8 @@ const AddUser = () => {
   };
   
   return (
-    <div className="max-w-4xl mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
-      <TiArrowBack size={50} onClick={()=>navigate(-1)} className="cursor-pointer"/>
+    <div className="w-full mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
+      
       <h2 className="text-2xl font-bold mb-6">Add New System User</h2>
       <form onSubmit={handleSubmit} encType="multipart/form-data">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

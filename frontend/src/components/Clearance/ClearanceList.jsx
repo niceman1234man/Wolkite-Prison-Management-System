@@ -4,8 +4,10 @@ import DataTable from "react-data-table-component";
 import axiosInstance from "../../utils/axiosInstance";
 import { useSelector } from "react-redux";
 import { FaArrowLeft } from "react-icons/fa";
-
+import InmateClearance from "./InmateClearance";
+import AddModal from "../Modals/AddModal";
 const ClearanceButtons = ({ _id, onDelete }) => {
+ 
   const handleDelete = async () => {
     if (window.confirm("Are you sure you want to delete this clearance?")) {
       try {
@@ -32,6 +34,7 @@ const ClearancesList = () => {
   const [clearances, setClearances] = useState([]);
   const [filteredClearances, setFilteredClearances] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [open,setOpen]=useState(false);
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
   const navigate = useNavigate();
 
@@ -104,12 +107,16 @@ const ClearancesList = () => {
           className="px-4 py-2 border border-gray-300 rounded-md w-1/3"
           onChange={filterClearances}
         />
-        <Link
-          to="/securityStaff-dashboard/add-clearance"
+        <button
+        onClick={()=>setOpen(true)}
           className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-md"
         >
           Add New Clearance
-        </Link>
+        </button>
+          <AddModal open={open} setOpen={setOpen}>
+          <InmateClearance setOpen={setOpen} />
+         </AddModal>
+             
       </div>
 
       {loading ? (
