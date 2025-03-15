@@ -57,7 +57,8 @@ const SecurityStafSidebar = () => {
             { to: "/securityStaff-dashboard/reports", icon: <FaChartBar />, label: "Reports" },
             { to: "/securityStaff-dashboard/clearance", icon: <FaClipboardCheck />, label: "Clearance" },
             { to: "/securityStaff-dashboard/parole", icon: <FaClipboardCheck />, label: "Parole" },
-            { to: "/securityStaff-dashboard/settings", icon: <FaCogs />, label: "Settings" }
+            { to: "/securityStaff-dashboard/woreda", icon: <FaCogs />, label: "Woreda" },
+            { to: "/securityStaff-dashboard/court", icon: <FaCogs />, label: "Court" }
           ].map((item, index) => (
             <NavLink
               key={index}
