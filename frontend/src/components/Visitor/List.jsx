@@ -2,12 +2,13 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import DataTable from "react-data-table-component";
 import { useSelector } from "react-redux";
-<<<<<<< HEAD
 import axiosInstance from "../../utils/axiosInstance.js";
 import { FaArrowLeft, FaSearch } from "react-icons/fa";
 import { columns as defaultColumns } from "../../utils/VisitorHelper.jsx"; // Ensure this is correctly defined
 import UpdateVisitorModal from "../Modals/UpdateVisitorModal";  // Modal for updating visitor
 import ViewVisitorModal from "../Modals/ViewVisitorModal";      // Modal for viewing visitor
+import AddModal from "../Modals/AddModal.jsx";    
+import RegisterVisitor from '../../components/Visitor/RegisterVisitor.jsx'
 
 // Custom styles for the table
 const customStyles = {
@@ -30,22 +31,14 @@ const customStyles = {
     },
   },
 };
-=======
-import AddModal from "../Modals/AddModal.jsx";
-import RegisterVisitor from "./RegisterVisitor.jsx";
->>>>>>> 9841893fad09bcad182335094d042e0d90feb385
 
 const List = () => {
   const [visitors, setVisitors] = useState([]);
   const [filteredVisitors, setFilteredVisitors] = useState([]);
   const [loading, setLoading] = useState(false);
-<<<<<<< HEAD
   const [selectedVisitor, setSelectedVisitor] = useState(null);
   const [viewVisitor, setViewVisitor] = useState(null);
-=======
-  const [open,setOpen]=useState(false);
- 
->>>>>>> 9841893fad09bcad182335094d042e0d90feb385
+  const [open, setOpen] = useState(false); // <-- Added state for modal open status
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
 
   // Fetch visitors data on component mount
@@ -106,7 +99,6 @@ const List = () => {
   };
 
   return (
-<<<<<<< HEAD
     <div className="flex">
       {/* Sidebar */}
       <div className={`transition-all duration-300 ${isCollapsed ? "w-16" : "w-64"}`} />
@@ -139,35 +131,16 @@ const List = () => {
           </div>
           
           {/* Add New Visitor Button */}
-          <Link
-            to="/policeOfficer-dashboard/add"
-            className="h-10 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-md flex items-center justify-center min-w-[150px] md:w-auto"
-=======
-    <div className={`p-4 md:p-6 mt-12 transition-all duration-300 ${isCollapsed ? "ml-16" : "ml-64"}`}>
-      {/* Fixed Header Section */}
-      <div className="sticky top-0 bg-white z-10 shadow-md p-4 w-full">
-        <div className="text-center mb-4">
-          <h3 className="text-xl md:text-2xl font-bold">Manage Visitors</h3>
-        </div>
-
-        {/* Search & Add Button (Fixed) */}
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-4">
-          <input
-            type="text"
-            onChange={handleFilter}
-            placeholder="Search visitors..."
-            className="px-3 py-2 border rounded-md w-full sm:w-64 text-sm"
-          />
           <button
-            onClick={()=>setOpen(true)}
-            className="px-3 py-2 bg-teal-600 text-white rounded-md text-center w-full sm:w-auto text-sm"
->>>>>>> 9841893fad09bcad182335094d042e0d90feb385
+            onClick={() => setOpen(true)} // This opens the modal
+            className="h-10 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-md flex items-center justify-center min-w-[150px] md:w-auto"
           >
             Add New Visitor
           </button>
           <AddModal open={open} setOpen={setOpen}>
-          <RegisterVisitor setOpen={setOpen} />
-        </AddModal>
+            {/* Ensure you have imported RegisterVisitor in your AddModal */}
+            <RegisterVisitor setOpen={setOpen} />
+          </AddModal>
         </div>
 
         {/* Visitor List Table */}

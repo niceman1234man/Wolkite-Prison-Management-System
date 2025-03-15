@@ -1,5 +1,6 @@
 import { Dialog, DialogContent, DialogHeader, DialogFooter, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
+import RegisterVisitor from '../../components/Visitor/RegisterVisitor'
 
 export default function AddModal({ open, setOpen , children}) {
   return (
