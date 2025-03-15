@@ -12,6 +12,7 @@ const PostNotice = () => {
   const [roles, setRoles] = useState([]);
   const [date, setDate] = useState("");
   const [priority, setPriority] = useState("Normal");
+  const [isPosted, setIsPosted] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
@@ -28,13 +29,14 @@ const PostNotice = () => {
     }
     setLoading(true);
     try {
-      await axiosInstance.post("/notice/add-notice", { title, description, date, priority, roles });
+      await axiosInstance.post("/notice/add-notice", { title, description, date, priority, roles, isPosted });
       toast.success("Notice posted successfully!");
       setTitle("");
       setDescription("");
       setDate("");
       setPriority("Normal");
       setRoles([]);
+      setIsPosted(false);
       navigate("/inspector-dashboard/notices");
     } catch (error) {
       console.error("Error:", error);
@@ -46,7 +48,6 @@ const PostNotice = () => {
 
   return (
     <div className={`flex flex-col transition-all mt-12 duration-300 ${isCollapsed ? "ml-16" : "ml-64"}`}>
-      {/* Header Section */}
       <div
         className={`bg-white shadow-md p-4 fixed top-14 z-20 transition-all duration-300 ml-2 ${isCollapsed ? "left-16 w-[calc(100%-5rem)]" : "left-64 w-[calc(100%-17rem)]"}`}
       >
@@ -62,7 +63,6 @@ const PostNotice = () => {
         </div>
       </div>
 
-      {/* Form Section */}
       <div className="flex justify-center items-center min-h-screen p-6 mt-20">
         <div className="max-w-lg w-full bg-white p-8 shadow-lg rounded-md">
           <form onSubmit={handleSubmit}>
@@ -72,7 +72,7 @@ const PostNotice = () => {
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="mt-1 w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+                className="mt-1 w-full p-2 border border-gray-300 rounded-md"
                 required
               />
             </div>
@@ -82,7 +82,7 @@ const PostNotice = () => {
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="mt-1 w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+                className="mt-1 w-full p-2 border border-gray-300 rounded-md"
                 rows="4"
                 required
               ></textarea>
@@ -94,7 +94,7 @@ const PostNotice = () => {
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="mt-1 w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+                className="mt-1 w-full p-2 border border-gray-300 rounded-md"
                 required
               />
             </div>
@@ -104,12 +104,23 @@ const PostNotice = () => {
               <select
                 value={priority}
                 onChange={(e) => setPriority(e.target.value)}
-                className="mt-1 w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+                className="mt-1 w-full p-2 border border-gray-300 rounded-md"
               >
                 {priorityOptions.map((level) => (
                   <option key={level} value={level}>{level}</option>
                 ))}
               </select>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700">Mark as Posted</label>
+              <input
+                type="checkbox"
+                checked={isPosted}
+                onChange={() => setIsPosted(!isPosted)}
+                className="mr-2"
+              />
+              <span>{isPosted ? "Yes" : "No"}</span>
             </div>
 
             <div className="mb-6">

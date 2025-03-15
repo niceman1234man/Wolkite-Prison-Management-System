@@ -2,8 +2,11 @@
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.6",
     "@radix-ui/react-slot": "^1.1.2",
+    "chart.js": "^4.4.8",
     "class-variance-authority": "^0.7.1",
+    "framer-motion": "^12.5.0",
     "lucide-react": "^0.479.0",
+    "react-chartjs-2": "^5.3.0",
     "tailwind-merge": "^3.0.2",
     "tailwindcss-animate": "^1.0.7"
   }
