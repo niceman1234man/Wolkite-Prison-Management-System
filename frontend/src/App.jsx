@@ -83,6 +83,11 @@ import ViewTransfer from "./components/Woreda/ViewTransfer";
 import EditTransfer from "./components/Woreda/EditTransfer";
 import UpdateClearance from "./components/Clearance/UpdateClearance";
 import ViewClearance from "./components/Clearance/ViewClearance";
+import Woreda from "./components/SecurityStaff/Woreda";
+import Court from "./components/SecurityStaff/Court";
+import ParoleSend from "./components/SecurityStaff/ParoleSend";
+import WoredaView from "./components/SecurityStaff/WoredaView";
+import CourtView from "./components/SecurityStaff/CourtView";
 function App() {
   return (
     <>
@@ -200,6 +205,12 @@ function App() {
           >
             <Route index element={<SecurityStaffSummary />} />
             <Route path="inmates" element={<InmateList />} />
+            <Route path="woreda" element={<Woreda />} />
+            <Route path="woreda-view/:id" element={<WoredaView />} />
+            <Route path="court" element={<Court />} />
+            <Route path="court-view/:id" element={<CourtView />} />
+            <Route path="parole" element={<ParoleSend />} />
+
             <Route path="add-inmate" element={<AddInmate />} />
             <Route path="update-inmate/:id" element={<UpdateInmate />} />
             <Route path="view-inmate/:id" element={<ViewInmate />} />
