@@ -82,78 +82,7 @@ const SecurityStaffSidebar = () => {
               )}
             </NavLink>
           ))}
-          <NavLink
-            to="/securityStaff-dashboard"
-            className={({ isActive }) =>
-              `flex items-center p-2 rounded-lg hover:bg-teal-600 transition-colors ${
-                isActive ? "bg-teal-600" : ""
-              } ${isCollapsed ? "justify-center" : "justify-start"}`
-            }
-            end
-          >
-            <FaTachometerAlt className="h-6 w-6" />
-            {!isCollapsed && <span className="ml-3">Dashboard</span>}
-          </NavLink>
-
-          <NavLink
-            to="/securityStaff-dashboard/inmates"
-            className={({ isActive }) =>
-              `flex items-center p-2 rounded-lg hover:bg-teal-600 transition-colors ${
-                isActive ? "bg-teal-600" : ""
-              } ${isCollapsed ? "justify-center" : "justify-start"}`
-            }
-          >
-            <FaUsers className="h-6 w-6" />
-            {!isCollapsed && <span className="ml-3">Inmates</span>}
-          </NavLink>
-
-          <NavLink
-            to="/securityStaff-dashboard/reports"
-            className={({ isActive }) =>
-              `flex items-center p-2 rounded-lg hover:bg-teal-600 transition-colors ${
-                isActive ? "bg-teal-600" : ""
-              } ${isCollapsed ? "justify-center" : "justify-start"}`
-            }
-          >
-            <FaChartBar className="h-6 w-6" />
-            {!isCollapsed && <span className="ml-3">Reports</span>}
-          </NavLink>
-
-          <NavLink
-            to="/securityStaff-dashboard/clearance"
-            className={({ isActive }) =>
-              `flex items-center p-2 rounded-lg hover:bg-teal-600 transition-colors ${
-                isActive ? "bg-teal-600" : ""
-              } ${isCollapsed ? "justify-center" : "justify-start"}`
-            }
-          >
-            <FaClipboardCheck className="h-6 w-6" />
-            {!isCollapsed && <span className="ml-3">Clearance</span>}
-          </NavLink>
-
-          <NavLink
-            to="/securityStaff-dashboard/parole"
-            className={({ isActive }) =>
-              `flex items-center p-2 rounded-lg hover:bg-teal-600 transition-colors ${
-                isActive ? "bg-teal-600" : ""
-              } ${isCollapsed ? "justify-center" : "justify-start"}`
-            }
-          >
-            <FaClipboardCheck className="h-6 w-6" />
-            {!isCollapsed && <span className="ml-3">Parole</span>}
-          </NavLink>
-
-          <NavLink
-            to="/securityStaff-dashboard/settings"
-            className={({ isActive }) =>
-              `flex items-center p-2 rounded-lg hover:bg-teal-600 transition-colors ${
-                isActive ? "bg-teal-600" : ""
-              } ${isCollapsed ? "justify-center" : "justify-start"}`
-            }
-          >
-            <FaCogs className="h-6 w-6" />
-            {!isCollapsed && <span className="ml-3">Settings</span>}
-          </NavLink>
+         
         </nav>
       </div>
     </>

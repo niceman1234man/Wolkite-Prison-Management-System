@@ -6,9 +6,9 @@ import { useNavigate } from "react-router-dom";
 import { toast } from 'react-toastify'; 
 import 'react-toastify/dist/ReactToastify.css'; 
 import ConfirmModal from "../Modals/ConfirmModal";
-const ViewVisitor = () => {
+const ViewVisitor = ({setView,id}) => {
   const navigate=useNavigate();
-  const { id } = useParams();
+  // const { id } = useParams();
   const [visitor, setVisitor] = useState(null);
  const [error, setError] = useState(null);
   const [openDelete, setOpenDelete] = useState(false);
@@ -62,8 +62,8 @@ const ViewVisitor = () => {
   return (
     <>
       {visitor ? (
-        <div className="max-w-3xl mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
-         <TiArrowBack size={50} onClick={()=>navigate(-1)} className="cursor-pointer"/>
+        <div className="w-full mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
+        
           <h2 className="text-2xl font-bold mb-8 text-center">Visitor Details</h2>
           {error && <p className="text-red-500 text-center">{error}</p>}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -4,7 +4,7 @@ import DataTable from "react-data-table-component";
 import { useDispatch, useSelector } from "react-redux";
 import axiosInstance from "../../utils/axiosInstance";
 import { setIncident } from "../../redux/incidentSlice";
-import { FaArrowLeft, FaSearch } from "react-icons/fa"; 
+import { FaArrowLeft, FaSearch } from "react-icons/fa";
 
 const customStyles = {
   headCells: {
@@ -29,17 +29,22 @@ const customStyles = {
 
 import AddModal from "../Modals/AddModal";
 import Add from "./Add";
+import UpdateIncident from "./UpdateIncident";
+import ViewIncident from "./ViewIncident";
 
 const Incident = () => {
   const dispatch = useDispatch();
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
   const navigate = useNavigate();
-  
+
   const [incidents, setIncidents] = useState([]);
   const [filteredIncidents, setFilteredIncidents] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const [view, setView] = useState(false);
+  const [edit, setEdit] = useState(false);
+  const [selectedIncidentId, setSelectedIncidentId] = useState(null); // Store only the ID
 
   // Fetch Incidents
   useEffect(() => {
@@ -88,10 +93,26 @@ const Incident = () => {
     );
   };
 
+  // Handle View Incident
+  const handleViewIncident = (id) => {
+    setSelectedIncidentId(id); // Set the ID
+    setView(true);
+  };
+
+  // Handle Edit Incident
+  const handleEditIncident = (id) => {
+    setSelectedIncidentId(id); // Set the ID
+    setEdit(true);
+  };
+
   // Define Table Columns using useMemo for performance optimization
   const columns = useMemo(
     () => [
-      { name: "Incident ID", selector: (row) => row.incidentId, sortable: true },
+      {
+        name: "Incident ID",
+        selector: (row) => row.incidentId,
+        sortable: true,
+      },
       { name: "Reporter", selector: (row) => row.reporter, sortable: true },
       { name: "Type", selector: (row) => row.incidentType, sortable: true },
       { name: "Inmate", selector: (row) => row.inmate, sortable: true },
@@ -105,23 +126,23 @@ const Incident = () => {
         name: "Actions",
         cell: (row) => (
           <>
-            <Link
-              to={`/policeOfficer-dashboard/incident-details/${row._id}`}
+            <button
+              onClick={() => handleViewIncident(row._id)} // Pass the ID
               className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 mr-2"
             >
               View
-            </Link>
-            <Link
-              to={`/policeOfficer-dashboard/edit-incident/${row._id}`}
+            </button>
+            <button
+              onClick={() => handleEditIncident(row._id)} // Pass the ID
               className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700"
             >
               Edit
-            </Link>
+            </button>
           </>
         ),
       },
     ],
-    [incidents]
+    []
   );
 
   return (
@@ -129,7 +150,9 @@ const Incident = () => {
       {/* Header */}
       <div
         className={`bg-white shadow-md p-4 fixed top-14 z-20 flex flex-wrap items-center justify-between transition-all duration-300 ml-2 gap-4 ${
-          isCollapsed ? "left-16 w-[calc(100%-5rem)]" : "left-64 w-[calc(100%-17rem)]"
+          isCollapsed
+            ? "left-16 w-[calc(100%-5rem)]"
+            : "left-64 w-[calc(100%-17rem)]"
         }`}
       >
         {/* Back Button */}
@@ -139,9 +162,9 @@ const Incident = () => {
         >
           <FaArrowLeft className="mr-2 text-lg" /> Back
         </button>
-        
+
         <div className="flex-1" />
-        
+
         {/* Search Input */}
         <div className="relative flex items-center w-72 md:w-1/3 mr-4">
           <FaSearch className="absolute left-3 text-gray-500" />
@@ -153,7 +176,7 @@ const Incident = () => {
             onChange={filterByInput}
           />
         </div>
-        
+
         {/* Add New Incident Button (Modal Trigger) */}
         <button
           onClick={() => setOpen(true)}
@@ -165,12 +188,14 @@ const Incident = () => {
           <Add setOpen={setOpen} />
         </AddModal>
       </div>
-      
+
       {/* Main Content */}
       <div className="flex-1 relative min-h-screen mt-32">
         <div className="p-6">
-          <h2 className="text-2xl font-bold text-gray-800 mb-4">Incident List</h2>
-          
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">
+            Incident List
+          </h2>
+
           {/* Filter Buttons placed above the table */}
           <div className="flex justify-end space-x-2 mb-4">
             <button
@@ -198,9 +223,11 @@ const Incident = () => {
               Escalated
             </button>
           </div>
-          
+
           {loading ? (
-            <div className="text-center text-gray-600">Loading Incidents...</div>
+            <div className="text-center text-gray-600">
+              Loading Incidents...
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <DataTable
@@ -215,6 +242,15 @@ const Incident = () => {
           )}
         </div>
       </div>
+
+      {/* Modals */}
+      <AddModal open={view} setOpen={setView}>
+        {selectedIncidentId && <ViewIncident setView={setView} id={selectedIncidentId} />}
+      </AddModal>
+
+      <AddModal open={edit} setOpen={setEdit}>
+        {selectedIncidentId && <UpdateIncident setEdit={setEdit} id={selectedIncidentId} />}
+      </AddModal>
     </div>
   );
 };

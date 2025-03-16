@@ -5,6 +5,9 @@ import { useSelector } from "react-redux";
 import axiosInstance from "../../utils/axiosInstance";
 import { columns, PrisonButtons } from "../../utils/PrisonHelper";
 import { FaArrowLeft, FaSearch } from "react-icons/fa"; 
+import AddPrison from "./AddPrison";
+import AddModal from "../Modals/AddModal";
+
 
 const customStyles = {
   headCells: {
@@ -31,7 +34,7 @@ const PrisonsList = () => {
   const [prisons, setPrisons] = useState([]);
   const [filteredPrisons, setFilteredPrisons] = useState([]);
   const [loading, setLoading] = useState(false);
-  
+   const [open, setOpen] = useState(false);
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
   const navigate = useNavigate();
 
@@ -95,12 +98,15 @@ const PrisonsList = () => {
               onChange={filterPrisons}
             />
           </div>
-          <Link
-            to="/inspector-dashboard/add-prison"
+          <button
+           onClick={()=>setOpen(true)}
             className="h-10 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-md flex items-center justify-center min-w-[150px] md:w-auto"
           >
             Add New Prison
-          </Link>
+          </button>
+           <AddModal open={open} setOpen={setOpen}>
+                    <AddPrison setOpen={setOpen} />
+                  </AddModal>
         </div>
         <div className="p-6 mt-32">
           <h2 className="text-2xl font-bold text-gray-800 mb-4">Prison List</h2>

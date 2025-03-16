@@ -4,8 +4,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { TiArrowBack } from "react-icons/ti";
-const UpdateIncident = () => {
-  const { id } = useParams(); 
+const UpdateIncident = ({setEdit,id}) => {
+  // const { id } = useParams(); 
   const [formData, setFormData] = useState({});
   const navigate = useNavigate();
 

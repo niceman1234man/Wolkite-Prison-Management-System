@@ -12,7 +12,7 @@ const ViewNoticeModal = ({ open, setOpen, notice, onDelete, onToggleActivation }
         {/* Close Button - Now just closes modal */}
         <button
           className="absolute top-4 right-4 bg-gray-200 hover:bg-red-500 hover:text-white text-gray-600 rounded-full p-2 transition duration-300 shadow-md"
-          onClick={() => setOpen(false)} // ✅ Closes the modal and stays on the Notice List
+          onClick={() => setOpen(false)} 
         >
           <FaTimes size={18} />
         </button>

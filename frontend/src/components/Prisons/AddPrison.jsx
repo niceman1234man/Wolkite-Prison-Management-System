@@ -6,7 +6,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { FaArrowLeft } from "react-icons/fa";
 import { useSelector } from "react-redux";
 
-const AddPrison = () => {
+const AddPrison = ({setOpen}) => {
   const [prisonData, setPrisonData] = useState({
     prison_name: "",
     location: "",
@@ -33,6 +33,7 @@ const AddPrison = () => {
 
       if (response.data) {
         toast.success("Prison added successfully!");
+        setOpen(false)
         navigate("/inspector-dashboard/prisons");
       }
     } catch (error) {

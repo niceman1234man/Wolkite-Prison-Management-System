@@ -5,9 +5,9 @@ import { TiArrowBack } from "react-icons/ti";
 import { useNavigate } from "react-router-dom";
 import { toast } from 'react-toastify';  // Import toast
 import ConfirmModal from "../Modals/ConfirmModal";
-const ViewIncident = () => {
+const ViewIncident = ({setView,id}) => {
   const navigate = useNavigate();
-  const { id } = useParams();
+  // const { id } = useParams();
   const [incident, setIncident] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");

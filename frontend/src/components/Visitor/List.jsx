@@ -4,7 +4,7 @@ import DataTable from "react-data-table-component";
 import { useSelector } from "react-redux";
 import axiosInstance from "../../utils/axiosInstance.js";
 import { FaArrowLeft, FaSearch } from "react-icons/fa";
-import { columns as defaultColumns } from "../../utils/VisitorHelper.jsx"; // Ensure this is correctly defined
+import { columns as defaultColumns,UserButtons } from "../../utils/VisitorHelper.jsx"; // Ensure this is correctly defined
 import UpdateVisitorModal from "../Modals/UpdateVisitorModal";  // Modal for updating visitor
 import ViewVisitorModal from "../Modals/ViewVisitorModal";      // Modal for viewing visitor
 import AddModal from "../Modals/AddModal.jsx";    
@@ -38,53 +38,48 @@ const List = () => {
   const [loading, setLoading] = useState(false);
   const [selectedVisitor, setSelectedVisitor] = useState(null);
   const [viewVisitor, setViewVisitor] = useState(null);
-  const [open, setOpen] = useState(false); // <-- Added state for modal open status
+ const [open,setOpen]=useState(false) // <-- Added state for modal open status
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
 
   // Fetch visitors data on component mount
   useEffect(() => {
-    const fetchVisitors = async () => {
+    const fetchUsers = async () => {
       setLoading(true);
       try {
         const response = await axiosInstance.get("/visitor/allVisitors");
-
+        
         if (response.data && response.data.visitors) {
-          const formattedData = response.data.visitors.map((visitor) => ({
-            ...visitor,
-            action: (
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setViewVisitor(visitor)} // Open view modal
-                  className="text-white bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-lg shadow-md transition duration-300"
-                >
-                  View
-                </button>
-
-                <button
-                  onClick={() => setSelectedVisitor(visitor)} // Open update modal
-                  className="text-white bg-teal-600 hover:bg-teal-700 px-3 py-1 rounded-lg shadow-md transition duration-300"
-                >
-                  Edit
-                </button>
-              </div>
-            ),
+          let Uno=1;
+          const data = response.data.visitors.map((visitor, index) => ({
+            U_no:Uno++,
+            _id: visitor._id,
+            firstName: visitor.firstName,
+            middleName: visitor.middleName,
+            lastName: visitor.lastName,
+            inmate:visitor.inmate,
+            relation: visitor.relation,
+            purpose: visitor.purpose,
+            phone: visitor.phone,
+            date: new Date(visitor.date).toLocaleDateString(),
+            action: <UserButtons _id={visitor._id} />,
           }));
 
-          setVisitors(formattedData);
-          setFilteredVisitors(formattedData); // Set filtered visitors to all visitors initially
+          setVisitors(data);
+          setFilteredVisitors(data);
         } else {
-          console.error("Unexpected API response format:", response.data);
-          alert("Invalid response format from server.");
+          console.error("Unexpected data format:", response.data.visitor);
+          setUsers([]);
         }
       } catch (error) {
-        console.error("Error fetching visitors:", error);
-        alert("Failed to fetch visitors.");
+        console.error("Error fetching Visitors:", error);
+        alert(error.response?.data?.error || "Failed to load visitors.");
+        setVisitors([]);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchVisitors();
+    fetchUsers();
   }, []);
 
   // Filter visitors based on search query
@@ -162,31 +157,7 @@ const List = () => {
         </div>
       </div>
 
-      {/* Modals */}
-      {/* Update Visitor Modal */}
-      {selectedVisitor && (
-        <UpdateVisitorModal
-          open={true}
-          setOpen={() => setSelectedVisitor(null)} // Close modal
-          visitor={selectedVisitor}
-          setVisitor={(updatedVisitor) => {
-            // Update visitor in the list
-            setVisitors((prev) =>
-              prev.map((v) => (v._id === updatedVisitor._id ? updatedVisitor : v))
-            );
-            setSelectedVisitor(null); // Close the modal after update
-          }}
-        />
-      )}
-
-      {/* View Visitor Modal */}
-      {viewVisitor && (
-        <ViewVisitorModal
-          open={true}
-          setOpen={() => setViewVisitor(null)} // Close modal
-          visitor={viewVisitor}
-        />
-      )}
+     
     </div>
   );
 };

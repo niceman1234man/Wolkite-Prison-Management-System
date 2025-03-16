@@ -17,7 +17,9 @@ import axiosInstance from "../../utils/axiosInstance"; // Import axiosInstance
 const AdminSummary = () => {
   const [notice, setNotice] = useState([]);
   const [loading, setLoading] = useState(true); // Add loading state
-  const users = useSelector((state) => state.users.users);
+
+  // Use optional chaining and provide a fallback (empty array) for `users`
+  const users = useSelector((state) => state.users?.users || []);
   const police = users.filter((user) => user.role === "police-officer");
   const activeUsers = users.filter((user) => user.isactivated === true);
   const deactivatedUsers = users.filter((user) => user.isactivated === false); // Fix spelling
@@ -77,7 +79,7 @@ const AdminSummary = () => {
         <SummaryCard
           icon={<FaUsers />}
           text="Total Users"
-          number={users.length}
+          number={users.length} // Safe to use `length` now
           color="bg-teal-600"
         />
         <SummaryCard
@@ -95,7 +97,7 @@ const AdminSummary = () => {
         <SummaryCard
           icon={<FaUserShield />}
           text="Total Zone Police Officers"
-          number={police.length}
+          number={police.length} // Safe to use `length` now
           color="bg-purple-600"
         />
         <SummaryCard
@@ -113,7 +115,7 @@ const AdminSummary = () => {
           <SummaryCard
             icon={<FaFileAlt />}
             text="Active Accounts"
-            number={activeUsers.length}
+            number={activeUsers.length} // Safe to use `length` now
             color="bg-teal-600"
           />
           <SummaryCard
@@ -125,7 +127,7 @@ const AdminSummary = () => {
           <SummaryCard
             icon={<FaHourglassHalf />}
             text="Restricted Accounts"
-            number={deactivatedUsers.length} // Use corrected variable name
+            number={deactivatedUsers.length} // Safe to use `length` now
             color="bg-yellow-600"
           />
           <SummaryCard
