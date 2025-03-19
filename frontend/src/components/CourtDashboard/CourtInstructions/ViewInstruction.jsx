@@ -6,9 +6,8 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify"; // Import toastimp
 import ConfirmModal from "@/components/Modals/ConfirmModal";
 
-const ViewInstruction = () => {
+const ViewInstruction = ({id}) => {
   const navigate = useNavigate();
-  const { id } = useParams();
   const [instruction, setInstruction] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -69,12 +68,8 @@ const ViewInstruction = () => {
   }
 
   return (
-    <div className="max-w-3xl mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
-      <TiArrowBack
-        size={50}
-        onClick={() => navigate(-1)}
-        className="cursor-pointer"
-      />
+    <div className="w-full mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
+      
       <h2 className="text-2xl font-bold mb-6 text-center">
         Instruction Details
       </h2>

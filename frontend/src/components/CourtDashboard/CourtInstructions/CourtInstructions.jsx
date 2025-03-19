@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import axiosInstance from "../../../utils/axiosInstance";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
-const CourtInstructions = () => {
+const CourtInstructions = ({setOpen}) => {
   const navigate=useNavigate();
   const [formData, setFormData] = useState({
     prisonerName: "",
@@ -57,6 +57,7 @@ const CourtInstructions = () => {
 
       if (response.data.success) {
         toast.success("Instruction sent successfully!");
+        setOpen(false)
         setFormData({
           courtCaseNumber: "",
           judgeName: "",
@@ -80,7 +81,7 @@ const CourtInstructions = () => {
   };
 
   return (
-    <div className="p-6 max-w-2xl mx-auto bg-white shadow rounded-md mt-16">
+    <div className="p-6 w-full mx-auto bg-white shadow rounded-md ">
       <h2 className="text-2xl font-bold mb-4 text-center">Court Instruction</h2>
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

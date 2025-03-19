@@ -2,12 +2,12 @@ import React, { useEffect, useState } from "react";
 import axiosInstance from "../../../utils/axiosInstance";
 import { useParams, useNavigate } from "react-router-dom";
 import { TiArrowBack } from "react-icons/ti";
-import { toast } from 'react-toastify';
+import { toast } from "react-toastify";
 import ParoleRejectModal from "./ParoleRejectModal";
 import ConfirmModal from "@/components/Modals/ConfirmModal";
 
-const ViewParole = () => {
-  const { id } = useParams();
+const ViewParole = ({ id }) => {
+  // const { id } = useParams();
   const [inmateData, setInmateData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false); // Manage modal state
@@ -47,14 +47,15 @@ const ViewParole = () => {
     return <div>No data available</div>;
   }
 
-  const acceptParole=()=>{
-    return
-  }
+  const acceptParole = () => {
+    return;
+  };
 
   return (
-    <div className="max-w-5xl mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
-      <TiArrowBack size={50} onClick={() => navigate(-1)} className="cursor-pointer"/>
-      <h2 className="text-3xl font-bold mb-6 text-center">Parole Request Details</h2>
+    <div className="w-full mx-auto  bg-white p-8 rounded-md shadow-md">
+      <h2 className="text-3xl font-bold mb-6 text-center">
+        Parole Request Details
+      </h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
           <h3 className="text-xl font-semibold">Full Name:</h3>
@@ -68,18 +69,18 @@ const ViewParole = () => {
 
       <div className="mt-6">
         <button
-          onClick={() => setOpenAccept(true)} 
+          onClick={() => setOpenAccept(true)}
           className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded mr-4"
         >
           Accept
         </button>
-          <ConfirmModal
-                            open={openAccept}
-                            setOpen={setOpenAccept}
-                            onDelete={acceptParole}
-                            message="Do you really want to Accept this Parol?"
-                          />
-        <button 
+        <ConfirmModal
+          open={openAccept}
+          setOpen={setOpenAccept}
+          onDelete={acceptParole}
+          message="Do you really want to Accept this Parol?"
+        />
+        <button
           className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
           onClick={() => setIsRejectModalOpen(true)}
         >
@@ -88,10 +89,10 @@ const ViewParole = () => {
       </div>
 
       {/* Parole Rejection Modal */}
-      <ParoleRejectModal 
-        isOpen={isRejectModalOpen} 
-        onClose={() => setIsRejectModalOpen(false)} 
-        onSubmit={handleRejectParole} 
+      <ParoleRejectModal
+        isOpen={isRejectModalOpen}
+        onClose={() => setIsRejectModalOpen(false)}
+        onSubmit={handleRejectParole}
       />
     </div>
   );

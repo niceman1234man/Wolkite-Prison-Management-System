@@ -3,9 +3,9 @@ import axiosInstance from "../../../utils/axiosInstance";
 import { toast } from "react-toastify";
 import { useNavigate, useParams } from "react-router-dom";
 
-const CourtInstructions = () => {
+const EditInstruction = ({setOpen,id}) => {
   const navigate = useNavigate();
-  const { id } = useParams(); // Get the instruction ID from the URL
+// Get the instruction ID from the URL
 
   const [formData, setFormData] = useState({
     courtCaseNumber: "",
@@ -97,6 +97,7 @@ const CourtInstructions = () => {
 
       if (response.data) {
         toast.success("Instruction updated successfully!");
+        setOpen(false);
         setFormData({
           courtCaseNumber: "",
           judgeName: "",
@@ -214,4 +215,4 @@ const CourtInstructions = () => {
   );
 };
 
-export default CourtInstructions;
+export default EditInstruction;
