@@ -71,11 +71,11 @@ function Login() {
   };
 
   return (
-    <div className="flex flex-col min-h-[40vh] bg-gradient-to-r from-green-50 to-teal-50">
+    <div className="flex flex-col min-h-[40vh] bg-gradient-to-r from-green-50 to-teal-100">
       {/* Header with Prison Image */}
-      <header className="bg-gradient-to-r from-green-700 to-teal-600 text-white py-4 text-center shadow-lg relative">
+      {/* <header className="bg-gradient-to-r from-green-700 to-teal-600 text-white py-4 text-center shadow-lg relative">
         <div className="absolute inset-0 bg-black bg-opacity-50"></div> {/* Overlay for better text visibility */}
-        <div className="relative z-10">
+        {/* <div className="relative z-10">
           <h1 className="text-2xl font-bold">Wolkite Prison Management System</h1>
           <p className="text-sm mt-2">Secure and Efficient Prison Management</p>
         </div>
@@ -84,11 +84,11 @@ function Login() {
           alt="Prison"
           className="absolute inset-0 w-full h-full object-cover z-0"
         />
-      </header>
+      </header> */} 
 
       {/* Main Content */}
-      <main className="flex-grow flex items-center justify-center px-4 py-6">
-        <div className="bg-white w-full max-w-md rounded-xl shadow-2xl p-6 relative">
+      <main className="flex-grow items-center justify-center px-4 py-6">
+         
           {/* Login Title */}
           <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">Login</h1>
 
@@ -174,7 +174,7 @@ function Login() {
               </button>
             </div>
           </form>
-        </div>
+         
       </main>
     </div>
   );

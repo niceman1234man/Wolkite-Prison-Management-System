@@ -93,6 +93,12 @@ export const UserButtons = ({ _id }) => {
       <AddModal open={edit} setOpen={setEdit}>
         <EditUser setOpen={setEdit} id={_id} />
       </AddModal>
+      <button
+        className="px-3 py-1 bg-green-600 rounded"
+        onClick={() => setEdit(true)}
+      >
+        Send
+      </button>
     </div>
   );
 };

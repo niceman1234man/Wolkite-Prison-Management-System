@@ -5,6 +5,10 @@ import { useDispatch, useSelector } from "react-redux";
 import axiosInstance from "../../utils/axiosInstance";
 import { setIncident } from "../../redux/incidentSlice";
 import { FaArrowLeft, FaSearch } from "react-icons/fa";
+import AddModal from "../Modals/AddModal";
+import Add from "./Add";
+import UpdateIncident from "./UpdateIncident";
+import ViewIncident from "./ViewIncident";
 
 const customStyles = {
   headCells: {
@@ -26,11 +30,6 @@ const customStyles = {
     },
   },
 };
-
-import AddModal from "../Modals/AddModal";
-import Add from "./Add";
-import UpdateIncident from "./UpdateIncident";
-import ViewIncident from "./ViewIncident";
 
 const Incident = () => {
   const dispatch = useDispatch();
@@ -146,58 +145,60 @@ const Incident = () => {
   );
 
   return (
-    <div className="flex flex-col">
-      {/* Header */}
-      <div
-        className={`bg-white shadow-md p-4 fixed top-14 z-20 flex flex-wrap items-center justify-between transition-all duration-300 ml-2 gap-4 ${
-          isCollapsed
-            ? "left-16 w-[calc(100%-5rem)]"
-            : "left-64 w-[calc(100%-17rem)]"
-        }`}
-      >
-        {/* Back Button */}
-        <button
-          className="flex items-center text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg shadow-md transition duration-300 mr-4"
-          onClick={() => navigate(-1)}
-        >
-          <FaArrowLeft className="mr-2 text-lg" /> Back
-        </button>
-
-        <div className="flex-1" />
-
-        {/* Search Input */}
-        <div className="relative flex items-center w-72 md:w-1/3 mr-4">
-          <FaSearch className="absolute left-3 text-gray-500" />
-          <input
-            type="text"
-            placeholder="Search by Incident ID"
-            className="h-10 px-4 py-2 border border-gray-300 rounded-md w-full pl-10"
-            value={searchQuery}
-            onChange={filterByInput}
-          />
-        </div>
-
-        {/* Add New Incident Button (Modal Trigger) */}
-        <button
-          onClick={() => setOpen(true)}
-          className="h-10 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-md flex items-center justify-center min-w-[150px] md:w-auto"
-        >
-          Add New Incident
-        </button>
-        <AddModal open={open} setOpen={setOpen}>
-          <Add setOpen={setOpen} />
-        </AddModal>
-      </div>
+    <div className="flex">
+      {/* Sidebar Spacing Fix */}
+      <div className={`transition-all duration-300 ${isCollapsed ? "w-16" : "w-64"}`} />
 
       {/* Main Content */}
-      <div className="flex-1 relative min-h-screen mt-32">
-        <div className="p-6">
+      <div className="flex-1 relative">
+        {/* Responsive Fixed Header */}
+        <div
+          className={`bg-white shadow-md p-4 fixed top-14 z-20 flex flex-wrap items-center justify-between transition-all duration-300 ml-2 gap-4 ${
+            isCollapsed
+              ? "left-16 w-[calc(100%-5rem)]"
+              : "left-64 w-[calc(100%-17rem)]"
+          }`}
+        >
+          {/* Back Button */}
+          <button
+            className="flex items-center text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg shadow-md transition duration-300"
+            onClick={() => navigate(-1)}
+          >
+            <FaArrowLeft className="mr-2 text-lg" /> Back
+          </button>
+
+          {/* Search Input */}
+          <div className="relative flex items-center w-full md:w-72">
+            <FaSearch className="absolute left-3 text-gray-500" />
+            <input
+              type="text"
+              placeholder="Search by Incident ID"
+              className="h-10 px-4 py-2 border border-gray-300 rounded-md w-full pl-10"
+              value={searchQuery}
+              onChange={filterByInput}
+            />
+          </div>
+
+          {/* Add New Incident Button (Modal Trigger) */}
+          <button
+            onClick={() => setOpen(true)}
+            className="h-10 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-md flex items-center justify-center min-w-[150px] md:w-auto"
+          >
+            Add New Incident
+          </button>
+          <AddModal open={open} setOpen={setOpen}>
+            <Add setOpen={setOpen} />
+          </AddModal>
+        </div>
+
+        {/* Push content down to prevent overlap */}
+        <div className="p-6 mt-32">
           <h2 className="text-2xl font-bold text-gray-800 mb-4">
             Incident List
           </h2>
 
           {/* Filter Buttons placed above the table */}
-          <div className="flex justify-end space-x-2 mb-4">
+          <div className="flex flex-wrap gap-2 mb-4">
             <button
               className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700"
               onClick={resetFilters}
