@@ -7,6 +7,10 @@ import { columns as defaultColumns } from "../../utils/NoticeHelper";
 import { FaArrowLeft, FaSearch } from "react-icons/fa";
 import UpdateNoticeModal from "../Modals/UpdateNoticeModal";
 import ViewNoticeModal from "../Modals/ViewNoticeModal";
+import PostNotice from "./Notices";
+import AddModal from "../Modals/AddModal";
+import UpdateNotice from "./UpdateNotice";
+import ViewNotice from "./ViewNotice";
 
 const customStyles = {
   headCells: {
@@ -30,6 +34,9 @@ const customStyles = {
 };
 
 const NoticesList = () => {
+  const [add,setAdd]=useState(false);
+  const [edit,setEdit]=useState(false);
+  const [view,setView]=useState(false);
   const [notices, setNotices] = useState([]);
   const [filteredNotices, setFilteredNotices] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -55,6 +62,9 @@ const NoticesList = () => {
                 >
                   View
                 </button>
+                <AddModal open={view} setOpen={setView}>
+        <ViewNotice setOpen={setView}  />
+      </AddModal>
 
                 {/* Edit Button (Opens Modal) */}
                 <button
@@ -63,6 +73,9 @@ const NoticesList = () => {
                 >
                   Edit
                 </button>
+                <AddModal open={edit} setOpen={setEdit}>
+        <UpdateNotice setOpen={setEdit}  />
+      </AddModal>
               </div>
             ),
           }));
@@ -93,7 +106,7 @@ const NoticesList = () => {
   };
 
   return (
-    <div className="flex">
+    <div className="w-full flex">
       <div className={`transition-all duration-300 ${isCollapsed ? "w-16" : "w-64"}`} />
       <div className="flex-1 relative min-h-screen">
         <div
@@ -117,12 +130,15 @@ const NoticesList = () => {
               onChange={filterNotices}
             />
           </div>
-          <Link
-            to="/inspector-dashboard/add-notice"
+          <button
+            onClick={()=>setAdd(true)}
             className="h-10 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-md flex items-center justify-center min-w-[150px] md:w-auto"
           >
             Add New Notice
-          </Link>
+          </button>
+          <AddModal open={add} setOpen={setAdd}>
+        <PostNotice setOpen={setAdd}  />
+      </AddModal>
         </div>
 
         <div className="p-6 mt-32">

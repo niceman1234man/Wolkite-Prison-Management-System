@@ -7,11 +7,11 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import UpdateNoticeModal from "../Modals/UpdateNoticeModal";
 
-const UpdateNotice = () => {
+const UpdateNotice = ({setOpen,id}) => {
   const [notice, setNotice] = useState(null); // Store the notice data
   const [openModal, setOpenModal] = useState(true); // Open modal on load
   const navigate = useNavigate();
-  const { id } = useParams();
+  // const { id } = useParams();
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
 
   useEffect(() => {

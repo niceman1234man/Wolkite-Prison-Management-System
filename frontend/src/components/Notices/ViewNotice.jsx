@@ -6,9 +6,9 @@ import "react-toastify/dist/ReactToastify.css";
 import ConfirmModal from "../Modals/ConfirmModal";
 import ViewNoticeModal from "../Modals/ViewNoticeModal";
 
-const ViewNotice = () => {
+const ViewNotice = ({id}) => {
   const navigate = useNavigate();
-  const { id } = useParams();
+  // const { id } = useParams();
   const [notice, setNotice] = useState(null);
   const [loading, setLoading] = useState(true);
   const [openDelete, setOpenDelete] = useState(false);

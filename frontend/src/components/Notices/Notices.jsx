@@ -6,7 +6,7 @@ import { FaArrowLeft } from "react-icons/fa";
 import { useSelector } from "react-redux";
 import axiosInstance from "../../utils/axiosInstance";
 
-const PostNotice = () => {
+const PostNotice = ({setOpen}) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [roles, setRoles] = useState([]);
@@ -31,6 +31,7 @@ const PostNotice = () => {
     try {
       await axiosInstance.post("/notice/add-notice", { title, description, date, priority, roles, isPosted });
       toast.success("Notice posted successfully!");
+      setOpen(false)
       setTitle("");
       setDescription("");
       setDate("");
@@ -47,17 +48,12 @@ const PostNotice = () => {
   };
 
   return (
-    <div className={`flex flex-col transition-all mt-12 duration-300 ${isCollapsed ? "ml-16" : "ml-64"}`}>
+    <div className={`w-full flex flex-col transition-all mt-12 duration-300 }`}>
       <div
-        className={`bg-white shadow-md p-4 fixed top-14 z-20 transition-all duration-300 ml-2 ${isCollapsed ? "left-16 w-[calc(100%-5rem)]" : "left-64 w-[calc(100%-17rem)]"}`}
+        className={`bg-white shadow-md p-4 fixed top-14 z-20 transition-all duration-300 ml-2 ${isCollapsed ? "left-10 w-[calc(100%-5rem)]" : "left-40 w-[calc(100%-17rem)]"}`}
       >
         <div className="flex items-center justify-between">
-          <button
-            className="flex items-center text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg shadow-md transition duration-300"
-            onClick={() => navigate(-1)}
-          >
-            <FaArrowLeft className="mr-2 text-lg" /> Back
-          </button>
+          
           <h3 className="text-2xl font-bold text-gray-800 text-center flex-1">Post a Notice</h3>
           <div className="w-24" />
         </div>
