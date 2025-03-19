@@ -51,7 +51,7 @@ const AdminSummary = () => {
       {/* Notices Section */}
       <div className="mb-12">
         <h3 className="text-2xl font-bold mb-6">Notices</h3>
-        {notice ? (
+        {notice > 0 ? (
           notice.map((noticeItem, index) => {
             // Check if the notice is posted and "Admin" is in the roles array
             if (noticeItem.isPosted && noticeItem.roles.includes("Admin")) {

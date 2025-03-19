@@ -91,6 +91,18 @@ const InspectorSidebar = () => {
             <FaCogs className="h-6 w-6" />
             {!isCollapsed && <span className="ml-3">Settings</span>}
           </NavLink>
+          <NavLink
+  to="/inspector-dashboard/homepage-settings"
+  className={({ isActive }) =>
+    `flex items-center p-2 rounded-lg hover:bg-teal-600 transition-colors ${
+      isActive ? "bg-teal-600" : ""
+    }`
+  }
+>
+  <FaCogs className="h-6 w-6" />
+  {!isCollapsed && <span className="ml-3">Homepage Settings</span>}
+</NavLink>
+
         </nav>
       </div>
     </>

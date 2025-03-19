@@ -88,6 +88,7 @@ import Court from "./components/SecurityStaff/Court";
 import ParoleSend from "./components/SecurityStaff/ParoleSend";
 import WoredaView from "./components/SecurityStaff/WoredaView";
 import CourtView from "./components/SecurityStaff/CourtView";
+import InspectorHomepageSettings from "./page/InspectorHomepageSettings";
 function App() {
   return (
     <>
@@ -157,6 +158,8 @@ function App() {
             <Route path="help" element={<HelpPage />} />
             <Route path="settingsPage" element={<SettingPage />} />
             <Route path="add-prison" element={<AddPrison />} />
+            <Route path="homepage-settings" element={<InspectorHomepageSettings />} />
+
           </Route>
 
           {/*court Dashboard Routes */}

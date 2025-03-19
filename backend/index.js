@@ -16,6 +16,7 @@ import dotenv from'dotenv';
 import { fileURLToPath } from 'url';
 import { instructionRouter } from './router/instruction.router.js';
 import { transferRouter } from './router/transfer.router.js';
+import { MessageRoutes } from './router/hompage.router.js';
 
 // Define __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -40,6 +41,8 @@ app.use(cors({
 //  app.use('/clearance',clearanceRouter);
  app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
  app.use("/clearance", clearanceRoutes);
+ app.use('/managemessages',MessageRoutes)
+
  connectDb();
 
 app.listen(5000,()=>{

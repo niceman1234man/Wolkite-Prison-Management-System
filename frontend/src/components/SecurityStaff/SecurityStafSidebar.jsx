@@ -10,11 +10,9 @@ import {
   FaClipboardCheck,
   FaCogs,
 } from "react-icons/fa";
-
 const SecurityStaffSidebar = () => {
   const dispatch = useDispatch();
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
-
   // Auto-collapse on small screens
   useEffect(() => {
     const handleResize = () => {
@@ -82,8 +80,7 @@ const SecurityStaffSidebar = () => {
               )}
             </NavLink>
           ))}
-         
-        </nav>
+     </nav>
       </div>
     </>
   );

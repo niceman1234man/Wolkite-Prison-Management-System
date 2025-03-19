@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router";
-import { FaUser, FaLock } from "react-icons/fa";
+import { FaUser, FaLock, FaArrowLeft } from "react-icons/fa";
 import Password from "../Password";
 import { Link } from "react-router";
 import axiosInstance from "../../utils/axiosInstance";
@@ -82,6 +82,12 @@ function Login() {
       
       <main className="flex-grow flex items-center justify-center">
         <div className="bg-white w-full max-w-md rounded-lg shadow-md p-8">
+           <button 
+                  onClick={() => navigate('/')} 
+                  className="mb-4 flex items-center text-white bg-blue-600 px-4 py-2 rounded-lg shadow-md hover:bg-blue-700 transition duration-300"
+                >
+                  <FaArrowLeft className="mr-2" /> Back
+                </button>
           <h1 className="text-2xl font-bold text-center mb-6">{label.h1}</h1>
           <form onSubmit={handleSubmit} className="flex flex-col">
             <p className="text-red-500 py-2 text-center font-semibold">{error&&error}</p>
