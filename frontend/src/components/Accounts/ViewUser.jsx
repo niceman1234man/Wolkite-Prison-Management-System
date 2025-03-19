@@ -6,10 +6,10 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import ConfirmModal from "../Modals/ConfirmModal";
 
-const ViewUser = () => {
+const ViewUser = ({id}) => {
   
   const navigate = useNavigate();
-  const { id } = useParams();
+  // const { id } = useParams();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [openDelete, setOpenDelete] = useState(false);
@@ -68,13 +68,13 @@ const [openActivate, setOpenActivate] = useState(false);
   }
 
   return (
-    <div className="max-w-3xl mx-auto mt-24 bg-white p-8 rounded-md shadow-md">
-      <button
+    <div className="w-full mx-auto mt-24 bg-white p-8 rounded-md shadow-md">
+      {/* <button
         className="flex items-center text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg shadow-md transition duration-300"
         onClick={() => navigate(-1)}
       >
         <FaArrowLeft className="mr-2 text-lg" /> Back
-      </button>
+      </button> */}
       <h2 className="text-2xl font-bold mb-8 text-center">User Account Details</h2>
 
       {user && (
