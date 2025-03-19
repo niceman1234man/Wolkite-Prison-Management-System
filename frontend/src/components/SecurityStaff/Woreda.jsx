@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import DataTable from "react-data-table-component";
 import { columns, TransferButtons } from "../../utils/WoredaHelper";
 import axiosInstance from "../../utils/axiosInstance";
-
 const Woreda = () => {
   const [inmates, setInmates] = useState([]);
   const [filteredInmates, setFilteredInmates] = useState([]);

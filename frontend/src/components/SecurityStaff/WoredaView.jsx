@@ -5,16 +5,16 @@ import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css'; 
 import { TiArrowBack } from "react-icons/ti";
 
-const WoredaView = () => {
-  const { id } = useParams();
+const WoredaView = ({id}) => {
+  // const { id } = useParams();
   const [inmateData, setInmateData] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+
   useEffect(() => {
     const fetchInmateDetails = async () => {
       try {
         const response = await axiosInstance.get(`/transfer/get-transfer/${id}`);
-       
         setInmateData(response.data.transfer);
         setLoading(false);
       } catch (error) {
@@ -27,28 +27,27 @@ const WoredaView = () => {
     fetchInmateDetails();
   }, [id]);
 
+  const handleAddToInmate = () => {
+    const initialData = {
+      fullName: `${inmateData.firstName} ${inmateData.middleName} ${inmateData.lastName}`,
+      age: inmateData.age,
+      birthDate: inmateData.dateOfBirth,
+      gender: inmateData.gender,
+      releaseReason: inmateData.reason
+      // Add other fields as needed
+    };
+    navigate("/securityStaff-dashboard/add-inmate", { state: { initialData } });
+  };
+
   if (loading) {
-    return <div>Loading...</div>; 
+    return <div>Loading...</div>;
   }
 
   if (!inmateData) {
     return <div>No data available</div>;
   }
-
-  const deleteTransfer = async () => {
-    if (window.confirm("Are you sure you want to delete this inmate?")) {
-      try {
-        await axiosInstance.delete(`/transfer/delete-transfer/${id}`);
-        toast.success("Inmate deleted successfully!");
-        navigate("/woreda-dashboard/inmates");
-      } catch (error) {
-        toast.error(error.response?.data?.error || "Error deleting Transfer");
-      }
-    }
-  };
   return (
     <div className="max-w-5xl mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
-       <TiArrowBack size={50} onClick={()=>navigate(-1)} className="cursor-pointer"/>
       <h2 className="text-3xl font-bold mb-6 text-center">Inmate from Woreda Details</h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
     
@@ -103,7 +102,7 @@ const WoredaView = () => {
         </div>
       <div className="mt-6">
         <button
-          onClick={() => navigate(`/inmates/update/${id}`)} 
+          onClick={handleAddToInmate} 
           className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded mr-4"
         >
          Add to Inmate
