@@ -1,13 +1,15 @@
-// InmateHelper.jsx
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import AddModal from "@/components/Modals/AddModal";
+import UpdateInmate from "@/components/Inmates/UpdateInmate";
+import ViewInmate from "@/components/Inmates/ViewInmate";
+import { useState } from "react";
 
 export const columns = [
   {
     name: "S No",
     selector: (row) => row.sno,
     width: "60px",
-    
   },
   {
     name: "Inmate Name",
@@ -37,57 +39,33 @@ export const columns = [
   },
 ];
 
-export const InmateButtons = ({ _id, onDelete }) => {
-  const navigate = useNavigate();
-
-  const handleDelete = async (id) => {
-    const confirmDelete = window.confirm(
-      "Are you sure you want to delete this inmate record?"
-    );
-    if (!confirmDelete) return;
-
-    try {
-      const response = await axios.delete(
-        `https://localhost:5000/api/inmate/${id}`, // Updated API endpoint for inmate
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-
-      if (response.data.success) {
-        alert("Inmate record deleted successfully.");
-        onDelete();
-      } else {
-        alert("Failed to delete the inmate record.");
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      alert(error.response?.data?.error || "Error deleting the inmate record.");
-    }
-  };
-
+export const InmateButtons = ({ _id }) => {
+  const [view, setView] = useState(false);
+  const [edit, setEdit] = useState(false);
   return (
     <div className="flex space-x-3 text-white text-center">
+      {/* View Button */}
       <button
         className="px-3 py-1 bg-green-600 rounded hover:bg-green-700"
-        onClick={() => navigate(`/securityStaff-dashboard/view-inmate/${_id}`)}
+        onClick={() => setView(true)}
       >
         View
       </button>
+      <AddModal open={view} setOpen={setView}>
+        <ViewInmate id={_id} />
+      </AddModal>
+
+      {/* Edit Button */}
       <button
         className="px-3 py-1 bg-blue-600 rounded hover:bg-blue-700"
-        onClick={() => navigate(`/securityStaff-dashboard/update-inmate/${_id}`)}
+        onClick={() => setEdit(true)}
       >
         Edit
       </button>
-      <button
-        className="px-3 py-1 bg-red-600 rounded hover:bg-red-700"
-        onClick={() => handleDelete(_id)}
-      >
-        Delete
-      </button>
+      <AddModal open={edit} setOpen={setEdit}>
+        <UpdateInmate setOpen={setEdit} id={_id} />
+      </AddModal>
+
     </div>
   );
 };

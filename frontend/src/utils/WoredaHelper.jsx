@@ -1,5 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import AddModal from "@/components/Modals/AddModal";
+import WoredaView from "@/components/SecurityStaff/WoredaView";
+import { useState } from "react";
 
 export const columns = [
   {
@@ -42,7 +45,7 @@ export const columns = [
 
 export const TransferButtons = ({ _id, onDelete }) => {
   const navigate = useNavigate();
-
+  const [view,setView]=useState(false);
   const handleDelete = async (id) => {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this prison record?"
@@ -76,10 +79,13 @@ export const TransferButtons = ({ _id, onDelete }) => {
      
       <button
         className="px-3 py-1 bg-green-600 rounded hover:bg-red-700"
-        onClick={() => navigate(`/securityStaff-dashboard/woreda-view/${_id}`)}
+        onClick={() => setView(true)}
       >
         View
       </button>
+      <AddModal open={view} setOpen={setView}>
+        <WoredaView id={_id} />
+      </AddModal>
       {/* <button
         className="px-3 py-1 bg-blue-600 rounded hover:bg-blue-700"
         onClick={() => navigate(`/woreda-dashboard/edit/${_id}`)}
