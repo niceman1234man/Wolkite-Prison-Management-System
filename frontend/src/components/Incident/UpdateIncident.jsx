@@ -45,6 +45,7 @@ const UpdateIncident = ({setEdit,id}) => {
       );
       if (response.data) {
         toast.success("Incident updated successfully!");
+        setEdit(false)
         navigate("/policeOfficer-dashboard/incident");
       }
     } catch (error) {
@@ -54,12 +55,7 @@ const UpdateIncident = ({setEdit,id}) => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
-      <TiArrowBack
-        size={50}
-        onClick={() => navigate(-1)}
-        className="cursor-pointer"
-      />
+    <div className="w-full mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
       <h2 className="text-2xl font-bold mb-6">Update Incident</h2>
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
