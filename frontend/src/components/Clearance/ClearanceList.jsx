@@ -6,8 +6,11 @@ import { useSelector } from "react-redux";
 import { FaArrowLeft } from "react-icons/fa";
 import InmateClearance from "./InmateClearance";
 import AddModal from "../Modals/AddModal";
+import ViewClearance from "./ViewClearance";
+import UpdateClearance from "./UpdateClearance";
 const ClearanceButtons = ({ _id, onDelete }) => {
- 
+ const [edit,setEdit]=useState(false)
+ const [view,setView]=useState(false)
   const handleDelete = async () => {
     if (window.confirm("Are you sure you want to delete this clearance?")) {
       try {
@@ -24,8 +27,15 @@ const ClearanceButtons = ({ _id, onDelete }) => {
 
   return (
     <div className="flex gap-2">
-      <Link to={`/securityStaff-dashboard/edit-clearance/${_id}`} className="text-blue-500 hover:underline">Edit</Link>
-      <button onClick={handleDelete} className="text-red-500 hover:underline">Delete</button>
+      <button  className="text-blue-500 hover:underline" onClick={()=>setEdit(true)}>Edit</button>
+      <AddModal open={edit} setOpen={setEdit}>
+        <UpdateClearance setOpen={setEdit} id={_id} />
+      </AddModal>
+
+      <button onClick={()=>setView(true)} className="text-green-500 hover:underline" >View</button>
+      <AddModal open={view} setOpen={setView}>
+        <ViewClearance id={_id} />
+      </AddModal>
     </div>
   );
 };

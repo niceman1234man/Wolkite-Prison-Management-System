@@ -3,8 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import axiosInstance from "../../utils/axiosInstance";
 import { TiArrowBack } from "react-icons/ti";
 
-const UpdateClearance = () => {
-  const { id } = useParams();
+const UpdateClearance = ({setOpen,id}) => {
+  // const { id } = useParams();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -31,7 +31,7 @@ const UpdateClearance = () => {
   useEffect(() => {
     const fetchInmateDetails = async () => {
       try {
-        const response = await axiosInstance.get(`/clearance/get-clearance/${id}`);
+        const response = await axiosInstance.get(`/clearance/getClearance/${id}`);
         if (response.data) {
             const clearance=response.data.clearance;
           setFormData({
@@ -75,6 +75,7 @@ const UpdateClearance = () => {
       });
       if (response.data) {
         alert("Clearance Updated successfully.");
+        setOpen(false)
         setFormData({
           date: new Date().toISOString().substring(0, 10),
           reason: "",
@@ -96,7 +97,6 @@ const UpdateClearance = () => {
 
   return (
     <div className="max-w-3xl mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
-      <TiArrowBack size={50} onClick={() => navigate(-1)} className="cursor-pointer" />
       <h2 className="text-2xl font-bold mb-6 text-center">update Inmate Clearance</h2>
       {errorMessage && <div className="text-red-600 mb-4">{errorMessage}</div>}
       <form onSubmit={handleSubmit}>

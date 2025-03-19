@@ -3,11 +3,12 @@ import { useNavigate, useParams } from "react-router-dom";
 import axiosInstance from "../../utils/axiosInstance";
 import { TiArrowBack } from "react-icons/ti";
 import { toast } from 'react-toastify'; 
+import ConfirmModal from "../Modals/ConfirmModal";
 
-function ViewClearance() {
-    const { id } = useParams();
+function ViewClearance({id}) {
+    // const { id } = useParams();
     const navigate = useNavigate();
-  
+ 
     const [formData, setFormData] = useState({
       date: new Date().toISOString().substring(0, 10),
       reason: "",
@@ -15,11 +16,12 @@ function ViewClearance() {
       inmate: "", 
       sign: "",
     });
-
+  const [openDelete,setOpenDelete]=useState(false)
     useEffect(() => {
         const fetchInmateDetails = async () => {
           try {
-            const response = await axiosInstance.get(`/clearance/get-clearance/${id}`);
+            const response = await axiosInstance.get(`/clearance/getClearance/${id}`);
+           
             if (response.data) {
                 const clearance=response.data.clearance;
               setFormData({
@@ -43,13 +45,12 @@ function ViewClearance() {
 
       const deleteClearance = async () => {
         try {
-          const confirm = window.confirm("Are you sure you want to delete this Clearance ?");
-          if (confirm) {
+          
             const deletedClearance = await axiosInstance.delete(`/clearance/delete-clearance/${id}`);
             if (deletedClearance) {
               toast.success("clearance deleted successfully!");
               navigate("/securityStaff-dashboard/clearance");  // Ensure you redirect to the correct page
-            }
+            
           }
         } catch (error) {
           setError(error.response?.data?.error || "Error deleting Instruction");
@@ -57,7 +58,6 @@ function ViewClearance() {
       };
   return (
     <div className="max-w-3xl mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
-         <TiArrowBack size={50} onClick={() => navigate(-1)} className="cursor-pointer" />
          <h2 className="text-2xl font-bold mb-6 text-center">Clearance Details</h2>
    
          {formData ? (
@@ -99,10 +99,16 @@ function ViewClearance() {
              
                <button
                  className="bg-red-600 text-white py-2 px-3 rounded font-semibold w-[70px]"
-                 onClick={deleteClearance}
+                 onClick={()=>setOpenDelete(true)}
                >
                  Delete
                </button>
+               <ConfirmModal
+                 open={openDelete}
+                 setOpen={setOpenDelete}
+                 onDelete={deleteClearance}
+                 message={`Do you want to delete this user Clearance? This Action is Undone.`}
+               />
              </div>
            </>
          ) : (
