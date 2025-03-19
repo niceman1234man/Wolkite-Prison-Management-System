@@ -5,7 +5,8 @@ import ConfirmModal from "@/components/Modals/ConfirmModal";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axiosInstance from "./axiosInstance";
-
+import AddModal from "@/components/Modals/AddModal";
+import EditPrison from "@/components/Prisons/EditPrison";
 export const columns = [
   {
     name: "S No",
@@ -36,6 +37,7 @@ export const columns = [
 ];
 
 export const PrisonButtons = ({ _id, onDelete }) => {
+  const [edit,setEdit]=useState(false);
   const [openDelete, setOpenDelete] = useState(false);
   const navigate = useNavigate();
 
@@ -67,10 +69,13 @@ export const PrisonButtons = ({ _id, onDelete }) => {
     <div className="flex space-x-3 text-white">
       <button
         className="px-3 py-1 bg-blue-600 rounded hover:bg-blue-700"
-        onClick={() => navigate(`/inspector-dashboard/edit/${_id}`)}
+        onClick={() => setEdit(true)}
       >
         Edit Prison
       </button>
+      <AddModal open={edit} setOpen={setEdit}>
+        <EditPrison setOpen={setEdit} id={_id} />
+      </AddModal>
       <button
         className="px-3 py-1 bg-red-600 rounded hover:bg-red-700"
         onClick={() => setOpenDelete(true)}

@@ -1,5 +1,9 @@
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import AddModal from "@/components/Modals/AddModal";
+import ViewUser from "@/components/Accounts/ViewUser";
+import { useState } from "react";
+import EditUser from "@/components/Accounts/EditUser";
 // import { useAuth } from "../context/authContext";
 
 export const columns = [
@@ -65,23 +69,30 @@ export const columns = [
 
 
 export const UserButtons = ({ _id }) => {
-  const navigate = useNavigate();
+    const [edit,setEdit]=useState(false);
+    const [view,setView]=useState(false);
 //   const { user } = useAuth(); // Get logged-in user details
 
   return (
     <div className="flex space-x-3 text-white">
       <button
         className="px-3 py-1 bg-teal-600 rounded"
-        onClick={() => navigate(`/admin-dashboard/users/${_id}`)}
+        onClick={() => setView(true)}
       >
         View
       </button>
+      <AddModal open={view} setOpen={setView}>
+        <ViewUser id={_id} />
+      </AddModal>
       <button
         className="px-3 py-1 bg-blue-600 rounded"
-        onClick={() => navigate(`/admin-dashboard/edit/${_id}`)}
+        onClick={() => setEdit(true)}
       >
         Edit
       </button>
+      <AddModal open={edit} setOpen={setEdit}>
+        <EditUser setOpen={setEdit} id={_id} />
+      </AddModal>
     </div>
   );
 };

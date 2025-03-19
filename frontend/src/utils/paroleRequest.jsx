@@ -1,7 +1,9 @@
 // InmateHelper.jsx
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-
+import AddModal from "@/components/Modals/AddModal";
+import ViewParole from "@/components/CourtDashboard/CourtInstructions/ViewParole";
+import { useState } from "react";
 export const columns = [
   {
     name: "S No",
@@ -39,6 +41,7 @@ export const columns = [
 
 export const ParoleRequestButtons = ({ _id }) => {
   const navigate = useNavigate();
+  const [view,setView]=useState(false);
 
 //   const handleDelete = async (id) => {
 //     const confirmDelete = window.confirm(
@@ -72,10 +75,13 @@ export const ParoleRequestButtons = ({ _id }) => {
     <div className="flex space-x-3 text-white">
       <button
         className="px-3 py-1 bg-green-600 rounded hover:bg-green-700"
-        onClick={() => navigate(`/court-dashboard/view-request/${_id}`)}
+        onClick={() => setView(true)}
       >
         View
       </button>
+      <AddModal open={view} setOpen={setView}>
+        <ViewParole id={_id} />
+      </AddModal>
       {/* <button
         className="px-3 py-1 bg-green-600 rounded hover:bg-green-700"
         onClick={() => navigate(`/policeOfficer-dashboard/status/${_id}`)}

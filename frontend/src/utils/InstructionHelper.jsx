@@ -1,3 +1,7 @@
+import EditInstruction from "@/components/CourtDashboard/CourtInstructions/EditInstruction";
+import ViewInstruction from "@/components/CourtDashboard/CourtInstructions/ViewInstruction";
+import AddModal from "@/components/Modals/AddModal";
+import { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 // import { useAuth } from "../context/authContext";
@@ -63,83 +67,35 @@ export const columns = [
   },
 ];
 
-export const fetchDepartment = async () => {
-  try {
-    const response = await axios.get(
-      "https://employee-b-end.vercel.app/api/department",
-      {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      }
-    );
 
-    if (response.data.success) {
-      return response.data.departments;
-    } else {
-      alert("Failed to fetch departments");
-      return [];
-    }
-  } catch (error) {
-    console.error("Error fetching departments:", error);
-    alert(
-      error.response?.data?.error ||
-        "An error occurred while fetching department details"
-    );
-    return [];
-  }
-};
 
-export const getEmployees = async (id) => {
-  console.log("Fetching employees for department ID:", id);
-  if (!id || id.length !== 24) {
-    console.error("Invalid department ID, request aborted:", id);
-    return [];
-  }
 
-  try {
-    const response = await axios.get(
-      `https://employee-b-end.vercel.app/api/employee/department/${id}`,
-      {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      }
-    );
-
-    if (response.data.success) {
-      return response.data.employees;
-    } else {
-      alert("Failed to fetch employees");
-      return [];
-    }
-  } catch (error) {
-    console.error("Error fetching employees:", error);
-    alert(
-      error.response?.data?.error ||
-        "An error occurred while fetching employee details"
-    );
-    return [];
-  }
-};
 export const UserButtons = ({ _id }) => {
   const navigate = useNavigate();
+  const [view,setView]=useState(false);
+  const [edit,setEdit]=useState(false);
 //   const { user } = useAuth(); // Get logged-in user details
 
   return (
     <div className="flex space-x-3 text-white">
       <button
         className="px-3 py-1 bg-teal-600 rounded"
-        onClick={() => navigate(`/court-dashboard/view/${_id}`)}
+        onClick={() => setView(true)}
       >
         View
       </button>
+      <AddModal open={view} setOpen={setView}>
+        <ViewInstruction id={_id} />
+      </AddModal>
       <button
         className="px-3 py-1 bg-blue-600 rounded"
-        onClick={() => navigate(`/court-dashboard/edit/${_id}`)}
+        onClick={() => setEdit(true)}
       >
         Edit
       </button>
+      <AddModal open={edit} setOpen={setEdit}>
+        <EditInstruction setOpen={setEdit} id={_id} />
+      </AddModal>
     </div>
   );
 };
