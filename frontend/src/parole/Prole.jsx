@@ -70,7 +70,7 @@ const Prole = () => {
 
   return (
     <div
-      className={`p-6 mt-12 transition-all duration-300 ease-in-out ${
+      className={`p-6 mt-12 transition-all duration-300 ease-in-out ml-3 ${
         isCollapsed ? "pl-16" : "pl-64" // Adjust padding based on sidebar state
       }`}
     >

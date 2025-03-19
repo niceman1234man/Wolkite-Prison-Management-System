@@ -6,6 +6,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { motion, AnimatePresence } from "framer-motion";
 import "@fontsource/poppins";
 import "@fontsource/roboto";
+import Login from "../components/auth/Login"; // Import the Login component
 
 import backgroundImage from "../assets/gurageZone.png";
 import ethiopiaFlag from "../assets/centralEthiopiaFlag.png";
@@ -19,6 +20,7 @@ function Welcome() {
   const [direction, setDirection] = useState(1);
   const [sideImages, setSideImages] = useState([]);
   const [time, setTime] = useState(new Date());
+  const [isLoginOpen, setIsLoginOpen] = useState(false); // State for login modal
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -93,21 +95,24 @@ function Welcome() {
             <Link to="/about" className="hover:underline text-xl">About</Link>
             <Link to="/help" className="hover:underline text-xl">Help</Link>
             <Link to="/contact" className="hover:underline text-xl">Contact Us</Link>
-            <Link to="/login" className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded">Login</Link>
+            <button
+              onClick={() => setIsLoginOpen(true)} // Open login modal
+              className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
+            >
+              Login
+            </button>
           </div>
         </header>
+
         {/* Static Image on the Left Side */}
-
         <img
-  src={guragePrison} // Replace with your actual image path
-  alt="Prison"
-  className="absolute left-0 top-12  w-1/3 object-cover shadow-md border-r-4 border-gray-600"
-/>
-
+          src={guragePrison}
+          alt="Prison"
+          className="absolute left-0 top-12 w-1/3 object-cover shadow-md border-r-4 border-gray-600"
+        />
 
         {/* Main Content */}
         <main className="flex-grow flex items-center justify-center text-center p-10 z-10 relative">
-
           {/* Left Side Image */}
           {sideImages[0] && (
             <img
@@ -168,15 +173,32 @@ function Welcome() {
               <div className="absolute w-2 h-12 bg-white top-10 left-[48%] origin-bottom rotate-[var(--hourDeg)]" style={{ "--hourDeg": `${hoursDeg}deg` }}></div>
               <div className="absolute w-1.5 h-16 bg-blue-400 top-6 left-[49%] origin-bottom rotate-[var(--minuteDeg)]" style={{ "--minuteDeg": `${minutesDeg}deg` }}></div>
               <div className="absolute w-1 h-16 bg-red-500 top-2 left-[50%] origin-bottom rotate-[var(--secondDeg)]" style={{ "--secondDeg": `${secondsDeg}deg` }}></div>
-       
             </div>
-  
           </div>
         </main>
-        <footer className="bg-teal-800 text-white text-center py-4 ">
-        <p className="text-sm">&copy; {new Date().getFullYear()} Wolkite Prison Management. All rights reserved.</p>
-      </footer>
+
+        {/* Footer */}
+        <footer className="bg-teal-800 text-white text-center py-4">
+          <p className="text-sm">&copy; {new Date().getFullYear()} Wolkite Prison Management. All rights reserved.</p>
+        </footer>
       </div>
+
+      {/* Login Popup */}
+      {isLoginOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white w-full max-w-lg rounded-lg shadow-xl p-8 relative">
+            <button
+              onClick={() => setIsLoginOpen(false)} // Close login modal
+              className="absolute top-4 right-4 text-gray-600 hover:text-gray-900"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <Login /> {/* Render the Login component */}
+          </div>
+        </div>
+      )}
 
       <ToastContainer />
     </div>
