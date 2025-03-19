@@ -8,8 +8,30 @@ const UpdateIncident = ({setEdit,id}) => {
   // const { id } = useParams(); 
   const [formData, setFormData] = useState({});
   const navigate = useNavigate();
-
+const [inmates, setInmates] = useState([]); // State for inmates data
+  const [loading, setLoading] = useState(false); // Loading state
   useEffect(() => {
+    const fetchInmates = async () => {
+      setLoading(true);
+      try {
+        const response = await axiosInstance.get("/inmates/allInmates");
+        if (response.data?.inmates) {
+          setInmates(response.data.inmates); // Set inmates data
+        } else {
+          console.error("Invalid API response:", response);
+          toast.error("Invalid API response. Please try again.");
+        }
+      } catch (error) {
+        console.error("Error fetching inmates:", error);
+        toast.error(
+          error.response?.data?.error || "Failed to fetch inmate data."
+        );
+      } finally {
+        setLoading(false); // Reset loading state
+      }
+    };
+
+  ;
     const fetchIncident = async () => {
       try {
         const response = await axiosInstance.get(
@@ -26,6 +48,7 @@ const UpdateIncident = ({setEdit,id}) => {
         toast.error("Failed to load incident details");
       }
     };
+    fetchInmates();
     fetchIncident();
   }, [id]);
 
@@ -91,14 +114,24 @@ const UpdateIncident = ({setEdit,id}) => {
             <label className="block text-sm font-medium text-gray-700">
               Inmate
             </label>
-            <input
-              type="text"
+            <select
               name="inmate"
               value={formData.inmate || ""}
               onChange={handleChange}
               className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
               required
-            />
+            >
+              <option value="">Select Inmate</option>
+              {loading ? (
+                <option disabled>Loading inmates...</option>
+              ) : (
+                inmates.map((inmate) => (
+                  <option key={inmate._id} value={inmate.fullName}>
+                    {inmate.fullName}
+                  </option>
+                ))
+              )}
+            </select>
           </div>
           {/* Date of Incident */}
           <div>

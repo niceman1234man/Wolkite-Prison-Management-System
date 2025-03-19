@@ -1,15 +1,43 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axiosInstance from "../../utils/axiosInstance";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify"; // Import toast
 import "react-toastify/dist/ReactToastify.css"; // Import toast CSS
 import { TiArrowBack } from "react-icons/ti";
 
-const Add = ({setOpen}) => {
+const Add = ({ setOpen }) => {
   const [formData, setFormData] = useState({});
   const [attachment, setAttachment] = useState(null); // Changed to null
+  const [inmates, setInmates] = useState([]); // State for inmates data
+  const [loading, setLoading] = useState(false); // Loading state
   const navigate = useNavigate(); // Initialize navigate hook
 
+  // Fetch inmates from the backend
+  useEffect(() => {
+    const fetchInmates = async () => {
+      setLoading(true);
+      try {
+        const response = await axiosInstance.get("/inmates/allInmates");
+        if (response.data?.inmates) {
+          setInmates(response.data.inmates); // Set inmates data
+        } else {
+          console.error("Invalid API response:", response);
+          toast.error("Invalid API response. Please try again.");
+        }
+      } catch (error) {
+        console.error("Error fetching inmates:", error);
+        toast.error(
+          error.response?.data?.error || "Failed to fetch inmate data."
+        );
+      } finally {
+        setLoading(false); // Reset loading state
+      }
+    };
+
+    fetchInmates();
+  }, []);
+
+  // Handle form input changes
   const handleChange = (e) => {
     setFormData((prevData) => ({
       ...prevData,
@@ -17,6 +45,7 @@ const Add = ({setOpen}) => {
     }));
   };
 
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -46,7 +75,7 @@ const Add = ({setOpen}) => {
         toast.success("New Incident Registered Successfully!");
         setFormData({}); // Reset form after successful submission
         setAttachment(null); // Clear the attachment state
-        setOpen(false)
+        setOpen(false); // Close the modal
         navigate("/policeOfficer-dashboard/incident"); // Redirect after adding
       }
     } catch (error) {
@@ -64,7 +93,6 @@ const Add = ({setOpen}) => {
 
   return (
     <div className="w-full mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
-      
       <h2 className="text-2xl font-bold mb-6">Add New Incident</h2>
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -103,14 +131,23 @@ const Add = ({setOpen}) => {
             <label className="block text-sm font-medium text-gray-700">
               Inmate
             </label>
-            <input
-              type="text"
+            <select
               name="inmate"
-              placeholder="Inmate Name"
               onChange={handleChange}
               className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
               required
-            />
+            >
+              <option value="">Select Inmate</option>
+              {loading ? (
+                <option disabled>Loading inmates...</option>
+              ) : (
+                inmates.map((inmate) => (
+                  <option key={inmate._id} value={inmate.fullName}>
+                    {inmate.fullName}
+                  </option>
+                ))
+              )}
+            </select>
           </div>
 
           {/* Date of Incident */}
