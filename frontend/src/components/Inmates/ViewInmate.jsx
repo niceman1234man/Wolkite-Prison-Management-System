@@ -6,8 +6,8 @@ import 'react-toastify/dist/ReactToastify.css';
 import { TiArrowBack } from "react-icons/ti";
 import ConfirmModal from "../Modals/ConfirmModal";
 
-const ViewInmate = () => {
-  const { id } = useParams();
+const ViewInmate = ({id}) => {
+  // const { id } = useParams();
   const [inmateData, setInmateData] = useState(null);
   const [loading, setLoading] = useState(true);
    const [openDelete, setOpenDelete] = useState(false);
@@ -70,7 +70,6 @@ const ViewInmate = () => {
 
   return (
     <div className="max-w-5xl mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
-       <TiArrowBack size={50} onClick={()=>navigate(-1)} className="cursor-pointer"/>
       <h2 className="text-3xl font-bold mb-6 text-center">Inmate Details</h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div>
@@ -230,12 +229,7 @@ const ViewInmate = () => {
       </div>
 
       <div className="mt-6">
-        <button
-        onClick={() => navigate(`/securityStaff-dashboard/update-inmate/${id}`)}
-        className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded mr-4"
-        >
-          Edit Inmate
-        </button>
+       
         <button
         className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded mr-4"
         onClick={() => setOpenDelete(true)}

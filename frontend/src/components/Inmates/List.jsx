@@ -6,10 +6,14 @@ import { columns, InmateButtons } from "../../utils/InmateHelper";
 import axiosInstance from "../../utils/axiosInstance";
 import { useSelector, useDispatch } from "react-redux";
 import { setInmate } from "../../redux/prisonSlice.js";
+import AddInmate from "./Add";
+import AddModal from "../Modals/AddModal";
 
 const InmatesList = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [open,setOpen]=useState(false);
+  
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
   const [inmates, setInmates] = useState([]);
   const [filteredInmates, setFilteredInmates] = useState([]);
@@ -88,12 +92,15 @@ const InmatesList = () => {
           className="px-4 py-2 border border-gray-300 rounded-lg shadow-sm w-full md:w-1/3 focus:outline-none focus:ring-2 focus:ring-teal-500"
           onChange={handleSearch}
         />
-        <Link
-          to="/securityStaff-dashboard/add-inmate"
+        <button
+          onClick={()=>setOpen(true)}
           className="bg-teal-600 hover:bg-teal-700 text-white font-semibold px-5 py-2 rounded-lg shadow-md transition duration-300 text-center w-full md:w-auto"
         >
           + Add New Inmate
-        </Link>
+        </button>
+        <AddModal open={open} setOpen={setOpen}>
+           <AddInmate setOpen={setOpen} />
+          </AddModal>
       </div>
 
       {/* Inmate List Table */}

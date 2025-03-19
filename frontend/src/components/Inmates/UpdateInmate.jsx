@@ -5,9 +5,9 @@ import { toast } from 'react-toastify'; // Import toast
 import 'react-toastify/dist/ReactToastify.css'; // Import toast CS
 import { TiArrowBack } from "react-icons/ti";
 
-const UpdateInmate = () => {
+const UpdateInmate = ({setOpen,id}) => {
   const navigate = useNavigate();
-  const { id } = useParams(); // Assuming you're passing the inmate ID in the URL params
+  // const { id } = useParams(); // Assuming you're passing the inmate ID in the URL params
   console.log(id)
   const [formData, setFormData] = useState({
     fullName: "",
@@ -106,6 +106,7 @@ const UpdateInmate = () => {
 
       if (response.data) {
         navigate("/securityStaff-dashboard/inmates");
+        setOpen(false)
         toast.success("Inmate updated successfully!");
       } else {
         alert("Failed to update inmate.");
@@ -120,7 +121,7 @@ const UpdateInmate = () => {
   };
   return (
     <div className="max-w-5xl mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
-       <TiArrowBack size={50} onClick={()=>navigate(-1)} className="cursor-pointer"/>
+
       <h2 className="text-3xl font-bold mb-6 text-center">Update Inmate</h2>
       <form onSubmit={handleSubmit}>
         {/* Personal Information */}

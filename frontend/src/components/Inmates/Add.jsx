@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate,useLocation } from "react-router-dom";
 import axiosInstance from "../../utils/axiosInstance";
 import { toast } from 'react-toastify'; // Import toast
 import 'react-toastify/dist/ReactToastify.css'; // Import toast CS
@@ -7,52 +7,53 @@ import { TiArrowBack } from "react-icons/ti";
 
 const AddInmate = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const initialData = location.state?.initialData || {};
+  
   const [formData, setFormData] = useState({
-    fullName: "",
-    birthDate: "",
-    age: "",
-    motherName: "",
-    gender: "",
-    birthRegion: "",
-    birthZone: "",
-    birthWereda: "",
-    birthKebele: "",
-    currentRegion: "",
-    currentZone: "",
-    currentWereda: "",
-    currentKebele: "",
-    degreeLevel: "",
-    work: "",
-    nationality: "",
-    religion: "",
-    maritalStatus: "",
-    height: "",
-    hairType: "",
-    face: "",
-    foreHead: "",
-    nose: "",
-    eyeColor: "",
-    teeth: "",
-    lip: "",
-    ear: "",
-    specialSymbol: "",
-    contactName: "",
-    contactRegion: "",
-    contactZone: "",
-    contactWereda: "",
-    contactKebele: "",
-    phoneNumber: "",
-    registrarWorkerName: "",
-    caseType: "",
-    paroleDate: "",
-    releaseReason: "",
-    releasedDate: ""
+    fullName: initialData.fullName || "",
+    birthDate: initialData.birthDate || "",
+    age: initialData.age || "",
+    motherName: initialData.motherName || "",
+    gender: initialData.gender || "",
+    birthRegion: initialData.birthRegion || "",
+    birthZone: initialData.birthZone || "",
+    birthWereda: initialData.birthWereda || "",
+    birthKebele: initialData.birthKebele || "",
+    currentRegion: initialData.currentRegion || "",
+    currentZone: initialData.currentZone || "",
+    currentWereda: initialData.currentWereda || "",
+    currentKebele: initialData.currentKebele || "",
+    degreeLevel: initialData.degreeLevel || "",
+    work: initialData.work || "",
+    nationality: initialData.nationality || "",
+    religion: initialData.religion || "",
+    maritalStatus: initialData.maritalStatus || "",
+    height: initialData.height || "",
+    hairType: initialData.hairType || "",
+    face: initialData.face || "",
+    foreHead: initialData.foreHead || "",
+    nose: initialData.nose || "",
+    eyeColor: initialData.eyeColor || "",
+    teeth: initialData.teeth || "",
+    lip: initialData.lip || "",
+    ear: initialData.ear || "",
+    specialSymbol: initialData.specialSymbol || "",
+    contactName: initialData.contactName || "",
+    contactRegion: initialData.contactRegion || "",
+    contactZone: initialData.contactZone || "",
+    contactWereda: initialData.contactWereda || "",
+    contactKebele: initialData.contactKebele || "",
+    phoneNumber: initialData.phoneNumber || "",
+    registrarWorkerName: initialData.registrarWorkerName || "",
+    caseType: initialData.caseType || "",
+    paroleDate: initialData.paroleDate || "",
+    releaseReason: initialData.releaseReason || "",
+    releasedDate: initialData.releasedDate || ""
   });
-
-  // Separate state for file uploads
+console.log(formData.fullName)
   const [signature, setSignature] = useState(null);
 
-  // Handle changes for both text and file inputs.
   const handleChange = (e) => {
     const { name, value, files } = e.target;
     if (name === "signature") {
@@ -65,10 +66,8 @@ const AddInmate = () => {
     }
   };
 
-  // Handle form submission with multipart/form-data
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log(formData)
     const data = new FormData();
     Object.keys(formData).forEach((key) => {
       data.append(key, formData[key]);
@@ -78,29 +77,21 @@ const AddInmate = () => {
     }
 
     try {
-      const response = await axiosInstance.post(
-        "/inmates/new-inmate",
-        data,
-      );
-
+      const response = await axiosInstance.post("/inmates/new-inmate", data);
       if (response.data) {
         navigate("/securityStaff-dashboard/inmates");
-        toast.success("Inmate Registred Successfully!");
+        toast.success("Inmate Registered Successfully!");
       } else {
         alert("Failed to add inmate.");
       }
     } catch (error) {
       console.error("Error adding inmate:", error);
-      alert(
-        error.response?.data?.error ||
-          "An error occurred while adding the inmate."
-      );
+      alert(error.response?.data?.error || "An error occurred while adding the inmate.");
     }
   };
-
   return (
     <div className="max-w-5xl mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
-       <TiArrowBack size={50} onClick={()=>navigate(-1)} className="cursor-pointer"/>
+      
       <h2 className="text-3xl font-bold mb-6 text-center">Add New Inmate</h2>
       <form onSubmit={handleSubmit}>
         {/* Personal Information */}
@@ -110,6 +101,7 @@ const AddInmate = () => {
             <input
               type="text"
               name="fullName"
+              value={formData.fullName}
               placeholder="Enter full name"
               onChange={handleChange}
               className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
@@ -121,6 +113,7 @@ const AddInmate = () => {
             <input
               type="date"
               name="birthDate"
+              value={formData.birthDate}
               onChange={handleChange}
               className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
               required
@@ -131,6 +124,7 @@ const AddInmate = () => {
             <input
               type="number"
               name="age"
+              value={formData.age}
               placeholder="Enter age"
               onChange={handleChange}
               className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
@@ -151,6 +145,7 @@ const AddInmate = () => {
             <label className="block text-sm font-medium text-gray-700">Gender</label>
             <select
               name="gender"
+              value={formData.gender}
               onChange={handleChange}
               className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
               required
