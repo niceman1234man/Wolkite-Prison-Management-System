@@ -5,8 +5,8 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { FaArrowLeft } from "react-icons/fa";
 
-const EditPrison = () => {
-  const { id } = useParams();
+const EditPrison = ({setOpen,id}) => {
+  // const { id } = useParams();
   const navigate = useNavigate();
   
   const [prisonData, setPrisonData] = useState({
@@ -51,6 +51,7 @@ const EditPrison = () => {
     try {
       await axiosInstance.put(`/prison/update-prison/${id}`, prisonData);
       toast.success("Prison updated successfully!");
+      setOpen(false);
       navigate("/inspector-dashboard/prisons");
     } catch (error) {
       console.error("Error:", error);
@@ -61,15 +62,10 @@ const EditPrison = () => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto mt-20 bg-white p-8 rounded-md shadow-lg">
+    <div className="w-full mx-auto bg-white p-8 rounded-md shadow-lg">
       {/* Back Button and Title */}
       <div className="flex items-center justify-between mb-6">
-        <button
-          className="flex items-center text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg shadow-md transition duration-300"
-          onClick={() => navigate(-1)}
-        >
-          <FaArrowLeft className="mr-2 text-lg" /> Back
-        </button>
+        
         <h2 className="text-2xl font-bold text-gray-800 text-center flex-1">Update Prison</h2>
         <div className="w-24" />
       </div>

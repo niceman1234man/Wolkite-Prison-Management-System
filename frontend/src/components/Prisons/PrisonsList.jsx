@@ -105,8 +105,8 @@ const PrisonsList = () => {
             Add New Prison
           </button>
            <AddModal open={open} setOpen={setOpen}>
-                    <AddPrison setOpen={setOpen} />
-                  </AddModal>
+            <AddPrison setOpen={setOpen} />
+            </AddModal>
         </div>
         <div className="p-6 mt-32">
           <h2 className="text-2xl font-bold text-gray-800 mb-4">Prison List</h2>
