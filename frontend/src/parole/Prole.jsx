@@ -18,7 +18,7 @@ const Prole = () => {
     setLoadingInmates(true);
     try {
       const response = await axiosInstance.get("/inmates/allInmates");
-      console.log('inmate data', response.data)
+      console.log("inmate data", response.data);
 
       if (response.data && response.data?.inmates) {
         let sno = 1;
@@ -53,11 +53,11 @@ const Prole = () => {
   const handleInmateSearch = (e) => {
     const query = e.target.value.toLowerCase();
     if (!query) {
-      setFilteredInmates(inmates);
+      setFilteredInmates(inmates); // Reset to all inmates if the search query is empty
       return;
     }
     const filtered = inmates.filter((inmate) =>
-      inmate.inmate_name.toLowerCase().includes(query)
+      inmate.inmate_name.toLowerCase().includes(query) // Use `inmate_name` instead of `fullName`
     );
     setFilteredInmates(filtered);
   };
