@@ -1,31 +1,36 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { FaArrowLeft, FaSearch } from "react-icons/fa";
 import DataTable from "react-data-table-component";
+import { columns, ParoleRequestButtons } from "../../../utils/paroleRequest";
 import axiosInstance from "../../../utils/axiosInstance";
-import { columns,ParoleRequestButtons } from "../../../utils/paroleRequest";
+import { useSelector } from "react-redux";
 
 const ParoleRequest = () => {
+  const navigate = useNavigate();
+  const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
   
-  const [inmates, setInmates] = useState([]); // State for inmates data
-  const [filteredInmates, setFilteredInmates] = useState([]); // Filtered inmates data
-  const [loadingInmates, setLoadingInmates] = useState(false);
+  const [inmates, setInmates] = useState([]);
+  const [filteredInmates, setFilteredInmates] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Fetch all inmates from the backend
+  // Fetch inmates from backend
   const fetchInmates = async () => {
-    setLoadingInmates(true);
+    setLoading(true);
     try {
       const response = await axiosInstance.get("/inmates/allInmates");
 
-      if (response.data && response.data?.inmates) {
+      if (response.data && response.data.inmates) {
         let sno = 1;
         const formattedData = response.data.inmates.map((inmate) => ({
           _id: inmate._id,
-          sno: sno++, // Auto-increment serial number
+          sno: sno++,
           inmate_name: inmate.fullName || "N/A",
           age: inmate.age || "N/A",
           gender: inmate.gender || "N/A",
           sentence: inmate.releaseReason || "N/A",
-          action: < ParoleRequestButtons _id={inmate._id} onDelete={fetchInmates} />,
+          action: <ParoleRequestButtons _id={inmate._id} onDelete={fetchInmates} />,
         }));
 
         setInmates(formattedData);
@@ -37,7 +42,7 @@ const ParoleRequest = () => {
       console.error("Error fetching inmates:", error);
       alert(error.response?.data?.error || "Failed to fetch inmate data.");
     } finally {
-      setLoadingInmates(false);
+      setLoading(false);
     }
   };
 
@@ -45,9 +50,10 @@ const ParoleRequest = () => {
     fetchInmates();
   }, []);
 
-  // Search and filter by inmate name
-  const handleInmateSearch = (e) => {
+  // Search filter
+  const handleSearch = (e) => {
     const query = e.target.value.toLowerCase();
+    setSearchQuery(query);
     if (!query) {
       setFilteredInmates(inmates);
       return;
@@ -59,53 +65,63 @@ const ParoleRequest = () => {
   };
 
   return (
-    <div className="p-6 mt-12">
-      {/* Title */}
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold">Manage Parole Applications</h2>
-      </div>
+    <div
+      className={`p-6 mt-24 transition-all duration-300 ${
+        isCollapsed ? "ml-16 w-[calc(100%-4rem)]" : "ml-64 w-[calc(100%-16rem)]"
+      }`}
+    >
+      {/* Back Button */}
+      <div
+          className={`bg-white shadow-md p-4 fixed top-12 z-20 flex justify-between items-center transition-all duration-300 ml-2 ${isCollapsed ? "left-16 w-[calc(100%-5rem)]" : "left-64 w-[calc(100%-17rem)]"}`}
+          style={{ zIndex: 20 }}
+        >
+          <h3 className="text-2xl font-bold text-gray-800 text-center">
+          Manage Parole Applications
+          </h3>
 
-      {/* Parole Search & Filter Controls */}
-      <div className="flex justify-between items-center mb-4">
-        <input
-          type="text"
-          placeholder="Search by inmate name"
-          className="px-4 py-2 border border-gray-300 rounded-md w-1/3"
-          onChange={handleInmateSearch}
-        />
+ 
+          <div className="relative flex items-center w-72 md:w-1/2 lg:w-1/3 ml-auto">
+  <FaSearch className="absolute left-4 text-gray-500" />
+  <input
+    type="text"
+    placeholder="Search by inmate name..."
+    className="px-4 py-2 pl-10 border border-gray-300 rounded-lg shadow-sm w-full focus:outline-none focus:ring-2 focus:ring-teal-500"
+    onChange={handleSearch}
+    value={searchQuery}
+  />
+</div>
 
-        <div className="space-x-3">
-          <button
-            className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700"
-            onClick={() => setFilteredLeaves(leaves)} // Reset to all
-          >
-            All
-          </button>
-          <button
-            className="px-3 py-1 bg-yellow-600 text-white rounded-md hover:bg-yellow-700"
-            onClick={() => filterByButton("Pending")}
-          >
-            Pending
-          </button>
-          <button
-            className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700"
-            onClick={() => filterByButton("Active")}
-          >
-            Active
-          </button>
-          <button
-            className="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700"
-            onClick={() => filterByButton("Revoked")}
-          >
-            Revoked
-          </button>
+        </div>
+      {/* Search & Filters */}
+      <div className="flex flex-col md:flex-row justify-between mt-10 items-center mb-6 gap-4">
+        <div className="flex flex-wrap gap-2">
+          {["All", "Pending", "Active", "Revoked"].map((status) => (
+            <button
+              key={status}
+              className={`px-3 py-1 rounded-md text-white ${
+                status === "All"
+                  ? "bg-gray-600 hover:bg-gray-700"
+                  : status === "Pending"
+                  ? "bg-yellow-600 hover:bg-yellow-700"
+                  : status === "Active"
+                  ? "bg-green-600 hover:bg-green-700"
+                  : "bg-red-600 hover:bg-red-700"
+              }`}
+              onClick={() => setFilteredInmates(status === "All" ? inmates : inmates.filter(inmate => inmate.sentence === status))}
+            >
+              {status}
+            </button>
+          ))}
         </div>
       </div>
-      {/* Inmate List Table */}
-      {loadingInmates ? (
+
+      {/* Data Table */}
+      {loading ? (
         <div className="text-center text-gray-600">Loading inmates...</div>
       ) : (
-        <DataTable columns={columns} data={filteredInmates} pagination />
+        <div className="overflow-x-auto bg-white p-5 rounded-lg shadow-md">
+          <DataTable columns={columns} data={filteredInmates} pagination />
+        </div>
       )}
     </div>
   );

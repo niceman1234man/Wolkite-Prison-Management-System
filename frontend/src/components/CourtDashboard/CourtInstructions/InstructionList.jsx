@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useSelector } from "react-redux";
+import { FaArrowLeft, FaSearch } from "react-icons/fa";
 import DataTable from "react-data-table-component";
 import { columns, UserButtons } from "../../../utils/InstructionHelper";
 import axiosInstance from "../../../utils/axiosInstance";
@@ -10,27 +11,27 @@ const InstructionList = () => {
   const [instructions, setInstructions] = useState([]);
   const [filteredInstructions, setFilteredInstructions] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [add,setAdd]=useState(false);
+  const [add, setAdd] = useState(false);
+  const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
+
   useEffect(() => {
     const fetchInfo = async () => {
       setLoading(true);
       try {
         const response = await axiosInstance.get("/instruction/allInstruction");
-        console.log(response);
         if (response.data && response.data.instructions) {
-          let Uno=1;
-         
-          const data = response.data.instructions.map((instuct, index) => ({
-            U_no:Uno++,
+          let Uno = 1;
+          const data = response.data.instructions.map((instuct) => ({
+            U_no: Uno++,
             _id: instuct._id,
             courtCaseNumber: instuct.courtCaseNumber,
-            prisonName:instuct.prisonName,
+            prisonName: instuct.prisonName,
             judgeName: instuct.judgeName,
             verdict: instuct.verdict,
             instructions: instuct.instructions,
             hearingDate: instuct.hearingDate,
             effectiveDate: instuct.effectiveDate,
-            sendDate:instuct.sendDate ,
+            sendDate: instuct.sendDate,
             action: <UserButtons _id={instuct._id} />,
           }));
 
@@ -41,8 +42,8 @@ const InstructionList = () => {
           setInstructions([]);
         }
       } catch (error) {
-        console.error("Error fetching users:", error);
-        alert(error.response?.data?.error || "Failed to load users.");
+        console.error("Error fetching instructions:", error);
+        alert(error.response?.data?.error || "Failed to load instructions.");
         setInstructions([]);
       } finally {
         setLoading(false);
@@ -57,44 +58,69 @@ const InstructionList = () => {
     const filtered = instructions.filter(
       (instruct) =>
         instruct.courtCaseNumber.toLowerCase().includes(query) ||
-      instruct.prisonName.toLowerCase().includes(query) 
-    
+        instruct.prisonName.toLowerCase().includes(query)
     );
-    setFilteredUsers(filtered);
+    setFilteredInstructions(filtered);
   };
 
   return (
-    <div className="p-6 mt-12">
-      <div className="text-center mb-4">
-        <h3 className="text-2xl font-bold">Manage Instruction</h3>
-      </div>
-
-      <div className="flex justify-between items-center mb-4">
-        <input
-          type="text"
-          onChange={handleFilter}
-          placeholder="Search by first, middle, or last name"
-          className="px-4 py-2 border rounded-md"
-        />
+    <div className="flex-1 relative min-h-screen">
+      {/* Sticky Header */}
+      <div
+        className={`bg-white shadow-md p-4 fixed top-14 z-20 flex flex-wrap items-center justify-between transition-all duration-300 ml-2 gap-2 ${
+          isCollapsed ? "left-16 w-[calc(100%-5rem)]" : "left-64 w-[calc(100%-17rem)]"
+        }`}
+      >
+        {/* Back Button */}
         <button
-          onClick={()=>setAdd(true)}
-          className="px-4 py-2 bg-teal-600 text-white rounded-md"
+          className="flex items-center text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg shadow-md transition duration-300"
+          onClick={() => window.history.back()}
         >
-          Add New Instruction
+          <FaArrowLeft className="mr-2 text-lg" /> Back
         </button>
+
+        <div className="flex-1" />
+
+        {/* Search Input */}
+        <div className="relative flex items-center w-60 md:w-1/3">
+          <FaSearch className="absolute left-3 text-gray-500" />
+          <input
+            type="text"
+            placeholder="Search by court case number or prison name"
+            className="h-10 px-4 py-2 border border-gray-300 rounded-md w-full pl-10"
+            onChange={handleFilter}
+          />
+        </div>
+
+        {/* Add Button */}
+        <button
+          onClick={() => setAdd(true)}
+          className="h-10 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-md flex items-center justify-center min-w-[150px] md:w-auto"
+        >
+           Add New Instruction
+        </button>
+
         <AddModal open={add} setOpen={setAdd}>
-                <CourtInstructions setOpen={setAdd}  />
-              </AddModal>
+          <CourtInstructions setOpen={setAdd} />
+        </AddModal>
       </div>
 
-      <div className="mt-6 bg-white p-4 rounded shadow-md">
-        <DataTable
-          columns={columns}
-          data={filteredInstructions}
-          pagination
-          progressPending={loading}
-          progressComponent={<p className="text-center">Loading...</p>}
-        />
+      {/* Table Container */}
+      <div
+        className={`p-6 mt-32 transition-all duration-300 ${
+          isCollapsed ? "ml-16 w-[calc(100%-4rem)]" : "ml-64 w-[calc(100%-16rem)]"
+        }`}
+      >
+        {/* Instruction Table */}
+        <div className="mt-6 bg-white p-4 rounded-lg shadow-md overflow-x-auto">
+          <DataTable
+            columns={columns}
+            data={filteredInstructions}
+            pagination
+            progressPending={loading}
+            progressComponent={<p className="text-center">Loading...</p>}
+          />
+        </div>
       </div>
     </div>
   );
