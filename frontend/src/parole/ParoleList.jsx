@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams,useNavigate } from "react-router-dom";
 import axiosInstance from "../utils/axiosInstance"; // Axios utility
 import { useSelector } from "react-redux"; // To access sidebar state
 
@@ -14,6 +14,7 @@ const behaviorRules = [
 
 const InmateBehavior = () => {
   const { inmateId } = useParams(); // Getting inmate ID from URL params
+  const navigate=useNavigate();
   const [inmateDetails, setInmateDetails] = useState(null);  
   const [selectedBehaviors, setSelectedBehaviors] = useState({}); // To track selected behavior scores
   const [paroleScore, setParoleScore] = useState(null); // To track the parole score after submission
@@ -47,6 +48,7 @@ const InmateBehavior = () => {
       setLoadingInmates(false);
     }
   };
+  console.log(inmateDetails)
 
   useEffect(() => {
     if (inmateId) {
@@ -146,11 +148,12 @@ const InmateBehavior = () => {
       // Send behavior logs to the server
       const addBehaviorResponse = await axiosInstance.post(
         `/parole-tracking/add/${inmateId}`, 
-        { behaviorLogs } // Corrected payload structure
+        { fullName:inmateDetails.inmate_name,age:inmateDetails.age,gender:inmateDetails.gender,behaviorLogs } // Corrected payload structure
       );
 
       if (addBehaviorResponse.status === 200) {
         alert("Behavior logged successfully!");
+        navigate("/policeOfficer-dashboard/status/");
       } else {
         alert("Failed to log behavior.");
       }
