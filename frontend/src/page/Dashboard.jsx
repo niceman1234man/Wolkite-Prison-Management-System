@@ -3,6 +3,9 @@ import axiosInstance from "../utils/axiosInstance";
 import { Link } from "react-router-dom";
 import { FaUsers, FaExchangeAlt, FaExclamationCircle } from "react-icons/fa";
 import { useSelector } from "react-redux"; // Import useSelector for sidebar state
+import useNotices from "../hooks/useNotice.jsx";  
+import NoticeButton from "../utils/noticeButtons.jsx"; // 🛠️ Import reusable notice button
+import NoticeModal from "../components/Modals/NoticeModal.jsx"; // 🛠️ Import notice modal
 
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState({
@@ -15,6 +18,9 @@ const Dashboard = () => {
 
   // Get sidebar state from Redux
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
+
+  // 🛠️ Use the custom hook to fetch and manage notices
+  const { notices, isModalOpen, setIsModalOpen, markNoticeAsRead } = useNotices();
 
   useEffect(() => {
     fetchDashboardData();
@@ -65,6 +71,9 @@ const Dashboard = () => {
           }`}
         >
           <h3 className="text-2xl font-bold text-gray-800 text-center">Dashboard Overview</h3>
+
+          {/* 🛠️ Reusable Notice Button */}
+          <NoticeButton notices={notices} onClick={() => setIsModalOpen(true)} />
         </div>
 
         {/* Push content down to prevent overlap */}
@@ -131,6 +140,15 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* 🛠️ Reusable Notice Modal */}
+      <NoticeModal
+        notices={notices}
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSelectNotice={markNoticeAsRead}
+        selectedNotice={null}
+      />
     </div>
   );
 };
