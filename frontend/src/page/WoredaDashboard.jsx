@@ -11,7 +11,7 @@ const WoredaDashboard = () => {
   return (
     <div className="flex">
       <WoredaSidebar />
-      <div className="flex-1 ml-64 justify-center h-screen bg-gray-100">
+      <div className="flex-1 mx-4  justify-center h-screen bg-gray-100">
         <Navbar />
         <Outlet /> 
       </div>

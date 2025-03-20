@@ -89,6 +89,10 @@ import ParoleSend from "./components/SecurityStaff/ParoleSend";
 import WoredaView from "./components/SecurityStaff/WoredaView";
 import CourtView from "./components/SecurityStaff/CourtView";
 import InspectorHomepageSettings from "./page/InspectorHomepageSettings";
+import Dashboard from "./page/Dashboard";
+import PrisonerList from "./components/Woreda/PrisonerList";
+import WoredaReports from './components/Woreda/Reports'
+import WoredaNotifications from './components/Woreda/Notifications'
 function App() {
   return (
     <>
@@ -179,8 +183,15 @@ function App() {
           </Route>
       {/*Woreda Dashboard Routes */}
           <Route path="/woreda-dashboard" element={<WoredaDashboard/>}>
+           <Route index element={<Dashboard />} />   
+           <Route path="transfers" element={<PrisonerList/>}/>
+           <Route path="reports" element={<WoredaReports/>}/>
+           <Route path="notifications" element={<WoredaNotifications/>}/>
+           <Route path="prisoners" element={<PrisonerList/>}/>
+
+
            <Route path="add" element={<InmateTransferForm/>}/>
-           <Route path="inmates" element={<TransferList/>}/>
+          <Route path="inmates" element={<TransferList/>}/>
            <Route path="edit/:id" element={<EditTransfer/>}/>
            <Route path="view/:id" element={<ViewTransfer/>}/>
            <Route path="setting" element={<Setting />} />
