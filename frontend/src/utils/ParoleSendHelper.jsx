@@ -1,6 +1,9 @@
 // InmateHelper.jsx
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
+import AddModal from "@/components/Modals/AddModal";
+import ViewParole from "@/components/SecurityStaff/ViewParole";
+import { useState } from "react";
 
 export const columns = [
   {
@@ -39,7 +42,7 @@ export const columns = [
 
 export const InmateButtons = ({ _id, onDelete }) => {
   const navigate = useNavigate();
-
+ const [view,setView]=useState(false)
   const handleDelete = async (id) => {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this inmate record?"
@@ -72,10 +75,13 @@ export const InmateButtons = ({ _id, onDelete }) => {
     <div className="flex space-x-3 text-white text-center">
       <button
         className="px-3 py-1 bg-green-600 rounded hover:bg-green-700"
-        onClick={() => navigate(`/securityStaff-dashboard/view-inmate/${_id}`)}
+        onClick={() =>setView(true)}
       >
         View
       </button>
+      <AddModal open={view} setOpen={setView}>
+        <ViewParole id={_id}/>
+      </AddModal>
       
     </div>
   );
