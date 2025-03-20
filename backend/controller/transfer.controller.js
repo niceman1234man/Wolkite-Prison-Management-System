@@ -1,4 +1,4 @@
-import {Transfer} from '../model/transfer.model.js'
+import {Ttransfer} from '../model/transfer.model.js'
  
 
 // Create Transfer Request

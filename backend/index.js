@@ -18,6 +18,10 @@ import { instructionRouter } from './router/instruction.router.js';
 import { transferRouter } from './router/transfer.router.js';
 import { MessageRoutes } from './router/hompage.router.js';
 
+import reportRoutes from "./router/reportRouter.js"; // Import report routes
+import prisonerRoutes from "./router/prisonerRouter.js"; // Import prisoner routes
+import transferRoutes from "./router/transferRouter.js"; // Import transfer routes
+
 // Define __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -42,6 +46,10 @@ app.use(cors({
  app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
  app.use("/clearance", clearanceRoutes);
  app.use('/managemessages',MessageRoutes)
+
+ app.use("/api/reports", reportRoutes); // Use report routes
+app.use("/api/prisoners", prisonerRoutes); // Use prisoner routes
+app.use("/api/transfers", transferRoutes); // Use transfer routes
 
  connectDb();
 

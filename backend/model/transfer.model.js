@@ -20,4 +20,4 @@ const transferSchema = new mongoose.Schema({
        
     
 }, { timestamps: true });
-export const Transfer= mongoose.model('Transfer', transferSchema);
+export const Ttransfer= mongoose.model('Ttransfer', transferSchema);
