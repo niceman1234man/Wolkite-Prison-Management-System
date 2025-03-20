@@ -1,4 +1,4 @@
-import { image } from "framer-motion/client";
+// import { image } from "framer-motion/client";
 import { HomepageMessage } from "../model/homepage.model.js";
 
 // Get all messages

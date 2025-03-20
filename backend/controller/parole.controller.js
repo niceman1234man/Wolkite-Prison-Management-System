@@ -21,7 +21,8 @@ import {Inmate} from '../model/inmate.model.js'
 
 export const addBehaviorLog = async (req, res) => {
   try {
-    const { behaviorLogs } = req.body;
+    const {fullName,age,gender, behaviorLogs } = req.body;
+    console.log(fullName,age,gender, behaviorLogs)
     const { inmateId } = req.params;
     // Validate behaviorLogs array
     if (!Array.isArray(behaviorLogs) || behaviorLogs.length === 0) {
@@ -33,7 +34,7 @@ export const addBehaviorLog = async (req, res) => {
 
     // If no existing tracking record, create a new one
     if (!paroleTracking) {
-      paroleTracking = new ParoleTracking({ inmateId, behaviorLogs: [] });
+      paroleTracking = new ParoleTracking({ inmateId,fullName,age,gender, behaviorLogs: [] });
     }
 
     // Update or add new behavior logs
@@ -72,8 +73,9 @@ export const addBehaviorLog = async (req, res) => {
  
 export const getAllParoleRecords = async (req, res) => {
   try {
-    const records = await ParoleTracking.find().populate("inmate", "name age gender");
-    res.status(200).json(records);
+    const records = await ParoleTracking.find();
+    if(!records) return res.json("Parole does not found")
+    res.status(200).json({parole:records});
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -107,7 +109,7 @@ export const getParoleRecordById = async (req, res) => {
       return res.status(404).json({ message: "Parole tracking record not found" });
     }
 
-    res.status(200).json(paroleTracking);
+    res.status(200).json({parole:paroleTracking});
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

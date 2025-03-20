@@ -136,8 +136,8 @@ export const getClearanceById = async (req, res) => {
 // Create a new clearance
 export const createClearance = async (req, res) => {
   try {
-    const { date, inmate, reason, remark, sign } = req.body;
-    const newClearance = new Clearance({ date, inmate, reason, remark, sign });
+    const { date, inmate, reason, remark, sign,registrar } = req.body;
+    const newClearance = new Clearance({ date, inmate, reason, remark, sign,registrar });
     await newClearance.save();
     res.status(201).json({ success: true, message: "Clearance created successfully", newClearance });
   } catch (error) {
