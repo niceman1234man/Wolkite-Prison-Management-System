@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import axiosInstance from "../../utils/axiosInstance";
 import { useNavigate } from "react-router-dom";
 
-export default function InmateTransferForm() {
+export default function InmateTransferForm({setOpen}) {
   const [prisons, setPrisons] = useState([]);
   const [transferData, setTransferData] = useState({
     firstName: "",
@@ -63,6 +63,7 @@ export default function InmateTransferForm() {
       console.log(transferData);
       await axiosInstance.post("/transfer/new-transfer", transferData);
       alert("Transfer request submitted successfully");
+      setOpen(false)
      navigate("/woreda-dashboard/inmates")
     } catch (error) {
       console.error("Error submitting transfer:", error);
@@ -71,7 +72,7 @@ export default function InmateTransferForm() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-md mt-8">
+    <div className="w-full mx-auto p-6 bg-white rounded-lg shadow-md mt-8">
       <h2 className="text-xl font-bold mb-4">Inmate Transfer Request</h2>
       <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
         {/* First Name */}

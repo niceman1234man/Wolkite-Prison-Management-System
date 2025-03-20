@@ -19,19 +19,19 @@ const ParoleSend = () => {
   const fetchInmates = async () => {
     setLoading(true);
     try {
-      const response = await axiosInstance.get("/inmates/allInmates");
+      const response = await axiosInstance.get("/parole-tracking");
 
-      if (response.data && response.data?.inmates) {
-        dispatch(setInmate(response.data.inmates));
+      if (response.data && response.data?.parole) {
+        dispatch(setInmate(response.data.parole));
         let sno = 1;
-        const formattedData = response.data.inmates.map((inmate) => ({
-          _id: inmate._id,
+        const formattedData = response.data.parole.map((parole) => ({
+          _id: parole.inmateId,
           sno: sno++, // Auto-increment serial number
-          inmate_name: inmate.fullName || "N/A",
-          age: inmate.age || "N/A",
-          gender: inmate.gender || "N/A",
-          sentence: inmate.releaseReason || "N/A",
-          action: <InmateButtons _id={inmate._id} onDelete={fetchInmates} />,
+          inmate_name: parole.fullName || "N/A",
+          age: parole.age || "N/A",
+          gender: parole.gender || "N/A",
+          sentence: parole.releaseReason || "N/A",
+          action: <InmateButtons _id={parole.inmateId} onDelete={fetchInmates} />,
         }));
 
         setInmates(formattedData);

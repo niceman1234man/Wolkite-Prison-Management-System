@@ -13,11 +13,16 @@ const InmateClearance = ({setOpen}) => {
     remark: "",
     inmate: "", // Pre-populate this based on inmateId if possible
     sign: "",
+    registrar:""
   });
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [sign, setSign] = useState("");
+  const [inmates, setInmates] = useState([]); 
 
+
+   
+  
   // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -29,6 +34,27 @@ const InmateClearance = ({setOpen}) => {
 
   // Pre-populate inmate's name if inmateId is available
   useEffect(() => {
+    const fetchInmates = async () => {
+      setLoading(true);
+      try {
+        const response = await axiosInstance.get("/inmates/allInmates");
+        if (response.data?.inmates) {
+          setInmates(response.data.inmates); // Set inmates data
+        } else {
+          console.error("Invalid API response:", response);
+          toast.error("Invalid API response. Please try again.");
+        }
+      } catch (error) {
+        console.error("Error fetching inmates:", error);
+        toast.error(
+          error.response?.data?.error || "Failed to fetch inmate data."
+        );
+      } finally {
+        setLoading(false); // Reset loading state
+      }
+    };
+
+    
     const fetchInmateDetails = async () => {
       try {
         const response = await axiosInstance.get(`/inmates/${inmateId}`);
@@ -42,9 +68,10 @@ const InmateClearance = ({setOpen}) => {
         console.error("Error fetching inmate details:", error);
       }
     };
-
+    fetchInmates();
     if (inmateId) {
       fetchInmateDetails();
+
     }
   }, [inmateId]);
 
@@ -109,11 +136,33 @@ const InmateClearance = ({setOpen}) => {
             />
           </div>
           <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Inmate
+            </label>
+            <select
+              name="inmate"
+              onChange={handleChange}
+              className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
+              required
+            >
+              <option value="">Select Inmate</option>
+              {loading ? (
+                <option disabled>Loading inmates...</option>
+              ) : (
+                inmates.map((inmate) => (
+                  <option key={inmate._id} value={inmate.fullName}>
+                    {inmate.fullName}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+          <div>
             <label className="block text-sm font-medium text-gray-700">Registrar Name</label>
             <input
               type="text"
               name="inmate"
-              value={formData.inmate}
+              value={formData.registrar}
               placeholder="Enter registrar name"
               onChange={handleChange}
               className="mt-1 p-2 block w-full border border-gray-300 rounded-md"

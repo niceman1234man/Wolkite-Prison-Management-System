@@ -3,12 +3,14 @@ import { Link } from "react-router-dom";
 import DataTable from "react-data-table-component";
 import { columns, TransferButtons } from "../../utils/TransferHelper";
 import axiosInstance from "../../utils/axiosInstance";
+import AddModal from "../Modals/AddModal";
+import InmateTransferForm from "./NewTransfer";
 
 const TransferList = () => {
   const [inmates, setInmates] = useState([]);
   const [filteredInmates, setFilteredInmates] = useState([]);
   const [loading, setLoading] = useState(false);
-
+  const [add,setAdd]=useState(false)
   useEffect(() => {
     const fetchInfo = async () => {
       setLoading(true);
@@ -68,12 +70,15 @@ const TransferList = () => {
           placeholder="Search by first or middle name"
           className="px-4 py-2 border rounded-md"
         />
-        <Link
-          to="/woreda-dashboard/add"
+        <button
+          onClick={()=>setAdd(true)}
           className="px-4 py-2 bg-teal-600 text-white rounded-md"
         >
           Add New Transfer
-        </Link>
+        </button>
+         <AddModal open={add} setOpen={setAdd}>
+                  <InmateTransferForm setOpen={setAdd} />
+                </AddModal>
       </div>
 
       <div className="mt-6 bg-white p-4 rounded shadow-md">
