@@ -6,29 +6,33 @@ import "react-toastify/dist/ReactToastify.css";
 import { useSelector } from "react-redux";
 import { TiArrowBack } from "react-icons/ti";
 
-const RegisterVisitor = ({setOpen}) => {
+const RegisterVisitor = ({ setOpen }) => {
   const [formData, setFormData] = useState({});
   const navigate = useNavigate();
   const user = useSelector((state) => state.user.user);
-const [inmates, setInmates] = useState([]);
-  const [loading, setLoading] = useState(false); 
+  const [inmates, setInmates] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  // Get sidebar state from Redux
+  const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
 
   const fetchInmates = async () => {
     setLoading(true);
     try {
       const response = await axiosInstance.get("/inmates/allInmates");
       if (response.data?.inmates) {
-        setInmates(response.data.inmates); // Fixed incorrect variable usage
+        setInmates(response.data.inmates);
       } else {
         console.error("Invalid API response:", response);
       }
     } catch (error) {
       console.error("Error fetching inmates:", error);
       alert(error.response?.data?.error || "Failed to fetch inmate data.");
-    } finally { 
+    } finally {
       setLoading(false);
     }
   };
+
   useEffect(() => {
     const getVisitor = async () => {
       try {
@@ -53,7 +57,7 @@ const [inmates, setInmates] = useState([]);
 
     getVisitor();
     fetchInmates();
-  }, [user]); // Add user as a dependency
+  }, [user]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -65,27 +69,48 @@ const [inmates, setInmates] = useState([]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    console.log("Form Data Before Submission:", formData); // Debugging
-
+  
+    console.log("Form Data Before Submission:", formData);
+  
     try {
       const response = await axiosInstance.post("/visitor/new-visitor", formData);
-      console.log("Response:", response.data); // Debugging
-
-      if (response.data) {
+      console.log("API Response:", response);
+  
+      // Check if the response indicates success
+      if (response.data && response.data.success) {
+        // Display success toast
         toast.success("Visitor Information Registered Successfully!");
-        setOpen(false)
+  
+        // Close the modal and navigate
+        setOpen(false);
         navigate("/policeOfficer-dashboard/visitors");
+      } else {
+        // Handle cases where the API response does not indicate success
+        toast.error(response.data?.message || "Failed to register visitor.");
       }
     } catch (error) {
-      console.error("Error:", error.response?.data); // Debugging
-      toast.error(error.response?.data?.message || "Failed to register visitor.");
+      console.error("API Error:", error);
+  
+      // Handle API errors
+      if (error.response) {
+        // Server responded with an error status code (4xx or 5xx)
+        toast.error(error.response.data?.message || "Failed to register visitor.");
+      } else if (error.request) {
+        // The request was made but no response was received
+        toast.error("No response from the server. Please try again.");
+      } else {
+        // Something happened in setting up the request
+        toast.error("An unexpected error occurred. Please try again.");
+      }
     }
   };
-
   return (
-    <div className="w-full mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
-     
+    <div
+      className={`w-full mx-auto mt-10 bg-white p-8 rounded-md shadow-md transition-all duration-300 ease-in-out ${
+        isCollapsed ? "ml-16" : "ml-64"
+      }`}
+      style={{ width: isCollapsed ? "calc(100% - 4rem)" : "calc(100% - 16rem)" }}
+    >
       <h2 className="text-2xl font-bold mb-6 text-center">Register Visitor</h2>
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

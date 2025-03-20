@@ -72,20 +72,6 @@ function Login() {
 
   return (
     <div className="flex flex-col min-h-[40vh] bg-gradient-to-r from-green-50 to-teal-100">
-      {/* Header with Prison Image */}
-      {/* <header className="bg-gradient-to-r from-green-700 to-teal-600 text-white py-4 text-center shadow-lg relative">
-        <div className="absolute inset-0 bg-black bg-opacity-50"></div> {/* Overlay for better text visibility */}
-        {/* <div className="relative z-10">
-          <h1 className="text-2xl font-bold">Wolkite Prison Management System</h1>
-          <p className="text-sm mt-2">Secure and Efficient Prison Management</p>
-        </div>
-        <img
-          src={prisonImage} // Prison image
-          alt="Prison"
-          className="absolute inset-0 w-full h-full object-cover z-0"
-        />
-      </header> */} 
-
       {/* Main Content */}
       <main className="flex-grow items-center justify-center px-4 py-6">
          
