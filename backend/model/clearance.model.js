@@ -5,7 +5,11 @@ const clearanceSchema=new mongoose.Schema({
         type:Date ,
         required:true
     },
-   
+    registrar:{
+        type:String ,
+        required:true
+    }
+   ,
     inmate:{
         type:String ,
         required:true

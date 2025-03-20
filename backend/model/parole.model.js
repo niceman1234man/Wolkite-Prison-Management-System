@@ -6,6 +6,23 @@ const ParoleTrackingSchema = new mongoose.Schema({
     ref: "Inmate", // Reference to the inmate model
     required: true,
   },
+  fullName:{
+    type:String,
+    required:true
+  },
+  age:{
+    type:Number,
+    required:true
+  },
+  gender:{
+    type: String,
+    enum: [
+      
+      "male",
+      "female",
+    ],
+    required: true,
+  },
   behaviorLogs: [
     {
       rule: {
