@@ -175,12 +175,7 @@ const UserList = () => {
               className="px-4 py-2 border rounded-md w-full sm:w-auto"
               onChange={handleFilterUsers}
             />
-            <Link
-              to="/admin-dashboard/add-user"
-              className="px-4 py-2 bg-teal-600 text-white rounded-md text-center"
-            >
-              Add New User
-            </Link>
+       
           </div>
         </div>
 
