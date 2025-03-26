@@ -166,6 +166,7 @@ const AddUser = ({setOpen}) => {
               <option value="police-officer">Police Officer</option>
               <option value="inspector">Inspector</option>
               <option value="court">Court</option>
+              <option value="woreda">Woreda</option>
             </select>
           </div>
 

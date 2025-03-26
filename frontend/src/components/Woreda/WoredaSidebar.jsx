@@ -106,33 +106,6 @@ const WoredaSidebar = () => {
             <FaChartBar className="h-6 w-6" />
             {!isCollapsed && <span className="ml-3">Reports</span>}
           </NavLink>
-
-          {/* Notifications */}
-          <NavLink
-            to="/woreda-dashboard/notifications"
-            className={({ isActive }) =>
-              `flex items-center p-2 rounded-lg hover:bg-teal-600 transition-colors ${
-                isActive ? "bg-teal-600" : ""
-              } ${isCollapsed ? "justify-center" : "justify-start"}`
-            }
-            end
-          >
-            <FaBell className="h-6 w-6" />
-            {!isCollapsed && <span className="ml-3">Notifications</span>}
-          </NavLink>
-
-          {/* Account Settings */}
-          <NavLink
-            to="/woreda-dashboard/setting"
-            className={({ isActive }) =>
-              `flex items-center p-2 rounded-lg hover:bg-teal-600 transition-colors ${
-                isActive ? "bg-teal-600" : ""
-              } ${isCollapsed ? "justify-center" : "justify-start"}`
-            }
-          >
-            <FaCogs className="h-6 w-6" />
-            {!isCollapsed && <span className="ml-3">Account Settings</span>}
-          </NavLink>
         </nav>
       </div>
     </>
