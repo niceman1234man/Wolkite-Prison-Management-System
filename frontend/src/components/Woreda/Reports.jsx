@@ -16,29 +16,45 @@ import {
 } from "recharts";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { useSelector } from "react-redux"; // Import useSelector for sidebar state
+import { useSelector } from "react-redux";
 import {
   FaUsers,
   FaExchangeAlt,
   FaClock,
   FaCheckCircle,
   FaExclamationCircle,
+  FaUserFriends,
+  FaUserCheck,
+  FaExclamationTriangle,
+  FaFileAlt,
+  FaMale,
+  FaFemale,
+  FaGavel,
+  FaHospital,
 } from "react-icons/fa";
 
 const COLORS = ["#4F46E5", "#10B981", "#F59E0B", "#EF4444"];
 
 const Reports = () => {
-  const [dailyIntakeData, setDailyIntakeData] = useState([]);
-  const [transferStats, setTransferStats] = useState({
-    totalPrisoners: 0,
-    successRate: 0,
-    averageDelay: 0,
-    complianceRate: 0,
-    completedTransfers: 0,
-    pendingTransfers: 0,
-    inProgressTransfers: 0,
-    failedTransfers: 0,
-    complianceStatus: "Non-compliant",
+  const [woredaStats, setWoredaStats] = useState({
+    totalInmates: 0,
+    activeInmates: 0,
+    transferRequested: 0,
+    transferred: 0,
+    maleInmates: 0,
+    femaleInmates: 0,
+    highRiskInmates: 0,
+    mediumRiskInmates: 0,
+    lowRiskInmates: 0,
+    inmatesWithMedicalConditions: 0,
+    paroleEligible: 0,
+    averageSentenceLength: 0,
+    totalCrimes: 0,
+    topCrimes: [],
+    inmateTrend: 0,
+    riskTrend: 0,
+    genderTrend: 0,
+    medicalTrend: 0,
   });
   const [loading, setLoading] = useState(false);
   const [timeRange, setTimeRange] = useState("week"); // 'week', 'month', 'year'
@@ -47,38 +63,34 @@ const Reports = () => {
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
 
   useEffect(() => {
-    fetchReports();
+    fetchWoredaReports();
   }, [timeRange]);
 
-  const fetchReports = async () => {
+  const fetchWoredaReports = async () => {
     setLoading(true);
     try {
-      // Fetch daily intake data
-      const intakeResponse = await axiosInstance.get(
-        `/api/reports/daily-intake?range=${timeRange}`
+      // Log the token status
+      const token = localStorage.getItem("token");
+      console.log("Token status:", token ? "Present" : "Missing");
+      
+      // Fetch woreda statistics
+      const response = await axiosInstance.get(
+        `/woreda/stats?range=${timeRange}`
       );
 
-      // Format daily intake data
-      if (intakeResponse.data?.dailyIntake) {
-        const formattedData = intakeResponse.data.dailyIntake.map((item) => ({
-          date: new Date(item.date).toLocaleDateString(),
-          intakeCount: parseInt(item.intakeCount) || 0,
-          transferCount: parseInt(item.transferCount) || 0,
-        }));
-        setDailyIntakeData(formattedData);
-      }
-
-      // Fetch transfer statistics
-      const statsResponse = await axiosInstance.get(
-        `/api/reports/transfer-stats?range=${timeRange}`
-      );
-
-      if (statsResponse.data?.transferStats) {
-        setTransferStats(statsResponse.data.transferStats);
+      if (response.data?.success && response.data?.stats) {
+        setWoredaStats(response.data.stats);
       }
     } catch (error) {
-      console.error("Error fetching reports:", error);
-      toast.error("Failed to fetch reports");
+      console.error("Error fetching woreda reports:", error);
+      console.error("Error details:", {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data,
+        headers: error.response?.headers,
+        config: error.config
+      });
+      toast.error(error.response?.data?.error || "Failed to fetch woreda reports");
     } finally {
       setLoading(false);
     }
@@ -132,7 +144,7 @@ const Reports = () => {
           }`}
         >
           <h3 className="text-2xl font-bold text-gray-800">
-            Reports & Analytics
+            Woreda Reports & Analytics
           </h3>
           <div className="flex gap-2">
             {["week", "month", "year"].map((range) => (
@@ -162,48 +174,105 @@ const Reports = () => {
               {/* Stats Overview */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <StatCard
-                  title="Total Prisoners"
-                  value={transferStats.totalPrisoners || "0"}
+                  title="Total Inmates"
+                  value={woredaStats.totalInmates || "0"}
                   icon={<FaUsers className="text-blue-600 text-xl" />}
                   color="text-blue-600"
-                  trend={transferStats.prisonerTrend}
+                  trend={woredaStats.inmateTrend}
                 />
                 <StatCard
-                  title="Transfer Rate"
-                  value={`${transferStats.successRate || "0"}%`}
-                  icon={<FaExchangeAlt className="text-green-600 text-xl" />}
+                  title="Active Inmates"
+                  value={woredaStats.activeInmates || "0"}
+                  icon={<FaUserCheck className="text-green-600 text-xl" />}
                   color="text-green-600"
-                  trend={transferStats.transferRateTrend}
+                  trend={woredaStats.activeTrend}
                 />
                 <StatCard
-                  title="Avg. Processing Time"
-                  value={`${transferStats.averageDelay || "0"}h`}
-                  icon={<FaClock className="text-yellow-600 text-xl" />}
+                  title="Transfer Requests"
+                  value={woredaStats.transferRequested || "0"}
+                  icon={<FaExchangeAlt className="text-yellow-600 text-xl" />}
                   color="text-yellow-600"
-                  trend={transferStats.processingTimeTrend}
+                  trend={woredaStats.transferTrend}
                 />
                 <StatCard
-                  title="Compliance Rate"
-                  value={`${transferStats.complianceRate || "0"}%`}
-                  icon={<FaCheckCircle className="text-purple-600 text-xl" />}
+                  title="High Risk Inmates"
+                  value={woredaStats.highRiskInmates || "0"}
+                  icon={<FaExclamationTriangle className="text-red-600 text-xl" />}
+                  color="text-red-600"
+                  trend={woredaStats.riskTrend}
+                />
+              </div>
+
+              {/* Additional Stats Overview */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <StatCard
+                  title="Male Inmates"
+                  value={woredaStats.maleInmates || "0"}
+                  icon={<FaMale className="text-indigo-600 text-xl" />}
+                  color="text-indigo-600"
+                  trend={woredaStats.genderTrend}
+                />
+                <StatCard
+                  title="Female Inmates"
+                  value={woredaStats.femaleInmates || "0"}
+                  icon={<FaFemale className="text-pink-600 text-xl" />}
+                  color="text-pink-600"
+                  trend={woredaStats.genderTrend}
+                />
+                <StatCard
+                  title="Medical Conditions"
+                  value={woredaStats.inmatesWithMedicalConditions || "0"}
+                  icon={<FaHospital className="text-purple-600 text-xl" />}
                   color="text-purple-600"
-                  trend={transferStats.complianceTrend}
+                  trend={woredaStats.medicalTrend}
+                />
+                <StatCard
+                  title="Parole Eligible"
+                  value={woredaStats.paroleEligible || "0"}
+                  icon={<FaGavel className="text-emerald-600 text-xl" />}
+                  color="text-emerald-600"
+                  trend={woredaStats.paroleTrend}
                 />
               </div>
 
               {/* Charts Section */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Daily Intake Chart */}
+                {/* Gender Distribution */}
                 <div className="bg-white rounded-xl shadow-md p-6">
                   <h3 className="text-xl font-semibold mb-4">
-                    Daily Intake Trends
+                    Gender Distribution
                   </h3>
                   <div className="h-[300px]">
-                    {dailyIntakeData.length > 0 ? (
+                    {woredaStats.totalInmates > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={dailyIntakeData}>
-                          <XAxis dataKey="date" tick={{ fontSize: 12 }} />
-                          <YAxis tick={{ fontSize: 12 }} />
+                        <PieChart>
+                          <Pie
+                            data={[
+                              {
+                                name: "Male",
+                                value: woredaStats.maleInmates,
+                              },
+                              {
+                                name: "Female",
+                                value: woredaStats.femaleInmates,
+                              },
+                            ]}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            outerRadius={80}
+                            fill="#8884d8"
+                            dataKey="value"
+                          >
+                            {[woredaStats.maleInmates, woredaStats.femaleInmates].map(
+                              (_, index) => (
+                                <Cell
+                                  key={`cell-${index}`}
+                                  fill={COLORS[index % COLORS.length]}
+                                />
+                              )
+                            )}
+                          </Pie>
                           <Tooltip
                             contentStyle={{
                               backgroundColor: "white",
@@ -212,23 +281,7 @@ const Reports = () => {
                             }}
                           />
                           <Legend />
-                          <Line
-                            type="monotone"
-                            dataKey="intakeCount"
-                            stroke="#4F46E5"
-                            name="New Intakes"
-                            strokeWidth={2}
-                            dot={{ r: 4 }}
-                          />
-                          <Line
-                            type="monotone"
-                            dataKey="transferCount"
-                            stroke="#10B981"
-                            name="Transfers"
-                            strokeWidth={2}
-                            dot={{ r: 4 }}
-                          />
-                        </LineChart>
+                        </PieChart>
                       </ResponsiveContainer>
                     ) : (
                       <div className="flex items-center justify-center h-full">
@@ -238,35 +291,28 @@ const Reports = () => {
                   </div>
                 </div>
 
-                {/* Transfer Status Distribution */}
+                {/* Risk Level Distribution */}
                 <div className="bg-white rounded-xl shadow-md p-6">
                   <h3 className="text-xl font-semibold mb-4">
-                    Transfer Status Distribution
+                    Risk Level Distribution
                   </h3>
                   <div className="h-[300px]">
-                    {transferStats.completedTransfers > 0 ||
-                    transferStats.pendingTransfers > 0 ||
-                    transferStats.inProgressTransfers > 0 ||
-                    transferStats.failedTransfers > 0 ? (
+                    {woredaStats.totalInmates > 0 ? (
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
                             data={[
                               {
-                                name: "Completed",
-                                value: transferStats.completedTransfers,
+                                name: "High Risk",
+                                value: woredaStats.highRiskInmates,
                               },
                               {
-                                name: "Pending",
-                                value: transferStats.pendingTransfers,
+                                name: "Medium Risk",
+                                value: woredaStats.mediumRiskInmates,
                               },
                               {
-                                name: "In Progress",
-                                value: transferStats.inProgressTransfers,
-                              },
-                              {
-                                name: "Failed",
-                                value: transferStats.failedTransfers,
+                                name: "Low Risk",
+                                value: woredaStats.lowRiskInmates,
                               },
                             ]}
                             cx="50%"
@@ -277,10 +323,9 @@ const Reports = () => {
                             dataKey="value"
                           >
                             {[
-                              transferStats.completedTransfers,
-                              transferStats.pendingTransfers,
-                              transferStats.inProgressTransfers,
-                              transferStats.failedTransfers,
+                              woredaStats.highRiskInmates,
+                              woredaStats.mediumRiskInmates,
+                              woredaStats.lowRiskInmates,
                             ].map((_, index) => (
                               <Cell
                                 key={`cell-${index}`}
@@ -300,46 +345,53 @@ const Reports = () => {
                       </ResponsiveContainer>
                     ) : (
                       <div className="flex items-center justify-center h-full">
-                        <p className="text-gray-500">
-                          No transfer data available
-                        </p>
+                        <p className="text-gray-500">No data available</p>
                       </div>
                     )}
                   </div>
                 </div>
               </div>
 
-              {/* Compliance Status */}
+              {/* Inmate Status Distribution */}
               <div className="bg-white rounded-xl shadow-md p-6">
                 <h3 className="text-xl font-semibold mb-4">
-                  Legal Compliance Status
+                  Inmate Status Distribution
                 </h3>
-                <div className="flex items-center gap-4">
-                  {transferStats.complianceStatus === "Compliant" ? (
-                    <>
-                      <FaCheckCircle className="text-green-500 text-3xl" />
-                      <div>
-                        <p className="text-green-600 font-semibold">
-                          Compliant with 48-hour rule
-                        </p>
-                        <p className="text-gray-500 text-sm">
-                          All transfers are being processed within the required
-                          timeframe
-                        </p>
-                      </div>
-                    </>
+                <div className="h-[300px]">
+                  {woredaStats.totalInmates > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={[
+                        { name: "Active", value: woredaStats.activeInmates },
+                        { name: "Transfer Requested", value: woredaStats.transferRequested },
+                        { name: "Transferred", value: woredaStats.transferred },
+                      ]}>
+                        <XAxis dataKey="name" />
+                        <YAxis />
+                        <Tooltip />
+                        <Bar dataKey="value" fill="#4F46E5" />
+                      </BarChart>
+                    </ResponsiveContainer>
                   ) : (
-                    <>
-                      <FaExclamationCircle className="text-red-500 text-3xl" />
-                      <div>
-                        <p className="text-red-600 font-semibold">
-                          Non-compliant with 48-hour rule
-                        </p>
-                        <p className="text-gray-500 text-sm">
-                          Some transfers are exceeding the required timeframe
-                        </p>
+                    <div className="flex items-center justify-center h-full">
+                      <p className="text-gray-500">No data available</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Top Crimes */}
+              <div className="bg-white rounded-xl shadow-md p-6">
+                <h3 className="text-xl font-semibold mb-4">Top Crimes</h3>
+                <div className="space-y-4">
+                  {woredaStats.topCrimes && woredaStats.topCrimes.length > 0 ? (
+                    woredaStats.topCrimes.map((crime, index) => (
+                      <div key={index} className="flex items-center justify-between">
+                        <span className="text-gray-600">{crime.name}</span>
+                        <span className="font-semibold">{crime.count}</span>
                       </div>
-                    </>
+                    ))
+                  ) : (
+                    <p className="text-gray-500">No crime data available</p>
                   )}
                 </div>
               </div>

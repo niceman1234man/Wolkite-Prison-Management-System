@@ -6,14 +6,17 @@ import { useSelector } from "react-redux"; // Import useSelector for sidebar sta
 import useNotices from "../hooks/useNotice.jsx";  
 import NoticeButton from "../utils/noticeButtons.jsx"; // 🛠️ Import reusable notice button
 import NoticeModal from "../components/Modals/NoticeModal.jsx"; // 🛠️ Import notice modal
+import { toast } from "react-toastify";
 
 const Dashboard = () => {
   const [dashboardData, setDashboardData] = useState({
     totalPrisoners: 0,
     pendingTransfers: 0,
     urgentCases: 0,
+    recentTransfers: [],
+    recentIncidents: [],
   });
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768); // Track mobile view
 
   // Get sidebar state from Redux
@@ -35,26 +38,25 @@ const Dashboard = () => {
   }, []);
 
   const fetchDashboardData = async () => {
-    setLoading(true);
     try {
-      const response = await axiosInstance.get("/dashboard/data", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-
-      if (response.data) {
-        setDashboardData(response.data);
+      const response = await axiosInstance.get("/dashboard/data");
+      if (response.data?.success) {
+        setDashboardData(response.data.data);
       }
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
+      toast.error(error.response?.data?.error || "Failed to fetch dashboard data");
     } finally {
       setLoading(false);
     }
   };
 
   if (loading) {
-    return <div className="text-center p-6">Loading dashboard data...</div>; // Show loading state
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
   }
 
   return (
@@ -110,6 +112,55 @@ const Dashboard = () => {
               <div>
                 <h3 className="text-lg font-semibold">Urgent Cases</h3>
                 <p className="text-2xl font-bold">{dashboardData.urgentCases}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Recent Activity Section */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            {/* Recent Transfers */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h3 className="text-xl font-semibold mb-4">Recent Transfers</h3>
+              <div className="space-y-4">
+                {dashboardData.recentTransfers.map((transfer, index) => (
+                  <div key={index} className="border-b pb-4 last:border-b-0">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium">
+                          {transfer.fromPrison?.prison_name} → {transfer.toPrison?.prison_name}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          Status: <span className="font-medium">{transfer.status}</span>
+                        </p>
+                      </div>
+                      <span className="text-sm text-gray-500">
+                        {new Date(transfer.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Recent Incidents */}
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h3 className="text-xl font-semibold mb-4">Recent Incidents</h3>
+              <div className="space-y-4">
+                {dashboardData.recentIncidents.map((incident, index) => (
+                  <div key={index} className="border-b pb-4 last:border-b-0">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium">{incident.title}</p>
+                        <p className="text-sm text-gray-600">
+                          Priority: <span className="font-medium">{incident.priority}</span>
+                        </p>
+                      </div>
+                      <span className="text-sm text-gray-500">
+                        {new Date(incident.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

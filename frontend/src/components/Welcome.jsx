@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import axiosInstance from "../utils/axiosInstance";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import "@fontsource/poppins";
 import "@fontsource/roboto";
-import Login from "../components/auth/Login"; // Import the Login component
+import Login from "../components/auth/Login";
 
 import backgroundImage from "../assets/gurageZone.png";
 import ethiopiaFlag from "../assets/centralEthiopiaFlag.png";
@@ -20,7 +19,7 @@ function Welcome() {
   const [direction, setDirection] = useState(1);
   const [sideImages, setSideImages] = useState([]);
   const [time, setTime] = useState(new Date());
-  const [isLoginOpen, setIsLoginOpen] = useState(false); // State for login modal
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -28,18 +27,26 @@ function Welcome() {
       try {
         const messagesResponse = await axiosInstance.get("/managemessages/get-messages");
         if (messagesResponse.data?.messages) {
-          setMessages(messagesResponse.data.messages);
+          const messagesWithFullUrls = messagesResponse.data.messages.map(msg => ({
+            ...msg,
+            image: msg.image ? `${axiosInstance.defaults.baseURL}${msg.image}` : null
+          }));
+          setMessages(messagesWithFullUrls);
         } else {
           toast.error("No messages found.");
         }
 
         const imagesResponse = await axiosInstance.get("/manageimages/get-side-images");
         if (imagesResponse.data?.images) {
-          setSideImages(imagesResponse.data.images);
+          const imagesWithFullUrls = imagesResponse.data.images.map(img => 
+            `${axiosInstance.defaults.baseURL}${img}`
+          );
+          setSideImages(imagesWithFullUrls);
         } else {
           toast.error("No images available.");
         }
       } catch (error) {
+        console.error("Error fetching content:", error);
         toast.error(`Failed to load content: ${error.response?.data?.message || error.message}`);
       } finally {
         setLoading(false);
@@ -58,7 +65,6 @@ function Welcome() {
     }
   }, [messages]);
 
-  // Update the clock every second
   useEffect(() => {
     const timer = setInterval(() => {
       setTime(new Date());
@@ -66,7 +72,6 @@ function Welcome() {
     return () => clearInterval(timer);
   }, []);
 
-  // Calculate rotation angles for watch hands
   const secondsDeg = (time.getSeconds() / 60) * 360;
   const minutesDeg = (time.getMinutes() / 60) * 360;
   const hoursDeg = ((time.getHours() % 12) / 12) * 360 + (time.getMinutes() / 60) * 30;
@@ -96,7 +101,7 @@ function Welcome() {
             <Link to="/help" className="hover:underline text-xl">Help</Link>
             <Link to="/contact" className="hover:underline text-xl">Contact Us</Link>
             <button
-              onClick={() => setIsLoginOpen(true)} // Open login modal
+              onClick={() => setIsLoginOpen(true)}
               className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
             >
               Login
@@ -115,28 +120,33 @@ function Welcome() {
         <main className="flex-grow flex items-center justify-center text-center p-10 z-10 relative">
           {/* Left Side Image */}
           {sideImages[0] && (
-            <img
+            <motion.img
               src={sideImages[0]}
               alt="Side Image Left"
               className="w-1/5 h-auto rounded-lg shadow-md hidden md:block"
+              initial={{ opacity: 0, x: -100 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 1, delay: 0.5 }}
             />
           )}
 
           {/* Message Box */}
           <motion.div
-            className="bg-white bg-opacity-10 p-12 rounded-lg shadow-2xl max-w-2xl w-full mx-6"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            className="bg-white bg-opacity-10 p-12 rounded-lg shadow-2xl max-w-2xl w-full mx-6 backdrop-blur-sm"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1 }}
           >
-            <h1 className="text-5xl font-bold mb-6 font-[Roboto] text-white">
+            <h1 className="text-5xl font-bold mb-6 font-[Roboto] text-white drop-shadow-lg">
               Welcome to Gurage PMS
             </h1>
 
             {loading ? (
-              <p className="text-2xl text-gray-700 mb-6">Loading messages...</p>
+              <div className="flex justify-center items-center h-32">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
+              </div>
             ) : (
-              <div className="relative w-full h-32 overflow-hidden">
+              <div className="relative w-full h-64 overflow-hidden rounded-xl">
                 <AnimatePresence custom={direction} mode="wait">
                   <motion.div
                     key={currentMessageIndex}
@@ -144,37 +154,43 @@ function Welcome() {
                     animate={{ x: 0, opacity: 1, scale: 1 }}
                     exit={{ x: -direction * 100, opacity: 0, scale: 0.9 }}
                     transition={{ duration: 1.2, ease: "easeInOut" }}
-                    className="absolute w-full p-8 text-white text-3xl rounded-lg h-32 bg-gradient-to-r from-blue-500 to-purple-500 shadow-xl"
+                    className="absolute w-full h-full flex flex-col items-center justify-center"
                   >
-                    {messages[currentMessageIndex]?.text}
+                    {/* Message Image */}
+                    {messages[currentMessageIndex]?.image && (
+                      <motion.img
+                        src={messages[currentMessageIndex].image}
+                        alt="Message"
+                        className="w-full h-32 object-cover rounded-t-xl"
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5 }}
+                      />
+                    )}
+                    
+                    {/* Message Text */}
+                    <div className="w-full p-6 bg-gradient-to-r from-blue-500 to-purple-500 rounded-b-xl">
+                      <p className="text-white text-2xl font-medium leading-relaxed">
+                        {messages[currentMessageIndex]?.text}
+                      </p>
+                    </div>
                   </motion.div>
                 </AnimatePresence>
               </div>
             )}
           </motion.div>
 
-          {/* Real Wristwatch Clock with Numbers */}
-          <div className="absolute top-20 right-10 flex flex-col items-center">
-            <div className="w-40 h-40 flex items-center justify-center rounded-full bg-gray-900 text-white shadow-lg border-4 border-blue-500 relative">
-              {/* Clock Numbers */}
-              {[...Array(12)].map((_, i) => (
-                <div
-                  key={i}
-                  className="absolute text-xl font-bold"
-                  style={{
-                    transform: `rotate(${i * 30}deg) translate(60px) rotate(-${i * 30}deg)`,
-                  }}
-                >
-                  {i === 0 ? 12 : i}
-                </div>
-              ))}
-
-              {/* Watch Hands */}
-              <div className="absolute w-2 h-12 bg-white top-10 left-[48%] origin-bottom rotate-[var(--hourDeg)]" style={{ "--hourDeg": `${hoursDeg}deg` }}></div>
-              <div className="absolute w-1.5 h-16 bg-blue-400 top-6 left-[49%] origin-bottom rotate-[var(--minuteDeg)]" style={{ "--minuteDeg": `${minutesDeg}deg` }}></div>
-              <div className="absolute w-1 h-16 bg-red-500 top-2 left-[50%] origin-bottom rotate-[var(--secondDeg)]" style={{ "--secondDeg": `${secondsDeg}deg` }}></div>
-            </div>
-          </div>
+          {/* Right Side Image */}
+          {sideImages[1] && (
+            <motion.img
+              src={sideImages[1]}
+              alt="Side Image Right"
+              className="w-1/5 h-auto rounded-lg shadow-md hidden md:block"
+              initial={{ opacity: 0, x: 100 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 1, delay: 0.5 }}
+            />
+          )}
         </main>
 
         {/* Footer */}
@@ -185,22 +201,30 @@ function Welcome() {
 
       {/* Login Popup */}
       {isLoginOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white w-full max-w-lg rounded-lg shadow-xl p-8 relative">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+        >
+          <motion.div
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="bg-white w-full max-w-lg rounded-lg shadow-xl p-8 relative"
+          >
             <button
-              onClick={() => setIsLoginOpen(false)} // Close login modal
+              onClick={() => setIsLoginOpen(false)}
               className="absolute top-4 right-4 text-gray-600 hover:text-gray-900"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            <Login /> {/* Render the Login component */}
-          </div>
-        </div>
+            <Login />
+          </motion.div>
+        </motion.div>
       )}
-
-      <ToastContainer />
     </div>
   );
 }

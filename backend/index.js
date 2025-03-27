@@ -25,6 +25,8 @@ import prisonerRoutes from "./router/prisonerRouter.js";
 import transferRoutes from "./router/transferRouter.js";
 import { woredaInmateRouter } from "./router/woredaInmate.router.js";
 import { notificationRouter } from "./router/notification.router.js";
+import woredaRouter from "./router/woreda.router.js";
+import dashboardRouter from "./router/dashboard.router.js";
 import { checkCustodyAlerts } from "./controller/notification.controller.js";
 
 // Load environment variables
@@ -52,21 +54,23 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Routes
 app.use("/api/user", userRouter);
-app.use("/visitor", visitorRouter);
-app.use("/incidents", incidentRouter);
-app.use("/inmates", inmateRouter);
+app.use("/api/visitor", visitorRouter);
+app.use("/api/incidents", incidentRouter);
+app.use("/api/inmates", inmateRouter);
 app.use("/api/prison", prisonRouter);
-app.use("/parole-tracking", paroleRouter);
-app.use("/notice", noticeRouter);
-app.use("/instruction", instructionRouter);
-app.use("/transfer", transferRouter);
-app.use("/clearance", clearanceRoutes);
-app.use("/managemessages", MessageRoutes);
+app.use("/api/parole-tracking", paroleRouter);
+app.use("/api/notice", noticeRouter);
+app.use("/api/instruction", instructionRouter);
+app.use("/api/transfer", transferRouter);
+app.use("/api/clearance", clearanceRoutes);
+app.use("/api/managemessages", MessageRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/prisoners", prisonerRoutes);
 app.use("/api/transfers", transferRoutes);
 app.use("/api/woreda-inmate", woredaInmateRouter);
 app.use("/api/notification", notificationRouter);
+app.use("/api/woreda", woredaRouter);
+app.use("/api/dashboard", dashboardRouter);
 
 // Connect to database
 mongoose

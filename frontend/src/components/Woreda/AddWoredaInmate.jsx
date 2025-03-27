@@ -468,7 +468,7 @@ export default function AddWoredaInmate() {
   };
 
   return (
-    <div className="flex">
+    <div className="flex mt-10">
       {/* Sidebar Spacing Fix */}
       <div
         className={`transition-all duration-300 ${
