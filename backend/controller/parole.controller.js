@@ -1,81 +1,116 @@
-
-import {ParoleTracking} from'../model/parole.model.js'
-import {Inmate} from '../model/inmate.model.js' 
-// export const createParoleTracking = async (req, res) => {
-//   try {
-//     const { inmateId, sentence } = req.body;
-//     const inmate = await Inmate.findById(inmateId);
-//     if (!inmate) {
-//       return res.status(404).json({ message: "Inmate not found" });
-//     }
-//     const newParoleTracking = new ParoleTracking({
-//       inmate: inmateId,
-//       sentence,
-//     });
-//     await newParoleTracking.save();
-//     res.status(201).json({ message: "Parole tracking record created", data: newParoleTracking });
-//   } catch (error) {
-//     res.status(500).json({ message: error.message });
-//   }
-// };
+import { ParoleTracking } from "../model/parole.model.js";
 
 export const addBehaviorLog = async (req, res) => {
   try {
-    const {fullName,age,gender, behaviorLogs } = req.body;
-    console.log(fullName,age,gender, behaviorLogs)
     const { inmateId } = req.params;
-    // Validate behaviorLogs array
-    if (!Array.isArray(behaviorLogs) || behaviorLogs.length === 0) {
-      return res.status(400).json({ message: "Invalid or empty behaviorLogs data." });
-    }
+    const {
+      fullName,
+      age,
+      gender,
+      behaviorLogs,
+      committeeNames,
+      caseType,
+      startDate,
+      releasedDate,
+      paroleDate,
+      sentenceYear,
+      durationToParole,
+      durationFromParoleToEnd
+    } = req.body;
 
-    // Find existing ParoleTracking document
+    // Validate input
+
+    // Get file paths for signatures
+    const signature1 = req.files?.signature1?.[0]?.filename;
+    const signature2 = req.files?.signature2?.[0]?.filename;
+    const signature3 = req.files?.signature3?.[0]?.filename;
+    const signature4 = req.files?.signature4?.[0]?.filename;
+    const signature5 = req.files?.signature5?.[0]?.filename;
+
+    console.log("Signature Paths:", [
+      signature1,
+      signature2,
+      signature3,
+      signature4,
+      signature5,
+    ]);
+    let parsedbehaviorLogs = JSON.parse(behaviorLogs);
+    
+    const logsToSave = parsedbehaviorLogs.map((log) => ({
+      rule: log.behaviorType,
+      points: log.points,
+      date: new Date(), 
+    }));
+
+    console.log("Behavior Logs to Save:", logsToSave);
+
+  
     let paroleTracking = await ParoleTracking.findOne({ inmateId });
 
-    // If no existing tracking record, create a new one
-    if (!paroleTracking) {
-      paroleTracking = new ParoleTracking({ inmateId,fullName,age,gender, behaviorLogs: [] });
+    if (paroleTracking) {
+      // Update existing record
+      paroleTracking.fullName = fullName;
+      paroleTracking.age = age;
+      paroleTracking.gender = gender;
+      paroleTracking.caseType = caseType;
+      paroleTracking.startDate = startDate;
+      paroleTracking.releasedDate = releasedDate;
+      paroleTracking.paroleDate = paroleDate;
+      paroleTracking.sentenceYear = sentenceYear;
+      paroleTracking.durationToParole = durationToParole;
+      paroleTracking.durationFromParoleToEnd = durationFromParoleToEnd;
+      paroleTracking.behaviorLogs.push(...logsToSave);
+      paroleTracking.committeeNames = committeeNames;
+      paroleTracking.signatures = [
+        signature1,
+        signature2,
+        signature3,
+        signature4,
+        signature5,
+      ].filter(Boolean);
+    } else {
+      // Create new record
+      paroleTracking = new ParoleTracking({
+        inmateId,
+        fullName,
+        age,
+        gender,
+        caseType,
+        startDate,
+        releasedDate,
+        paroleDate,
+        sentenceYear,
+        durationToParole,
+        durationFromParoleToEnd,
+        behaviorLogs: logsToSave,
+        committeeNames,
+        signatures: [signature1, signature2, signature3, signature4, signature5].filter(Boolean)
+      });
     }
 
-    // Update or add new behavior logs
-    behaviorLogs.forEach((log) => {
-      const existingLogIndex = paroleTracking.behaviorLogs.findIndex(
-        (entry) =>
-          entry.rule === log.behaviorType &&
-          new Date(entry.date).toISOString() === new Date(log.date).toISOString()
-      );
+    await paroleTracking.calculatePoints();
 
-      if (existingLogIndex !== -1) {
-        // Update existing log points
-        paroleTracking.behaviorLogs[existingLogIndex].points = log.points;
-      } else {
-        // Add new log entry
-        paroleTracking.behaviorLogs.push({
-          rule: log.behaviorType,
-          points: log.points,
-          date: log.date,
-        });
-      }
-    });
-
-    // Recalculate points & save
-    await paroleTracking.calculatePoints(); // Ensure this method is correctly defined
+    //
     await paroleTracking.save();
 
-    res.status(200).json({ message: "Behavior log(s) added/updated", data: paroleTracking });
+    console.log("ParoleTracking record saved successfully:", paroleTracking);
+
+    res.status(201).json({
+      success: true,
+      message: "Behavior log submitted successfully!",
+      data: paroleTracking,
+    });
   } catch (error) {
     console.error("Error in addBehaviorLog:", error);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: "Server error" });
   }
 };
 
-
- 
 export const getAllParoleRecords = async (req, res) => {
   try {
     const records = await ParoleTracking.find();
-    if(!records) return res.json("Parole does not found")
-    res.status(200).json({parole:records});
+    if (!records) return res.json("Parole does not found");
+    res.status(200).json({ parole: records });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -96,20 +131,18 @@ export const getAllParoleRecords = async (req, res) => {
 //   }
 // };
 
-
-
-
 export const getParoleRecordById = async (req, res) => {
   const { inmateId } = req.params;
   try {
-    const paroleTracking = await ParoleTracking.findOne({inmateId});
-   
+    const paroleTracking = await ParoleTracking.findOne({ inmateId });
 
     if (!paroleTracking) {
-      return res.status(404).json({ message: "Parole tracking record not found" });
+      return res
+        .status(404)
+        .json({ message: "Parole tracking record not found" });
     }
 
-    res.status(200).json({parole:paroleTracking});
+    res.status(200).json({ parole: paroleTracking });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -118,7 +151,9 @@ export const deleteParoleRecord = async (req, res) => {
   try {
     const paroleTracking = await ParoleTracking.findById(req.params.inmateId);
     if (!paroleTracking) {
-      return res.status(404).json({ message: "Parole tracking record not found" });
+      return res
+        .status(404)
+        .json({ message: "Parole tracking record not found" });
     }
     await paroleTracking.deleteOne();
     res.status(200).json({ message: "Parole tracking record deleted" });

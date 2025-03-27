@@ -3,7 +3,9 @@ export const addnewInmate = async (req, res) => {
     try {
       
         const {
-            fullName,
+          firstName,
+          middleName,
+          lastName,
             birthDate,
             age,
             motherName,
@@ -37,18 +39,23 @@ export const addnewInmate = async (req, res) => {
             contactWereda,
             contactKebele,
             phoneNumber,
-            registrarWorkerName,
             caseType,
+            startDate,
+            sentenceReason,
+            sentenceYear,
+            releasedDate,
             paroleDate,
-            releaseReason,
-            releasedDate
+            durationToParole,
+            durationFromParoleToEnd
           } = req.body;
-          if (!fullName || !age || !gender) {
+          if (!firstName || !age || !gender) {
             return res.status(400).json("all fields required");
           }
           
           const newInmate= new Inmate({
-            fullName,
+            firstName,
+            middleName,
+            lastName,
             birthDate,
             age,
             motherName,
@@ -82,11 +89,14 @@ export const addnewInmate = async (req, res) => {
             contactWereda,
             contactKebele,
             phoneNumber,
-            registrarWorkerName,
             caseType,
+            startDate,
+            sentenceYear,
+            sentenceReason,
+            releasedDate,
             paroleDate,
-            releaseReason,
-            releasedDate
+            durationToParole,
+            durationFromParoleToEnd
           });
           await newInmate.save();
         
@@ -121,7 +131,9 @@ export const getAllInmates = async (req, res) => {
     try {
       const { id } = req.params;
       const {
-        fullName,
+        firstName,
+        middleName,
+        lastName,
         birthDate,
         age,
         motherName,
@@ -155,24 +167,30 @@ export const getAllInmates = async (req, res) => {
         contactWereda,
         contactKebele,
         phoneNumber,
-        registrarWorkerName,
         caseType,
+        startDate,
+        sentenceReason,
+        sentenceYear,
+        releasedDate,
         paroleDate,
-        releaseReason,
-        releasedDate
+        durationToParole,
+        durationFromParoleToEnd
       } = req.body;
   
-      if (!fullName || !phoneNumber || !motherName || !age || !gender) {
+      if (!firstName || !phoneNumber || !motherName || !age || !gender) {
         return res.status(400).json({ message: "All fields are required" });
       }
   
       const updateInmate = await Inmate.findByIdAndUpdate(
         id,
         {
-          fullName,
+          firstName,
+          middleName,
+          lastName,
             birthDate,
             age,
             motherName,
+            sentenceYear,
             gender,
             birthRegion,
             birthZone,
@@ -203,11 +221,13 @@ export const getAllInmates = async (req, res) => {
             contactWereda,
             contactKebele,
             phoneNumber,
-            registrarWorkerName,
             caseType,
+            startDate,
+            sentenceReason,
+            releasedDate,
             paroleDate,
-            releaseReason,
-            releasedDate
+            durationToParole,
+            durationFromParoleToEnd
         },
         { new: true }
       );
