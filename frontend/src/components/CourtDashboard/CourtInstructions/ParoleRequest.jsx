@@ -29,7 +29,7 @@ const ParoleRequest = () => {
           inmate_name: inmate.fullName || "N/A",
           age: inmate.age || "N/A",
           gender: inmate.gender || "N/A",
-          sentence: inmate.releaseReason || "N/A",
+          sentence: inmate.caseType || "N/A",
           action: <ParoleRequestButtons _id={inmate.inmateId} onDelete={fetchInmates} />,
         }));
 

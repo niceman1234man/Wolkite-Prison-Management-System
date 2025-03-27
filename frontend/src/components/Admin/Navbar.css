@@ -111,13 +111,12 @@
     gap: 8px;
     padding: 10px;
     cursor: pointer;
-    transition: background 0.3s, color 0.3s;
+    transition: all 0.2s ease-in-out;
     font-size: 14px;
   }
   
   .dropdown-item:hover {
-    background: #f0f0f0;
-    color: #008080;
+    background-color: #f3f4f6;
   }
   
   .unread {
@@ -140,6 +139,10 @@
     height: 1px;
     background: #ddd;
     margin: 5px 10px;
+  }
+  
+  .rotate-180 {
+    transform: rotate(180deg);
   }
   
   

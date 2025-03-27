@@ -1,7 +1,18 @@
 import { createSlice } from "@reduxjs/toolkit";
 
+// Load user data from localStorage if it exists
+const loadUserFromStorage = () => {
+  try {
+    const userData = localStorage.getItem("user");
+    return userData ? JSON.parse(userData) : {};
+  } catch (error) {
+    console.error("Error loading user from localStorage:", error);
+    return {};
+  }
+};
+
 const initialState = {
-  user:  {}, // Load from localStorage
+  user: loadUserFromStorage(),
 };
 
 const userSlice = createSlice({

@@ -46,7 +46,7 @@ const CourtSidebar = () => {
             { to: "/court-dashboard", icon: <FaTachometerAlt />, label: "Dashboard", exact: true },
             { to: "/court-dashboard/parole", icon: <FaUsers />, label: "Parole Requests" },
             { to: "/court-dashboard/list", icon: <FaGavel />, label: "Manage Verdict" },
-            { to: "/court-dashboard/settings", icon: <FaCogs />, label: "Settings" }
+          
           ].map((item, index) => (
             <NavLink
               key={index}

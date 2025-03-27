@@ -151,15 +151,7 @@ function SecurityStaff() {
               Generate Clearance
             </li>
           </div>
-          <li
-            onClick={() => setActiveComponent("System Information")}
-            className={`hover:bg-gray-300 cursor-pointer flex items-center border-b border-white ${
-              activeComponent === "System Information" ? "bg-green-400" : ""
-            }`}
-          >
-            <FaUsersCog className="mr-2" size={20} />
-            Setting
-          </li>
+         
         </ul>
       </div>
 

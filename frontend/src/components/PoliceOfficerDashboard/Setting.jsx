@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../utils/axiosInstance";
 import { toast } from 'react-toastify'; 
 import 'react-toastify/dist/ReactToastify.css'; 
-import { TiArrowBack } from "react-icons/ti";
+
 const Setting = () => {
   const navigate = useNavigate();
   // const { user } = useAuth();
@@ -82,7 +82,6 @@ const Setting = () => {
   return (
     <div className="flex items-center justify-center mt-10 bg-gray-100">
       <div className="bg-white p-8 rounded-md shadow-md w-96 mt-11">
-      <TiArrowBack size={50} onClick={()=>navigate(-1)} className="cursor-pointer"/>
         <h2 className="text-xl font-bold mb-4 text-center">Change Password</h2>
         {error && <p className="text-red-500 text-center mb-4">{error}</p>}
         {successMessage && <p className="text-green-500 text-center mb-4">{successMessage}</p>}

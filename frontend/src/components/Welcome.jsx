@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import axiosInstance from "../utils/axiosInstance";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -21,6 +21,14 @@ function Welcome() {
   const [sideImages, setSideImages] = useState([]);
   const [time, setTime] = useState(new Date());
   const [isLoginOpen, setIsLoginOpen] = useState(false); // State for login modal
+  const location = useLocation();
+
+  useEffect(() => {
+    // Check if redirected from logout
+    if (location.state?.fromLogout) {
+      setIsLoginOpen(true);
+    }
+  }, [location]);
 
   useEffect(() => {
     const fetchContent = async () => {

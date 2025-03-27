@@ -91,7 +91,6 @@ function Login() {
             <div className="relative">
               <FaUser className="absolute left-3 top-3 text-gray-500" />
               <input
-                type="email"
                 name="email"
                 placeholder="Email Address"
                 value={user.email}

@@ -52,6 +52,16 @@ const ViewParole = ({ id }) => {
     );
   }
 
+
+  const parole={
+    name:inmates.fullName,
+    case:inmates.caseType,
+    start:new Date (inmates.startDate).toLocaleDateString(),
+    end:new Date(inmates.releasedDate).toLocaleDateString(),
+    point:inmates.totalPoints,
+    year:inmates.sentenceYear
+  }
+
   return (
     <div className="w-full mx-auto bg-white p-8 rounded-md shadow-md">
       <h2 className="text-2xl font-bold mb-8 text-center">Parole Details</h2>
@@ -76,8 +86,22 @@ const ViewParole = ({ id }) => {
               <p className="text-lg font-bold">
                 Total Points: <span className="font-medium">{inmates.totalPoints}</span>
               </p>
+              <p className="text-lg font-bold">
+                Case Type: <span className="font-medium">{inmates.caseType}</span>
+              </p>
+              <p className="text-lg font-bold">
+                Start Date: <span className="font-medium">{new Date (inmates.startDate).toLocaleDateString()}</span>
+              </p>
+              <p className="text-lg font-bold">
+                Release Date: <span className="font-medium">{new Date(inmates.releasedDate).toLocaleDateString()}</span>
+              </p>
+              <p className="text-lg font-bold">
+                Sentence Year: <span className="font-medium">{inmates.sentenceYear}</span>
+              </p>
+            
             </div>
           </div>
+              
 
           {/* Action Buttons */}
           <div className="flex justify-center mt-6">
@@ -92,6 +116,7 @@ const ViewParole = ({ id }) => {
           {/* Parole Request Form */}
           <ParoleRequestForm
             isOpen={openAccept}
+            parole={parole}
             onClose={() => setOpenAccept(false)}
             onSubmit={requestHandle}
           />

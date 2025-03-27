@@ -105,7 +105,7 @@ function App() {
         {/* <Route path='/admin' element={<Admin />} /> */}
         <Route path="/visitor" element={<Visitor />} />
         <Route path="/register" element={<VisitorRegister />} />
-        <Route path="/foregot-password" element={<ForegotPassword />} />
+        <Route path="/forgot-password" element={<ForegotPassword />} />
         <Route path="/visitor-dash" element={<VisitorDashboard />} />
         {/* <Route path='/inspector' element={<Inspector />} /> */}
         <Route path="/security" element={<SecurityStaff />} />
@@ -117,7 +117,6 @@ function App() {
           >
             <Route index element={<PoliceOfficerSummary />} />
             <Route path="visitors" element={<List />} />
-            <Route path="setting" element={<Setting />} />
             <Route path="add" element={<RegisterVisitor />} />
             <Route path="edit/:id" element={<EditVisitor />} />
             <Route path="view/:id" element={<ViewVisitor />} />
@@ -141,7 +140,6 @@ function App() {
             <Route path="users" element={<ListofUsers />} />
             <Route path="edit/:id" element={<EditUser />} />
             <Route path="users/:id" element={<ViewUser />} />
-            <Route path="setting" element={<Setting />} />
             <Route path="update-profile" element={<UpdateProfile />} />
             <Route path="help" element={<HelpPage />} />
             <Route path="settingsPage" element={<SettingPage />} />
@@ -157,7 +155,6 @@ function App() {
             <Route path="add-notice" element={<Notices />} />
             <Route path="update-notice/:id" element={<UpdateNotice />} />
             <Route path="view-notice/:id" element={<ViewNotice />} />
-            <Route path="settings" element={<Setting />} />
             <Route path="update-profile" element={<UpdateProfile />} />
             <Route path="help" element={<HelpPage />} />
             <Route path="settingsPage" element={<SettingPage />} />
@@ -179,7 +176,7 @@ function App() {
             <Route path="update-profile" element={<UpdateProfile />} />
             <Route path="help" element={<HelpPage />} />
             <Route path="settingsPage" element={<SettingPage />} />
-            <Route path="settings" element={<Setting />} />
+         
           </Route>
       {/*Woreda Dashboard Routes */}
           <Route path="/woreda-dashboard" element={<WoredaDashboard/>}>
@@ -194,7 +191,6 @@ function App() {
           <Route path="inmates" element={<TransferList/>}/>
            <Route path="edit/:id" element={<EditTransfer/>}/>
            <Route path="view/:id" element={<ViewTransfer/>}/>
-           <Route path="setting" element={<Setting />} />
            <Route path="update-profile" element={<UpdateProfile />} />
             <Route path="help" element={<HelpPage />} />
             <Route path="settingsPage" element={<SettingPage />} />
@@ -208,7 +204,6 @@ function App() {
             <Route path="update-profile" element={<UpdateProfile />} />
             <Route path="help" element={<HelpPage />} />
             <Route path="settingsPage" element={<SettingPage />} />
-            <Route path="setting" element={<Setting />} />
           </Route>
 
           {/*securityStaff Dashboard Routes */}
@@ -237,7 +232,7 @@ function App() {
             <Route path="view-clearance/:id" element={<ViewClearance />} />
             {/* <Route path="edit-clearance" element={<editClearance />} /> */}
             {/* <Route path='clearance' element={<clearanceLogic />} />  */}
-            <Route path="settings" element={<Setting />} />
+          
           </Route>
         </Route>
       </Routes>
