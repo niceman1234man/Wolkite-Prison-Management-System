@@ -16,7 +16,7 @@ import RegisterVisitor from "./components/Visitor/RegisterVisitor.jsx";
 import Setting from "./components/PoliceOfficerDashboard/Setting";
 import List from "./components/Visitor/List";
 import InmateList from "./components/Inmates/List.jsx";
-import Parole from "./parole/Prole.jsx"
+import Parole from "./parole/Prole.jsx";
 import Insident from "./components/Incident/incident.jsx";
 import PoliceOfficerReports from "./components/Reports/PoliceOfficerReports.jsx";
 import PoliceOfficerSummary from "./components/PoliceOfficerDashboard/PoliceOfficerSummary.jsx";
@@ -57,7 +57,7 @@ import ViewInmate from "./components/Inmates/ViewInmate.jsx";
 import VisitorSummaryCard from "./components/visitorDashboaard/VisitorSummary.jsx";
 import EditPrison from "./components/Prisons/EditPrison.jsx";
 import PrivateRoute from "./components/PrivateRoute.jsx";
-import ParoleList from "./parole/ParoleList.jsx"
+import ParoleList from "./parole/ParoleList.jsx";
 import Block from "./components/Block.jsx";
 import InmateBehavior from "./parole/ParoleList.jsx";
 import InmateBehaviorGraph from "./parole/InmateBehaviorGraph.jsx";
@@ -70,12 +70,12 @@ import ResetPassword from "./components/auth/ResetPassword.jsx";
 import updateProfile from "./components/profile/updateProfile.jsx";
 import UpdateProfile from "./components/profile/updateProfile.jsx";
 import HelpPage from "./page/helpPage.jsx";
-import SettingPage from './page/settingsPage.jsx'
+import SettingPage from "./page/settingsPage.jsx";
 import ParoleRequest from "./components/CourtDashboard/CourtInstructions/ParoleRequest.jsx";
 import InstructionList from "./components/CourtDashboard/CourtInstructions/InstructionList.jsx";
-import ViewInstruction from "./components/CourtDashboard/CourtInstructions/ViewInstruction.jsx"
-import EditInstruction from "./components/CourtDashboard/CourtInstructions/EditInstruction.jsx"
-import ViewParole  from "./components/CourtDashboard/CourtInstructions/ViewParole.jsx"
+import ViewInstruction from "./components/CourtDashboard/CourtInstructions/ViewInstruction.jsx";
+import EditInstruction from "./components/CourtDashboard/CourtInstructions/EditInstruction.jsx";
+import ViewParole from "./components/CourtDashboard/CourtInstructions/ViewParole.jsx";
 import WoredaDashboard from "./page/WoredaDashboard";
 import InmateTransferForm from "./components/Woreda/NewTransfer";
 import TransferList from "./components/Woreda/TransferList";
@@ -91,8 +91,12 @@ import CourtView from "./components/SecurityStaff/CourtView";
 import InspectorHomepageSettings from "./page/InspectorHomepageSettings";
 import Dashboard from "./page/Dashboard";
 import PrisonerList from "./components/Woreda/PrisonerList";
-import WoredaReports from './components/Woreda/Reports'
-import WoredaNotifications from './components/Woreda/Notifications'
+import WoredaReports from "./components/Woreda/Reports";
+import WoredaNotifications from "./components/Woreda/Notifications";
+import AddWoredaInmate from "./components/Woreda/AddWoredaInmate";
+import ViewWoredaInmate from "./components/Woreda/ViewWoredaInmate";
+import ViewPrisoner from "./components/Woreda/ViewPrisoner";
+
 function App() {
   return (
     <>
@@ -120,8 +124,8 @@ function App() {
             <Route path="add" element={<RegisterVisitor />} />
             <Route path="edit/:id" element={<EditVisitor />} />
             <Route path="view/:id" element={<ViewVisitor />} />
-            <Route path='parole' element={<Parole />} />  
-            <Route path='ParoleList/:inmateId' element={<ParoleList />} /> 
+            <Route path="parole" element={<Parole />} />
+            <Route path="ParoleList/:inmateId" element={<ParoleList />} />
             <Route path="incident" element={<Insident />} />
             <Route path="reports" element={<PoliceOfficerReports />} />
             <Route path="add-incident" element={<Add />} />
@@ -159,14 +163,16 @@ function App() {
             <Route path="help" element={<HelpPage />} />
             <Route path="settingsPage" element={<SettingPage />} />
             <Route path="add-prison" element={<AddPrison />} />
-            <Route path="homepage-settings" element={<InspectorHomepageSettings />} />
-
+            <Route
+              path="homepage-settings"
+              element={<InspectorHomepageSettings />}
+            />
           </Route>
 
           {/*court Dashboard Routes */}
           <Route path="/court-dashboard" element={<CourtDashboard />}>
             <Route index element={<CourtSummary />} />
-            <Route path="parole" element={< ParoleRequest/>} />
+            <Route path="parole" element={<ParoleRequest />} />
             <Route path="list" element={<InstructionList />} />
             <Route path="view/:id" element={<ViewInstruction />} />
             <Route path="view-request/:id" element={<ViewParole />} />
@@ -178,22 +184,23 @@ function App() {
             <Route path="settingsPage" element={<SettingPage />} />
          
           </Route>
-      {/*Woreda Dashboard Routes */}
-          <Route path="/woreda-dashboard" element={<WoredaDashboard/>}>
-           <Route index element={<Dashboard />} />   
-           <Route path="transfers" element={<PrisonerList/>}/>
-           <Route path="reports" element={<WoredaReports/>}/>
-           <Route path="notifications" element={<WoredaNotifications/>}/>
-           <Route path="prisoners" element={<PrisonerList/>}/>
-
-
-           <Route path="add" element={<InmateTransferForm/>}/>
-          <Route path="inmates" element={<TransferList/>}/>
-           <Route path="edit/:id" element={<EditTransfer/>}/>
-           <Route path="view/:id" element={<ViewTransfer/>}/>
-           <Route path="update-profile" element={<UpdateProfile />} />
+          {/*Woreda Dashboard Routes */}
+          <Route path="/woreda-dashboard" element={<WoredaDashboard />}>
+            <Route index element={<Dashboard />} />
+            <Route path="transfers" element={<PrisonerList />} />
+            <Route path="reports" element={<WoredaReports />} />
+            <Route path="notifications" element={<WoredaNotifications />} />
+            <Route path="prisoners" element={<PrisonerList />} />
+            <Route path="add" element={<InmateTransferForm />} />
+            <Route path="inmates" element={<AddWoredaInmate />} />
+            <Route path="inmates/:id" element={<ViewWoredaInmate />} />
+            <Route path="edit/:id" element={<EditTransfer />} />
+            <Route path="view/:id" element={<ViewTransfer />} />
+            <Route path="update-profile" element={<UpdateProfile />} />
             <Route path="help" element={<HelpPage />} />
             <Route path="settingsPage" element={<SettingPage />} />
+            <Route path="prisoner-list" element={<PrisonerList />} />
+            <Route path="prisoner/:id" element={<ViewPrisoner />} />
           </Route>
           {/*visitor Dashboard Routes */}
           <Route path="/visitor-dashboard" element={<VisitDashboard />}>
@@ -223,7 +230,7 @@ function App() {
             <Route path="update-inmate/:id" element={<UpdateInmate />} />
             <Route path="view-inmate/:id" element={<ViewInmate />} />
             <Route path="reports" element={<SecurityReport />} />
-            <Route path="clearance" element={< ClearancesList/>} />
+            <Route path="clearance" element={<ClearancesList />} />
             <Route path="add-clearance" element={<InmateClearance />} />
             <Route path="update-profile" element={<UpdateProfile />} />
             <Route path="help" element={<HelpPage />} />
