@@ -20,7 +20,7 @@ const ParoleSend = () => {
     setLoading(true);
     try {
       const response = await axiosInstance.get("/parole-tracking");
-
+     console.log(response)
       if (response.data && response.data?.parole) {
         dispatch(setInmate(response.data.parole));
         let sno = 1;

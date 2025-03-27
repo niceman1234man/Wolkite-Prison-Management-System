@@ -103,6 +103,22 @@ function Login() {
           </div>
         )}
 
+<<<<<<< HEAD
+          {/* Login Form */}
+          <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
+            {/* Email Input */}
+            <div className="relative">
+              <FaUser className="absolute left-3 top-3 text-gray-500" />
+              <input
+                name="email"
+                placeholder="Email Address"
+                value={user.email}
+                onChange={handleChange}
+                className="pl-10 py-2 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                required
+              />
+            </div>
+=======
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
           {/* Email Input */}
@@ -118,6 +134,7 @@ function Login() {
               required
             />
           </div>
+>>>>>>> c99b42a2e188ca9d811c861d4d1a40e33db56634
 
           {/* Password Input with Toggle */}
           <div className="relative">

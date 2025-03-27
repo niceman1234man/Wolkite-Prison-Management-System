@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "react-toastify";
 
-const ParoleRequestForm = ({ isOpen, onClose, onSubmit }) => {
+const ParoleRequestForm = ({ isOpen, onClose, onSubmit, parole }) => {
   const [formData, setFormData] = useState({
     receiverName: "",
     senderName: "",
@@ -27,7 +27,39 @@ const ParoleRequestForm = ({ isOpen, onClose, onSubmit }) => {
     officerName: "",
     officerSignature: "",
     legalArticles: "",
+    startDate: "", // For the start date
+    endDate: "",   // For the end date
+    paroleDate: "", // For the parole date
   });
+
+  // Function to convert date to YYYY-MM-DD format
+  const formatDate = (date) => {
+    if (!date) return '';
+    
+    try {
+      // If date is already in YYYY-MM-DD format, return as is
+      if (date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        return date;
+      }
+      
+      // If date is in MM/DD/YYYY format
+      if (date.includes('/')) {
+        const [month, day, year] = date.split('/');
+        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+      }
+      
+      // If date is a Date object or ISO string
+      const dateObj = new Date(date);
+      if (!isNaN(dateObj.getTime())) {
+        return dateObj.toISOString().split('T')[0];
+      }
+      
+      return '';
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return '';
+    }
+  };
 
   // Handle form input changes
   const handleChange = (e, index = null) => {
@@ -66,6 +98,19 @@ const ParoleRequestForm = ({ isOpen, onClose, onSubmit }) => {
     }
   };
 
+  useEffect(() => {
+    // Set the dates if available and convert to YYYY-MM-DD format
+    if (parole) {
+      console.log("parole object:", parole); // Add a console log to debug
+      setFormData((prevData) => ({
+        ...prevData,
+        startDate: parole.start ? formatDate(parole.start) : "",
+        endDate: parole.end ? formatDate(parole.end) : "",
+        paroleDate: parole.paroleDate ? formatDate(parole.paroleDate) : "",
+      }));
+    }
+  }, [parole]);
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto ">
@@ -76,23 +121,23 @@ const ParoleRequestForm = ({ isOpen, onClose, onSubmit }) => {
         <Card className="p-6  mx-auto mt-5 shadow-lg rounded-lg">
           <CardContent>
             <div className="float-end">
-            <div className="flex ">ቁጥር
-            <Input
-                type="number"
-                name="number"
-                onChange={handleChange}
-                className="mb-2 ml-3 w-auto"
-              />
-            </div>
-            <div className="flex">
-              ቀን{" "}
-              <Input
-                type="date"
-                name="date"
-                onChange={handleChange}
-                className="mb-2 ml-3 w-auto"
-              />
-            </div>
+              <div className="flex">ቁጥር
+                <Input
+                  type="number"
+                  name="number"
+                  onChange={handleChange}
+                  className="mb-2 ml-3 w-auto"
+                />
+              </div>
+              <div className="flex">
+                ቀን{" "}
+                <Input
+                  type="date"
+                  name="date"
+                  onChange={handleChange}
+                  className="mb-2 ml-3 w-auto"
+                />
+              </div>
             </div>
             <br />
             <br />
@@ -119,90 +164,103 @@ const ParoleRequestForm = ({ isOpen, onClose, onSubmit }) => {
               />
             </div>
             <div className="space-y-4">
-  <p>
-    የህግ ታራሚ ስም:
-    <Input
-      name="prisonerName"
-      placeholder="የእስረኛው ስም"
-      onChange={handleChange}
-      className="mb-2 inline-block w-auto"
-      required
-    />
-    የተባለው የህግ ታራሚ በአመክሮ መፈቻ ጥያቄ በተከሰሰበት
-    <Input
-      name="crimeType"
-      placeholder="የወንጀሉ አይነት"
-      onChange={handleChange}
-      className="mb-2 inline-block w-auto"
-      required
-    />
-    ወንጀል እስራት እንዲቀጣ በወሰነው መሠረት ከዚህ ውስጥ 2/3ኛው
-    <Input
-      name="sentenceReduction"
-      placeholder="ቅናሽ"
-      onChange={handleChange}
-      className="mb-2 inline-block w-auto"
-      required
-    />
-    በእስራት የፈጸመ ሲሆን 1/3ኛውን
-    <Input
-      name="additionalReduction"
-      placeholder="ቅናሽ"
-      onChange={handleChange}
-      className="mb-2 inline-block w-auto"
-      required
-    />
-    ቅናሽ አግጋቶዋል፡፡ አሁንም በጠቅላላው ከተፈረደበት የእስራት ጊዜ ውስጥ ወደፊት የሚቀረው
-    <Input
-      name="remainingSentence"
-      placeholder="ቀሪ"
-      onChange={handleChange}
-      className="mb-2 inline-block w-auto"
-      required
-    />
-  </p>
-</div>
+              <p>
+                የህግ ታራሚ ስም:
+                <Input
+                  name="prisonerName"
+                  placeholder="የእስረኛው ስም"
+                  value={parole.name}
+                  onChange={handleChange}
+                  className="mb-2 inline-block w-auto"
+                  required
+                />
+                የተባለው የህግ ታራሚ በአመክሮ መፈቻ ጥያቄ በተከሰሰበት
+                <Input
+                  name="crimeType"
+                  placeholder="የወንጀሉ አይነት"
+                  value={parole.case}
+                  onChange={handleChange}
+                  className="mb-2 inline-block w-auto"
+                  required
+                />
+                ወንጀል 
+                <Input
+                  name="year"
+                  placeholder="የወንጀሉ አይነት"
+                  value={parole.year}
+                  onChange={handleChange}
+                  className="mb-2 inline-block w-auto"
+                  required
+                />
+                እስራት እንዲቀጣ በወሰነው መሠረት ከዚህ ውስጥ 2/3ኛው
+                <Input
+                  name="sentenceReduction"
+                  placeholder="ቅናሽ"
+                  onChange={handleChange}
+                  className="mb-2 inline-block w-auto"
+                  required
+                />
+                በእስራት የፈጸመ ሲሆን 1/3ኛውን
+                <Input
+                  name="additionalReduction"
+                  placeholder="ቅናሽ"
+                  onChange={handleChange}
+                  className="mb-2 inline-block w-auto"
+                  required
+                />
+                ቅናሽ አግጋቶዋል፡፡ አሁንም በጠቅላላው ከተፈረደበት የእስራት ጊዜ ውስጥ ወደፊት የሚቀረው
+                <Input
+                  name="remainingSentence"
+                  placeholder="ቀሪ"
+                  onChange={handleChange}
+                  className="mb-2 inline-block w-auto"
+                  required
+                />
+              </p>
+            </div>
 
-              በዚህ መሠረት የህግ ታራሚው ጠቅላይ ፍርድ 2/3ኛውን የታሠረ በመሆኑ በአከሮ ለመፈታት የደረሰ ሆኖ
-              ተገኝቶዋል፡፡የኸውም የህግ ታራሚው በዚህ ማቤት በኖረባቸው ዘመኖች መልካም ፀባይ ይዞ የቆየ መሆኑንና
-              የታዘዘውን ሥራ በቅን የሠራ ነው እንዲሁም ፀባዩን ያረመና ወደ ማህበራዊ ኑሮ ተመልሶ ለመቀላቀል የሚበቃ
-              ሆኖ ተገኝቶዋል፡፡ 
-              <p className="mt-3">በዚሁ ረገድ በቆየበት ጊዜ ያሣየውን መልካም ፀባዩን የሚያረጋግጥ</p> 
-              <div className="flex mt-4">
-                1/ታራሚው ማ/ቤት የገባበት
+            <div className="flex mt-4">
+              1/ታራሚው ማ/ቤት የገባበት
               <Input
                 type="date"
-                name="date"
+                name="startDate"
+                value={formData.startDate} // Set date from form state
                 placeholder="የገባበት ቀን"
                 onChange={handleChange}
                 className="mb-2 w-auto ml-3"
               />
-              </div>
-              <div className="flex">
+            </div>
+            <div className="flex">
               2/ ታራሚው አስራቱ ጨርሶ የሚፈታው
               <Input
                 type="date"
-                name="date"
+                name="endDate"
+                value={formData.endDate} // Set date from form state
                 placeholder="የሚፈታበት ቀን"
                 onChange={handleChange}
                 className="mb-2 w-auto ml-3"
               />
-              </div>
-              <div className="flex">
+            </div>
+            <div className="flex">
               3/ በአመክሮ የሚፈታው
               <Input
                 type="date"
-                name="date"
+                name="paroleDate"
+                value={formData.paroleDate} // Set date from form state
                 placeholder="በ አመክሮ የሚፈታበት ቀን "
                 onChange={handleChange}
                 className="mb-2 w-auto ml-3"
               />
-              </div>
-              <div className="flex">
+            </div>
+
+            <div className="flex">
+              
+
               4/ በፀባይ ነጥብ መስጨ የተገኘ
               <Input
                 type="number"
                 name="point"
+                value={parole.point}
                 placeholder="ጠቅላላ ነጥብ "
                 onChange={handleChange}
                 className="mb-2 w-auto ml-3"

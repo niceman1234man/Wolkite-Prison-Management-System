@@ -2,7 +2,9 @@ import mongoose from 'mongoose'
 
 const InmateSchema = new mongoose.Schema(
   {
-    fullName: { type: String, required: true },
+    firstName: { type: String, required: true },
+    middleName: { type: String, required: true },
+    lastName: { type: String, required: true },
     birthDate: { type: Date, required: true },
     age: { type: Number, required: true },
     motherName: { type: String },
@@ -50,16 +52,15 @@ const InmateSchema = new mongoose.Schema(
     contactKebele: { type: String },
     phoneNumber: { type: String },
 
-    // Registrar Details
-    registrarWorkerName: { type: String, required: true },
-    signature: { type: String }, // Store image file path or URL
-
     // Case Details
     caseType: { type: String },
-    paroleDate: { type: Date },
-    releaseReason: { type: String },
+    startDate: { type: Date },
+    sentenceReason: { type: String },
     releasedDate: { type: Date },
-
+    sentenceYear: { type: Number },
+    paroleDate: { type: Date },
+    durationToParole: { type: String },
+    durationFromParoleToEnd: { type: String },
     // Timestamps for createdAt and updatedAt
   },
   { timestamps: true }

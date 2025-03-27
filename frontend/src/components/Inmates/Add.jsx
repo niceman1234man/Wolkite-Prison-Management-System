@@ -1,17 +1,19 @@
-import React, { useState } from "react";
-import { useNavigate,useLocation } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import axiosInstance from "../../utils/axiosInstance";
-import { toast } from 'react-toastify'; // Import toast
-import 'react-toastify/dist/ReactToastify.css'; // Import toast CS
+import { toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import { TiArrowBack } from "react-icons/ti";
 
-const AddInmate = () => {
+const AddInmate = ({setOpen}) => {
   const navigate = useNavigate();
   const location = useLocation();
   const initialData = location.state?.initialData || {};
-  
+
   const [formData, setFormData] = useState({
-    fullName: initialData.fullName || "",
+    firstName: initialData.firstName || "",
+    middleName: initialData.middleName || "",
+    lastName: initialData.lastName || "",
     birthDate: initialData.birthDate || "",
     age: initialData.age || "",
     motherName: initialData.motherName || "",
@@ -47,13 +49,120 @@ const AddInmate = () => {
     phoneNumber: initialData.phoneNumber || "",
     registrarWorkerName: initialData.registrarWorkerName || "",
     caseType: initialData.caseType || "",
-    paroleDate: initialData.paroleDate || "",
+    startDate: initialData.startDate || "",
+    sentenceYear: initialData.sentenceYear || "",
     releaseReason: initialData.releaseReason || "",
-    releasedDate: initialData.releasedDate || ""
+    releasedDate: initialData.releasedDate || "",
+    paroleDate: initialData.paroleDate || "",
+    durationToParole: initialData.durationToParole || "",
+    durationFromParoleToEnd: initialData.durationFromParoleToEnd || ""
   });
-console.log(formData.fullName)
-  const [signature, setSignature] = useState(null);
 
+  const [signature, setSignature] = useState(null);
+  useEffect(() => {
+    if (formData.startDate && formData.sentenceYear) {
+      const startDate = new Date(formData.startDate);
+      const sentenceYears = parseFloat(formData.sentenceYear);
+
+      // Calculate parole date (2/3 of sentence)
+      const paroleDate = calculateParoleDate(formData.startDate, formData.sentenceYear);
+      
+      // Calculate release date
+      const fullYears = Math.floor(sentenceYears);
+      const fractionalYear = sentenceYears - fullYears;
+      const months = Math.round(fractionalYear * 12);
+      startDate.setFullYear(startDate.getFullYear() + fullYears);
+      startDate.setMonth(startDate.getMonth() + months);
+      const releaseDate = startDate.toISOString().split('T')[0];
+
+      // Calculate durations
+      const durationToParole = calculateDuration(formData.startDate, paroleDate);
+      const durationFromParoleToEnd = calculateDuration(paroleDate, releaseDate);
+
+      setFormData(prevData => ({
+        ...prevData,
+        releasedDate: releaseDate,
+        paroleDate: paroleDate,
+        durationToParole: durationToParole,
+        durationFromParoleToEnd: durationFromParoleToEnd
+      }));
+    }
+  }, [formData.startDate, formData.sentenceYear]);
+
+  // Function to calculate age from birthdate
+  const calculateAge = (birthDate) => {
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDifference = today.getMonth() - birth.getMonth();
+
+    // Adjust age if the birthday hasn't occurred yet this year
+    if (
+      monthDifference < 0 ||
+      (monthDifference === 0 && today.getDate() < birth.getDate())
+    ) {
+      age--;
+    }
+
+    return age;
+  };
+
+  // Update age when birthDate changes
+  useEffect(() => {
+    if (formData.birthDate) {
+      const age = calculateAge(formData.birthDate);
+      setFormData((prevData) => ({
+        ...prevData,
+        age: age.toString(),
+      }));
+    }
+  }, [formData.birthDate]);
+
+  // Function to calculate parole date
+  const calculateParoleDate = (startDate, sentenceYear) => {
+    if (!startDate || !sentenceYear) return null;
+    
+    const start = new Date(startDate);
+    const twoThirdsYears = (parseFloat(sentenceYear) * 2) / 3;
+    
+    // Split the two-thirds years into full years and months
+    const fullYears = Math.floor(twoThirdsYears);
+    const fractionalYear = twoThirdsYears - fullYears;
+    const months = Math.round(fractionalYear * 12);
+    
+    // Add full years and months to the start date
+    start.setFullYear(start.getFullYear() + fullYears);
+    start.setMonth(start.getMonth() + months);
+    
+    return start.toISOString().split('T')[0];
+  };
+
+  // Function to calculate duration between two dates in years and months
+  const calculateDuration = (date1, date2) => {
+    if (!date1 || !date2) return null;
+    
+    const d1 = new Date(date1);
+    const d2 = new Date(date2);
+    
+    // Calculate years
+    let years = d2.getFullYear() - d1.getFullYear();
+    let months = d2.getMonth() - d1.getMonth();
+    
+    // Adjust for negative months
+    if (months < 0) {
+      years--;
+      months += 12;
+    }
+    
+    // If months is 0, just return years
+    if (months === 0) {
+      return `${years} year${years !== 1 ? 's' : ''}`;
+    }
+    
+    return `${years} year${years !== 1 ? 's' : ''} and ${months} month${months !== 1 ? 's' : ''}`;
+  };
+
+  // Handle form input changes
   const handleChange = (e) => {
     const { name, value, files } = e.target;
     if (name === "signature") {
@@ -66,6 +175,7 @@ console.log(formData.fullName)
     }
   };
 
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     const data = new FormData();
@@ -79,7 +189,7 @@ console.log(formData.fullName)
     try {
       const response = await axiosInstance.post("/inmates/new-inmate", data);
       if (response.data) {
-        navigate("/securityStaff-dashboard/inmates");
+         setFormData(false);
         toast.success("Inmate Registered Successfully!");
       } else {
         alert("Failed to add inmate.");
@@ -89,472 +199,491 @@ console.log(formData.fullName)
       alert(error.response?.data?.error || "An error occurred while adding the inmate.");
     }
   };
+
   return (
-    <div className="max-w-5xl mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
-      
-      <h2 className="text-3xl font-bold mb-6 text-center">Add New Inmate</h2>
-      <form onSubmit={handleSubmit}>
-        {/* Personal Information */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Full Name</label>
-            <input
-              type="text"
-              name="fullName"
-              value={formData.fullName}
-              placeholder="Enter full name"
-              onChange={handleChange}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Birth Date</label>
-            <input
-              type="date"
-              name="birthDate"
-              value={formData.birthDate}
-              onChange={handleChange}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Age</label>
-            <input
-              type="number"
-              name="age"
-              value={formData.age}
-              placeholder="Enter age"
-              onChange={handleChange}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Mother's Name</label>
-            <input
-              type="text"
-              name="motherName"
-              placeholder="Enter mother's name"
-              onChange={handleChange}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Gender</label>
-            <select
-              name="gender"
-              value={formData.gender}
-              onChange={handleChange}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-              required
-            >
-              <option value="">Select Gender</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-            </select>
-          </div>
-        </div>
+    <div className="max-w-5xl mx-auto mt-10 bg-white p-8 rounded-lg shadow-lg">
+      <div className="flex justify-between items-center mb-8">
+        <h2 className="text-3xl font-bold text-gray-800">Add New Inmate</h2>
+        <button
+          onClick={() => navigate("/securityStaff-dashboard/inmates")}
+          className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+        >
+          <TiArrowBack className="mr-2" />
+          Back to List
+        </button>
+      </div>
 
-        {/* Birth Place */}
-        <div className="mt-6">
-          <h3 className="text-xl font-semibold mb-2">Birth Place</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <form onSubmit={handleSubmit} className="space-y-8">
+        {/* Personal Information Section */}
+        <div className="bg-gray-50 p-6 rounded-lg">
+          <h3 className="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">Personal Information</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Region</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
               <input
                 type="text"
-                name="birthRegion"
-                placeholder="Enter birth region"
+                name="firstName"
+                value={formData.firstName}
+                placeholder="Enter First Name"
                 onChange={handleChange}
-                className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Zone</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Middle Name</label>
               <input
                 type="text"
-                name="birthZone"
-                placeholder="Enter birth zone"
+                name="middleName"
+                value={formData.middleName}
+                placeholder="Enter Middle name"
                 onChange={handleChange}
-                className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Wereda</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
               <input
                 type="text"
-                name="birthWereda"
-                placeholder="Enter birth wereda"
+                name="lastName"
+                value={formData.lastName}
+                placeholder="Enter Last name"
                 onChange={handleChange}
-                className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Kebele</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Birth Date</label>
               <input
-                type="text"
-                name="birthKebele"
-                placeholder="Enter birth kebele"
+                type="date"
+                name="birthDate"
+                value={formData.birthDate}
                 onChange={handleChange}
-                className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Current Living Place */}
-        <div className="mt-6">
-          <h3 className="text-xl font-semibold mb-2">Current Living Place</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Region</label>
-              <input
-                type="text"
-                name="currentRegion"
-                placeholder="Enter current region"
-                onChange={handleChange}
-                className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Zone</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
               <input
-                type="text"
-                name="currentZone"
-                placeholder="Enter current zone"
+                type="number"
+                name="age"
+                value={formData.age}
+                placeholder="Enter age"
                 onChange={handleChange}
-                className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                readOnly
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Wereda</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Mother's Name</label>
               <input
                 type="text"
-                name="currentWereda"
-                placeholder="Enter current wereda"
+                name="motherName"
+                placeholder="Enter mother's name"
                 onChange={handleChange}
-                className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Kebele</label>
-              <input
-                type="text"
-                name="currentKebele"
-                placeholder="Enter current kebele"
+              <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+              <select
+                name="gender"
+                value={formData.gender}
                 onChange={handleChange}
-                className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-              />
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                required
+              >
+                <option value="">Select Gender</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </select>
             </div>
           </div>
-        </div>
-
-        {/* Education & Work */}
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Degree Level</label>
-            <input
-              type="text"
-              name="degreeLevel"
-              placeholder="Enter degree level"
-              onChange={handleChange}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Work</label>
-            <input
-              type="text"
-              name="work"
-              placeholder="Enter occupation"
-              onChange={handleChange}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-            />
-          </div>
-        </div>
-
-        {/* Additional Personal Details */}
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Nationality</label>
-            <input
-              type="text"
-              name="nationality"
-              placeholder="Enter nationality"
-              onChange={handleChange}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Religion</label>
-            <input
-              type="text"
-              name="religion"
-              placeholder="Enter religion"
-              onChange={handleChange}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Marital Status</label>
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2">
+              Marital Status
+            </label>
             <select
               name="maritalStatus"
+              value={formData.maritalStatus}
               onChange={handleChange}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
+              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
             >
-              <option value="">Select marital status</option>
+              <option value="">Select Marital Status</option>
               <option value="single">Single</option>
               <option value="married">Married</option>
               <option value="divorced">Divorced</option>
               <option value="widowed">Widowed</option>
             </select>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Height (cm)</label>
-            <input
-              type="number"
-              name="height"
-              placeholder="Enter height"
-              onChange={handleChange}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-            />
-          </div>
         </div>
 
-        {/* Physical Characteristics */}
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Hair Type</label>
-            <input
-              type="text"
-              name="hairType"
-              placeholder="Enter hair type"
-              onChange={handleChange}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Face</label>
-            <input
-              type="text"
-              name="face"
-              placeholder="Describe face features"
-              onChange={handleChange}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Forehead</label>
-            <input
-              type="text"
-              name="foreHead"
-              placeholder="Describe forehead"
-              onChange={handleChange}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Nose</label>
-            <input
-              type="text"
-              name="nose"
-              placeholder="Describe nose"
-              onChange={handleChange}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Eye Color</label>
-            <input
-              type="text"
-              name="eyeColor"
-              placeholder="Enter eye color"
-              onChange={handleChange}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Teeth</label>
-            <input
-              type="text"
-              name="teeth"
-              placeholder="Describe teeth"
-              onChange={handleChange}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Lip</label>
-            <input
-              type="text"
-              name="lip"
-              placeholder="Describe lip"
-              onChange={handleChange}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Ear</label>
-            <input
-              type="text"
-              name="ear"
-              placeholder="Describe ear"
-              onChange={handleChange}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Special Symbol</label>
-            <input
-              type="text"
-              name="specialSymbol"
-              placeholder="Enter special symbol"
-              onChange={handleChange}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-            />
-          </div>
-        </div>
-
-        {/* Contact Information */}
-        <div className="mt-6">
-          <h3 className="text-xl font-semibold mb-2">Contact Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Location Information Section */}
+        <div className="bg-gray-50 p-6 rounded-lg">
+          <h3 className="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">Location Information</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Contact Name</label>
+              <h4 className="text-xl font-medium mb-4 text-gray-700">Birth Place</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Region</label>
+                  <input
+                    type="text"
+                    name="birthRegion"
+                    placeholder="Enter birth region"
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
+                  <input
+                    type="text"
+                    name="birthZone"
+                    placeholder="Enter birth zone"
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Wereda</label>
+                  <input
+                    type="text"
+                    name="birthWereda"
+                    placeholder="Enter birth wereda"
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Kebele</label>
+                  <input
+                    type="text"
+                    name="birthKebele"
+                    placeholder="Enter birth kebele"
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  />
+                </div>
+              </div>
+            </div>
+            <div>
+              <h4 className="text-xl font-medium mb-4 text-gray-700">Current Address</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Region</label>
+                  <input
+                    type="text"
+                    name="currentRegion"
+                    placeholder="Enter current region"
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
+                  <input
+                    type="text"
+                    name="currentZone"
+                    placeholder="Enter current zone"
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Wereda</label>
+                  <input
+                    type="text"
+                    name="currentWereda"
+                    placeholder="Enter current wereda"
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Kebele</label>
+                  <input
+                    type="text"
+                    name="currentKebele"
+                    placeholder="Enter current kebele"
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Physical Characteristics Section */}
+        <div className="bg-gray-50 p-6 rounded-lg">
+          <h3 className="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">Physical Characteristics</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Height (cm)</label>
+              <input
+                type="number"
+                name="height"
+                placeholder="Enter height"
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Hair Type</label>
+              <input
+                type="text"
+                name="hairType"
+                placeholder="Enter hair type"
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Face</label>
+              <input
+                type="text"
+                name="face"
+                placeholder="Describe face features"
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Forehead</label>
+              <input
+                type="text"
+                name="foreHead"
+                placeholder="Describe forehead"
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nose</label>
+              <input
+                type="text"
+                name="nose"
+                placeholder="Describe nose"
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Eye Color</label>
+              <input
+                type="text"
+                name="eyeColor"
+                placeholder="Enter eye color"
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Teeth</label>
+              <input
+                type="text"
+                name="teeth"
+                placeholder="Describe teeth"
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Lip</label>
+              <input
+                type="text"
+                name="lip"
+                placeholder="Describe lip"
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Ear</label>
+              <input
+                type="text"
+                name="ear"
+                placeholder="Describe ear"
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Special Symbol</label>
+              <input
+                type="text"
+                name="specialSymbol"
+                placeholder="Enter special symbol"
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Contact Information Section */}
+        <div className="bg-gray-50 p-6 rounded-lg">
+          <h3 className="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">Contact Information</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Contact Name</label>
               <input
                 type="text"
                 name="contactName"
                 placeholder="Enter contact name"
                 onChange={handleChange}
-                className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Contact Region</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Contact Region</label>
               <input
                 type="text"
                 name="contactRegion"
                 placeholder="Enter contact region"
                 onChange={handleChange}
-                className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Contact Zone</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Contact Zone</label>
               <input
                 type="text"
                 name="contactZone"
                 placeholder="Enter contact zone"
                 onChange={handleChange}
-                className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Contact Wereda</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Contact Wereda</label>
               <input
                 type="text"
                 name="contactWereda"
                 placeholder="Enter contact wereda"
                 onChange={handleChange}
-                className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Contact Kebele</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Contact Kebele</label>
               <input
                 type="text"
                 name="contactKebele"
                 placeholder="Enter contact kebele"
                 onChange={handleChange}
-                className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Phone Number</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
               <input
                 type="text"
                 name="phoneNumber"
                 placeholder="Enter phone number"
                 onChange={handleChange}
-                className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
               />
             </div>
           </div>
         </div>
 
-        {/* Registrar Information */}
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Registrar Worker Name</label>
-            <input
-              type="text"
-              name="registrarWorkerName"
-              placeholder="Enter registrar worker name"
-              onChange={handleChange}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Registrar Worker Signature</label>
-            <input
-              type="file"
-              name="signature"
-              accept="image/*"
-              onChange={handleChange}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-            />
-          </div>
-        </div>
-
-        {/* Case & Parole Details */}
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Case Type</label>
-            <input
-              type="text"
-              name="caseType"
-              placeholder="Enter case type"
-              onChange={handleChange}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Parole Date</label>
-            <input
-              type="date"
-              name="paroleDate"
-              onChange={handleChange}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Release Reason</label>
-            <textarea
-              name="releaseReason"
-              placeholder="Enter release reason"
-              onChange={handleChange}
-              rows="3"
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-            ></textarea>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Released Date</label>
-            <input
-              type="date"
-              name="releasedDate"
-              onChange={handleChange}
-              className="mt-1 p-2 block w-full border border-gray-300 rounded-md"
-            />
+        {/* Case Information Section */}
+        <div className="bg-gray-50 p-6 rounded-lg">
+          <h3 className="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">Case Information</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Case Type</label>
+              <input
+                type="text"
+                name="caseType"
+                placeholder="Enter case type"
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+              <input
+                type="date"
+                name="startDate"
+                value={formData.startDate}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Sentence Year</label>
+              <input
+                type="number"
+                name="sentenceYear"
+                value={formData.sentenceYear}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                step="0.5" // Allow decimal values (e.g., 1.5 for 1 year and 6 months)
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Released Date</label>
+              <input
+                type="date"
+                name="releasedDate"
+                value={formData.releasedDate}
+                onChange={handleChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                readOnly
+              />
+            </div>
+            <div className="md:col-span-2 lg:col-span-3">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Sentence Reason</label>
+              <textarea
+                name="sentenceReason"
+                placeholder="Enter sentence reason"
+                onChange={handleChange}
+                rows="3"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+              />
+            </div>
           </div>
         </div>
 
-        {/* Submit Button */}
-        <div className="mt-6">
+        {/* Parole Information Section */}
+        <div className="bg-gray-50 p-6 rounded-lg">
+          <h3 className="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">Parole Information</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h4 className="text-lg font-medium text-gray-700">Parole Date (2/3 of sentence)</h4>
+              <p className="text-gray-900">{formData.paroleDate || 'Not available'}</p>
+            </div>
+            
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h4 className="text-lg font-medium text-gray-700">Duration Until Parole</h4>
+              <p className="text-gray-900">{formData.durationToParole || 'Not available'}</p>
+            </div>
+            
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h4 className="text-lg font-medium text-gray-700">Duration From Parole to Release</h4>
+              <p className="text-gray-900">{formData.durationFromParoleToEnd || 'Not available'}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Form Actions */}
+        <div className="flex justify-end space-x-4 pt-6">
+          <button
+            type="button"
+            onClick={() => navigate("/securityStaff-dashboard/inmates")}
+            className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+          >
+            Cancel
+          </button>
           <button
             type="submit"
-            className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded"
+            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
           >
             Add Inmate
           </button>
