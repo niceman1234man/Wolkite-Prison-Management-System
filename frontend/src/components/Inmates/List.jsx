@@ -31,10 +31,10 @@ const InmatesList = () => {
         const formattedData = response.data.inmates.map((inmate) => ({
           _id: inmate._id,
           sno: sno++, // Auto-increment serial number
-          inmate_name: inmate.fullName || "N/A",
+          inmate_name: inmate.firstName +" "+ inmate.middleName || "N/A",
           age: inmate.age || "N/A",
           gender: inmate.gender || "N/A",
-          sentence: inmate.releaseReason || "N/A",
+          sentence: inmate.caseType || "N/A",
           action: <InmateButtons _id={inmate._id} onDelete={fetchInmates} />,
         }));
 
