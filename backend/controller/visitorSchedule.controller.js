@@ -1,4 +1,4 @@
-import VisitorSchedule from "../models/visitorSchedule.model.js";
+import VisitorSchedule from "../model/visitorSchedule.model.js";
 
 // Create new visit schedule
 export const createVisitSchedule = async (req, res) => {

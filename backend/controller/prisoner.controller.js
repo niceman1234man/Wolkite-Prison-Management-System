@@ -1,4 +1,4 @@
-import { Prisoner } from "../model/transfer.model.js";
+import { Prisoner } from "../model/Prisoner.js";
 import multer from "multer";
 import path from "path";
 

@@ -83,10 +83,10 @@ import ViewTransfer from "./components/Woreda/ViewTransfer";
 import EditTransfer from "./components/Woreda/EditTransfer";
 import UpdateClearance from "./components/Clearance/UpdateClearance";
 import ViewClearance from "./components/Clearance/ViewClearance";
-import Woreda from "./components/SecurityStaff/Woreda";
+// import Woreda from "./components/SecurityStaff/Woreda";
 import Court from "./components/SecurityStaff/Court";
 import ParoleSend from "./components/SecurityStaff/ParoleSend";
-import WoredaView from "./components/SecurityStaff/WoredaView";
+// import WoredaView from "./components/SecurityStaff/WoredaView";
 import CourtView from "./components/SecurityStaff/CourtView";
 import InspectorHomepageSettings from "./page/InspectorHomepageSettings";
 import Dashboard from "./page/Dashboard";
@@ -96,6 +96,7 @@ import WoredaNotifications from "./components/Woreda/Notifications";
 import AddWoredaInmate from "./components/Woreda/AddWoredaInmate";
 import ViewWoredaInmate from "./components/Woreda/ViewWoredaInmate";
 import ViewPrisoner from "./components/Woreda/ViewPrisoner";
+import TransferRequests from "./components/SecurityStaff/TransferRequests";
 
 function App() {
   return (
@@ -220,11 +221,13 @@ function App() {
           >
             <Route index element={<SecurityStaffSummary />} />
             <Route path="inmates" element={<InmateList />} />
-            <Route path="woreda" element={<Woreda />} />
-            <Route path="woreda-view/:id" element={<WoredaView />} />
+            {/* <Route path="woreda" element={<Woreda />} /> */}
+            {/* <Route path="woreda-view/:id" element={<WoredaView />} /> */}
             <Route path="court" element={<Court />} />
             <Route path="court-view/:id" element={<CourtView />} />
             <Route path="parole" element={<ParoleSend />} />
+            <Route path="transfer-requests" element={<TransferRequests />} />
+
 
             <Route path="add-inmate" element={<AddInmate />} />
             <Route path="update-inmate/:id" element={<UpdateInmate />} />

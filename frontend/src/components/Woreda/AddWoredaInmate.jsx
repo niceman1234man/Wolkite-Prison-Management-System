@@ -602,7 +602,7 @@ export default function AddWoredaInmate() {
                       </td>
                       <td className="hidden md:table-cell px-4 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">
-                          {inmate.assignedPrison}
+                          {prisons.find(p => p._id === inmate.assignedPrison)?.prison_name || "Not assigned"}
                         </div>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">

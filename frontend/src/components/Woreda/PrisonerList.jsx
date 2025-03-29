@@ -153,35 +153,31 @@ const PrisonerList = () => {
     try {
       const response = await axiosInstance.get("/woreda-inmate/getall-inmates");
       if (response.data?.success) {
-        // Fetch transfer status for each inmate
-        const transferStatusPromises = response.data.inmates.map(
-          async (inmate) => {
-            try {
-              const transferResponse = await axiosInstance.get(
-                `/transfer/get-transfer-status/${inmate._id}`
-              );
-              return transferResponse.data?.transferStatus || null;
-            } catch (error) {
-              console.error(
-                `Error fetching transfer status for inmate ${inmate._id}:`,
-                error
-              );
-              return null;
-            }
-          }
-        );
+        // Fetch all transfers
+        const transfersResponse = await axiosInstance.get("/transfer/getall-transfers");
+        console.log("Transfers response:", transfersResponse.data);
 
-        const transferStatuses = await Promise.all(transferStatusPromises);
+        // Create a map of inmate IDs to their transfer status
+        const transferStatusMap = {};
+        if (transfersResponse.data?.success && transfersResponse.data?.data) {
+          transfersResponse.data.data.forEach(transfer => {
+            transferStatusMap[transfer.inmateId] = transfer.status;
+          });
+        }
 
-        const data = response.data.inmates.map((prisoner, index) => ({
-          ...prisoner,
-          timeRemaining: calculateTimeRemaining(prisoner.intakeDate),
-          transferStatus: transferStatuses[index],
-        }));
+        const data = response.data.inmates.map((prisoner) => {
+          const status = transferStatusMap[prisoner._id];
+          console.log(`Processing prisoner ${prisoner._id} with status:`, status);
+          return {
+            ...prisoner,
+            timeRemaining: calculateTimeRemaining(prisoner.intakeDate),
+            transferStatus: status || "No Transfer Request",
+          };
+        });
 
-        // Filter inmates with 24 hours or less remaining time
+        // Filter inmates with 40 hours or less remaining time
         const urgentInmates = data.filter(
-          (prisoner) => prisoner.timeRemaining <= 24 * 60 * 60 * 1000
+          (prisoner) => prisoner.timeRemaining <= 40 * 60 * 60 * 1000
         );
 
         // Set both all prisoners and filtered prisoners
@@ -240,7 +236,7 @@ const PrisonerList = () => {
 
   const handleFilterUrgent = () => {
     const urgentPrisoners = prisoners.filter(
-      (prisoner) => prisoner.timeRemaining < 6 * 60 * 60 * 1000 // Less than 6 hours remaining
+      (prisoner) => prisoner.timeRemaining <= 40 * 60 * 60 * 1000 // Less than 40 hours remaining
     );
     setFilteredPrisoners(urgentPrisoners);
   };
@@ -269,7 +265,6 @@ const PrisonerList = () => {
           crime: selectedPrisonerData.crime,
           intakeDate: selectedPrisonerData.intakeDate,
           timeRemaining: selectedPrisonerData.timeRemaining,
-
           age: selectedPrisonerData.age,
           gender: selectedPrisonerData.gender,
           address: selectedPrisonerData.address,
@@ -277,20 +272,30 @@ const PrisonerList = () => {
           emergencyContact: selectedPrisonerData.emergencyContact,
           medicalConditions: selectedPrisonerData.medicalConditions,
         },
+        requestDetails: {
+          requestedBy: {
+            role: "Woreda",
+            prison: selectedPrisonerData.assignedPrison
+          },
+          requestDate: new Date().toISOString(),
+          status: "Pending"
+        }
       };
 
+      console.log("Submitting transfer request:", transferData);
       const response = await axiosInstance.post(
         "/api/transfer/create-transfer",
         transferData
       );
 
       if (response.data?.success) {
-        toast.success("Transfer request submitted successfully");
+        toast.success("Transfer request submitted successfully. Waiting for security staff approval.");
         setTransferModalOpen(false);
         setSelectedPrison("");
         setTransferReason("");
         setSelectedPrisonerData(null);
-        fetchPrisoners();
+        // Refresh the list to show updated status
+        await fetchPrisoners();
       }
     } catch (error) {
       console.error("Error creating transfer:", error);
@@ -324,13 +329,15 @@ const PrisonerList = () => {
       width: "180px",
     },
     {
-      name: "Status",
+      name: "Transfer Status",
       selector: (row) => row.transferStatus,
       cell: (row) => (
         <span
           className={`px-2 py-1 text-xs font-semibold rounded-full ${
             row.transferStatus === "Pending"
               ? "bg-yellow-100 text-yellow-800"
+              : row.transferStatus === "Under Review"
+              ? "bg-blue-100 text-blue-800"
               : row.transferStatus === "Approved"
               ? "bg-green-100 text-green-800"
               : row.transferStatus === "Rejected"
@@ -338,7 +345,7 @@ const PrisonerList = () => {
               : "bg-gray-100 text-gray-800"
           }`}
         >
-          {row.transferStatus || "Not Requested"}
+          {row.transferStatus || "No Transfer Request"}
         </span>
       ),
       sortable: true,
@@ -590,7 +597,7 @@ const PrisonerList = () => {
           <div className="flex items-center gap-6">
             <div className="flex flex-col">
               <h3 className="text-2xl font-bold text-gray-800">
-                Urgent Inmates (24h or less)
+                Urgent Inmates (40h or less)
               </h3>
               <div className="flex items-center gap-4 mt-2">
                 {/* Digital Clock Display */}

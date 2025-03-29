@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { toggleSidebar, setSidebarState } from "../../redux/sidebarSlice";
@@ -9,10 +9,14 @@ import {
   FaChartBar,
   FaClipboardCheck,
   FaCogs,
+  FaExchangeAlt,
 } from "react-icons/fa";
+
 const SecurityStaffSidebar = () => {
   const dispatch = useDispatch();
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
+  const [hovered, setHovered] = useState(null);
+
   // Auto-collapse on small screens
   useEffect(() => {
     const handleResize = () => {
@@ -50,11 +54,11 @@ const SecurityStaffSidebar = () => {
         <nav className="mt-4 space-y-1 px-2">
           {[
             { to: "/securityStaff-dashboard", icon: <FaTachometerAlt />, label: "Dashboard", exact: true },
+            { to: "/securityStaff-dashboard/transfer-requests", icon: <FaExchangeAlt />, label: "Transfer Requests" },
             { to: "/securityStaff-dashboard/inmates", icon: <FaUsers />, label: "Inmates" },
             { to: "/securityStaff-dashboard/reports", icon: <FaChartBar />, label: "Reports" },
             { to: "/securityStaff-dashboard/clearance", icon: <FaClipboardCheck />, label: "Clearance" },
             { to: "/securityStaff-dashboard/parole", icon: <FaClipboardCheck />, label: "Parole" },
-            { to: "/securityStaff-dashboard/woreda", icon: <FaCogs />, label: "Woreda" },
             { to: "/securityStaff-dashboard/court", icon: <FaCogs />, label: "Court" }
           ].map((item, index) => (
             <NavLink
@@ -80,7 +84,7 @@ const SecurityStaffSidebar = () => {
               )}
             </NavLink>
           ))}
-     </nav>
+        </nav>
       </div>
     </>
   );

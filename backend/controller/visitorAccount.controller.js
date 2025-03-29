@@ -1,4 +1,4 @@
-import VisitorAccount from "../models/visitorAccount.model.js";
+import VisitorAccount from "../model/visitorAccount.model.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 

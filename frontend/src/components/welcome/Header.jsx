@@ -1,6 +1,7 @@
 import React from 'react';
-import ethiopiaFlag from "../../assets/centralEthiopiaFlag.png";
+import southFlag from "../../assets/southFlag.png";
 import flagofEthiopia from "../../assets/Flag-Ethiopia.png";
+
 
 function Header({ activeButton, handleButtonClick, isMobileMenuOpen, setIsMobileMenuOpen }) {
   return (
@@ -8,7 +9,7 @@ function Header({ activeButton, handleButtonClick, isMobileMenuOpen, setIsMobile
       <div className="max-w-7xl mx-auto px-4">
         <div className="flex items-center justify-between py-4">
           <div className="flex items-center space-x-6">
-            <img src={ethiopiaFlag} alt="Central Ethiopia Flag" className="w-12 h-8 object-contain" />
+            <img src={southFlag} alt="Central Ethiopia Flag" className="w-12 h-10 object-contain" />
             <h1 className="font-bold text-2xl text-white">Gurage Zone PMS</h1>
             <img src={flagofEthiopia} alt="Ethiopian Flag" className="w-12 h-8 object-contain" />
           </div>

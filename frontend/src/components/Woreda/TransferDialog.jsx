@@ -30,26 +30,115 @@ const TransferDialog = ({
   const [transferReason, setTransferReason] = useState("");
   const [loading, setLoading] = useState(false);
   const [selectedPrisonName, setSelectedPrisonName] = useState("");
+  const [currentPrisonName, setCurrentPrisonName] = useState("");
+  const [error, setError] = useState("");
+  const [transferStatus, setTransferStatus] = useState("Pending");
+  const [hasApprovedTransfer, setHasApprovedTransfer] = useState(false);
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("");
 
   useEffect(() => {
-    fetchPrisons();
-  }, []);
+    if (inmate?.assignedPrison) {
+      fetchPrisons();
+      checkExistingTransfers();
+    }
+  }, [inmate?.assignedPrison]);
 
   const fetchPrisons = async () => {
     try {
       const response = await axiosInstance.get("/prison/getall-prisons");
-      if (response.data?.success) {
-        // Filter out the current prison from the list
-        const availablePrisons = (response.data.prisons || []).filter(
-          (prison) => prison._id !== currentPrison && prison.status === "Active"
+      console.log("Prison response:", response.data);
+      
+      if (response.data?.success && Array.isArray(response.data.prisons)) {
+        // Find current prison data
+        const currentPrisonData = response.data.prisons.find(
+          prison => prison._id === inmate?.assignedPrison
         );
-        setPrisons(availablePrisons);
+        
+        console.log("Current prison data:", currentPrisonData);
+        
+        if (currentPrisonData) {
+          setCurrentPrisonName(currentPrisonData.prison_name);
+        } else {
+          console.error("Current prison not found:", inmate?.assignedPrison);
+          setCurrentPrisonName("Not Assigned");
+        }
+
+        // Store all prisons in state
+        setPrisons(response.data.prisons);
+      } else {
+        console.error("Unexpected prison data format:", response.data);
+        toast.error("Invalid prison data format received");
+        setPrisons([]);
+        setCurrentPrisonName("Not Assigned");
       }
     } catch (error) {
       console.error("Error fetching prisons:", error);
-      toast.error("Failed to fetch available prisons");
+      console.error("Error details:", error.response?.data);
+      toast.error(error.response?.data?.message || "Failed to fetch prison data");
+      setPrisons([]);
+      setCurrentPrisonName("Not Assigned");
     }
   };
+
+  const checkExistingTransfers = async () => {
+    try {
+      if (!inmate?._id) {
+        console.log("No inmate ID available");
+        return;
+      }
+
+      const response = await axiosInstance.get("/transfer/getall-transfers");
+      console.log("All transfers:", response.data.data);
+      
+      // Filter transfers for this inmate
+      const inmateTransfers = response.data.data.filter(
+        transfer => transfer.inmateId === inmate._id
+      );
+      console.log("Inmate transfers:", inmateTransfers);
+      
+      if (inmateTransfers.length === 0) {
+        console.log("No transfers found for this inmate");
+        setHasApprovedTransfer(false);
+        return;
+      }
+
+      // Check for any active transfers (pending or in_review)
+      const activeTransfer = inmateTransfers.find(
+        transfer => 
+          transfer.status.toLowerCase() === "pending" || 
+          transfer.status.toLowerCase() === "in_review" ||
+          transfer.status.toLowerCase() === "approved"
+      );
+      
+      console.log("Active transfer found:", activeTransfer);
+      
+      if (activeTransfer) {
+        setHasApprovedTransfer(true);
+        const statusMessage = activeTransfer.status.toLowerCase() === "approved" 
+          ? "This inmate already has an approved transfer request"
+          : "This inmate already has a pending transfer request";
+        
+        setMessage(statusMessage);
+        setMessageType("error");
+      } else {
+        setHasApprovedTransfer(false);
+        setMessage("");
+      }
+    } catch (error) {
+      console.error("Error checking existing transfers:", error);
+      setMessage("Failed to check existing transfers");
+      setMessageType("error");
+      setHasApprovedTransfer(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen && inmate?.assignedPrison) {
+      fetchPrisons();
+      checkExistingTransfers();
+    }
+  }, [isOpen, inmate?.assignedPrison]);
 
   const handlePrisonChange = (e) => {
     const prisonId = e.target.value;
@@ -68,86 +157,86 @@ const TransferDialog = ({
 
   const handleTransfer = async () => {
     if (!selectedPrison || !transferReason) {
-      toast.error("Please fill in all required fields");
+      toast.error("Please fill in all fields");
       return;
     }
 
-    if (selectedPrison === currentPrison) {
-      toast.error("Cannot transfer to the same prison");
-      return;
-    }
-
-    setLoading(true);
     try {
+      // Find the selected prison data
+      const selectedPrisonData = prisons.find(p => p._id === selectedPrison);
+      if (!selectedPrisonData) {
+        toast.error("Invalid prison selection");
+        return;
+      }
+
       const transferData = {
         inmateId: inmate._id,
-        fromPrison: currentPrison || inmate?.assignedPrison,
-        toPrison: selectedPrison,
-        reason: transferReason.trim(),
-        status: "Pending",
+        fromPrison: currentPrisonName,
+        toPrison: selectedPrisonData.prison_name, // Use prison name instead of ID
+        reason: transferReason,
         inmateData: {
           firstName: inmate.firstName,
           lastName: inmate.lastName,
-          middleName: inmate.middleName,
-          dateOfBirth: inmate.dateOfBirth,
-          gender: inmate.gender,
           crime: inmate.crime,
-          sentenceStart: inmate.sentenceStart,
-          sentenceEnd: inmate.sentenceEnd,
-          paroleEligibility: inmate.paroleEligibility,
-          medicalConditions: inmate.medicalConditions,
-          riskLevel: inmate.riskLevel,
-          specialRequirements: inmate.specialRequirements,
           intakeDate: inmate.intakeDate,
-          arrestingOfficer: inmate.arrestingOfficer,
-          holdingCell: inmate.holdingCell,
-          documents: inmate.documents,
-          photo: inmate.documents?.[0] || null,
+          timeRemaining: inmate.timeRemaining,
+          age: inmate.age,
+          gender: inmate.gender,
+          address: inmate.address,
+          phoneNumber: inmate.phoneNumber,
+          emergencyContact: inmate.emergencyContact,
+          medicalConditions: inmate.medicalConditions,
         },
         requestDetails: {
-          requestDate: new Date().toISOString(),
           requestedBy: {
-            role: "woreda",
-            prison: currentPrison,
+            role: "Woreda",
+            prison: currentPrisonName
           },
-          status: "Pending",
-          securityReview: {
-            status: "Pending",
-            reviewDate: null,
-            reviewedBy: null,
-            rejectionReason: null,
-          },
-        },
+          requestDate: new Date().toISOString()
+        }
       };
 
       console.log("Submitting transfer request:", transferData);
-
       const response = await axiosInstance.post(
-        "/transfer-requests/create",
+        "/transfer/new-transfer",
         transferData
       );
 
       if (response.data?.success) {
-        toast.success("Transfer request submitted successfully");
+        toast.success("Transfer request submitted successfully. Waiting for security staff approval.");
         onClose();
-        setSelectedPrison("");
-        setTransferReason("");
-        if (onTransferComplete) onTransferComplete();
-      } else {
-        throw new Error(
-          response.data?.message || "Failed to submit transfer request"
-        );
+        onTransferComplete();
       }
     } catch (error) {
-      console.error("Transfer request error:", error);
+      console.error("Error creating transfer:", error);
       toast.error(
-        error.response?.data?.message ||
-          error.message ||
-          "Failed to submit transfer request. Please try again."
+        error.response?.data?.error || "Failed to submit transfer request"
       );
-    } finally {
-      setLoading(false);
     }
+  };
+
+  // Add status badge component
+  const StatusBadge = ({ status }) => {
+    const getStatusColor = (status) => {
+      switch (status) {
+        case "Pending":
+          return "bg-yellow-100 text-yellow-800";
+        case "Under Review":
+          return "bg-blue-100 text-blue-800";
+        case "Approved":
+          return "bg-green-100 text-green-800";
+        case "Rejected":
+          return "bg-red-100 text-red-800";
+        default:
+          return "bg-gray-100 text-gray-800";
+      }
+    };
+
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(status)}`}>
+        {status}
+      </span>
+    );
   };
 
   return (
@@ -156,13 +245,18 @@ const TransferDialog = ({
         <DialogHeader>
           <DialogTitle>Transfer Prisoner</DialogTitle>
           <DialogDescription>
-            Review prisoner details and select the destination prison for
-            transfer.
+            {hasApprovedTransfer ? (
+              <span className="text-red-600">
+                {message}
+              </span>
+            ) : (
+              "Review prisoner details and select the destination prison for transfer."
+            )}
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto pr-2">
-          {inmate && (
+          {inmate && !hasApprovedTransfer && (
             <div className="space-y-4">
               {/* Header with Photo */}
               <div className="flex items-center justify-between mb-6">
@@ -193,11 +287,11 @@ const TransferDialog = ({
                       {inmate?.lastName}
                     </h2>
                     <p className="text-gray-600">
-                      Current Prison:{" "}
-                      {currentPrison ||
-                        inmate?.assignedPrison ||
-                        "Not Assigned"}
+                      Current Prison: {currentPrisonName}
                     </p>
+                    <div className="mt-2">
+                      <StatusBadge status={transferStatus} />
+                    </div>
                   </div>
                 </div>
                 <button
@@ -213,14 +307,15 @@ const TransferDialog = ({
                 <h3 className="text-lg font-semibold mb-4">Transfer Details</h3>
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Select Destination Prison
+                    <label className="block text-sm font-medium text-gray-700">
+                      Select Prison
                     </label>
                     <select
                       value={selectedPrison}
-                      onChange={handlePrisonChange}
-                      className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
-                      disabled={loading}
+                      onChange={(e) => setSelectedPrison(e.target.value)}
+                      className="mt-1 block w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+                      disabled={loading || prisons.length === 0}
+                      required
                     >
                       <option value="">Select a prison</option>
                       {prisons.map((prison) => (
@@ -229,18 +324,23 @@ const TransferDialog = ({
                         </option>
                       ))}
                     </select>
+                    {prisons.length === 0 && !loading && (
+                      <p className="mt-1 text-sm text-red-600">
+                        No prisons available for transfer. Please try again later.
+                      </p>
+                    )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <label className="block text-sm font-medium text-gray-700">
                       Transfer Reason
                     </label>
                     <textarea
                       value={transferReason}
                       onChange={(e) => setTransferReason(e.target.value)}
-                      className="w-full p-2 border rounded-md focus:ring-2 focus:ring-blue-500"
+                      className="mt-1 block w-full p-2 border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
                       rows="3"
-                      disabled={loading}
-                      placeholder="Enter reason for transfer..."
+                      required
+                      placeholder="Enter the reason for transfer"
                     />
                   </div>
                 </div>
@@ -251,42 +351,46 @@ const TransferDialog = ({
 
         {/* Action Buttons */}
         <div className="flex justify-end space-x-4 mt-6">
-          <PrintButton
-            inmate={inmate}
-            title="Transfer Request"
-            additionalData={{
-              "Transfer Details": {
-                "From Prison": currentPrison || inmate?.assignedPrison,
-                "To Prison": selectedPrisonName,
-                "Transfer Reason": transferReason,
-                Status: "Pending",
-              },
-              "Inmate Information": {
-                "Full Name": `${inmate?.firstName} ${inmate?.middleName} ${inmate?.lastName}`,
-                Gender: inmate?.gender,
-                Age: inmate?.age,
-                "Current Status": inmate?.status,
-              },
-              "Criminal Information": {
-                Crime: inmate?.crime,
-                "Risk Level": inmate?.riskLevel,
-                "Sentence Start": new Date(
-                  inmate?.sentenceStart
-                ).toLocaleDateString(),
-                "Sentence End": new Date(
-                  inmate?.sentenceEnd
-                ).toLocaleDateString(),
-              },
-            }}
-          />
-          <button
-            onClick={handleTransfer}
-            disabled={loading}
-            className="flex items-center px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors disabled:opacity-50"
-          >
-            <FaExchangeAlt className="mr-2 text-sm" />
-            {loading ? "Submitting..." : "Submit Transfer"}
-          </button>
+          {!hasApprovedTransfer && (
+            <>
+              <PrintButton
+                inmate={inmate}
+                title="Transfer Request"
+                additionalData={{
+                  "Transfer Details": {
+                    "From Prison": currentPrisonName,
+                    "To Prison": selectedPrisonName,
+                    "Transfer Reason": transferReason,
+                    Status: transferStatus,
+                  },
+                  "Inmate Information": {
+                    "Full Name": `${inmate?.firstName} ${inmate?.middleName} ${inmate?.lastName}`,
+                    Gender: inmate?.gender,
+                    Age: inmate?.age,
+                    "Current Status": inmate?.status,
+                  },
+                  "Criminal Information": {
+                    Crime: inmate?.crime,
+                    "Risk Level": inmate?.riskLevel,
+                    "Sentence Start": new Date(
+                      inmate?.sentenceStart
+                    ).toLocaleDateString(),
+                    "Sentence End": new Date(
+                      inmate?.sentenceEnd
+                    ).toLocaleDateString(),
+                  },
+                }}
+              />
+              <button
+                onClick={handleTransfer}
+                disabled={loading}
+                className="flex items-center px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors disabled:opacity-50"
+              >
+                <FaExchangeAlt className="mr-2 text-sm" />
+                {loading ? "Submitting..." : "Submit Transfer"}
+              </button>
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>

@@ -1,5 +1,5 @@
 import Prisoner from "../model/Prisoner.js"; // Import the Prisoner model
-import Transfer from "../model/Transfer.js"; // Import the Transfer model
+import { Transfer } from "../model/transfer.model.js"; // Import the Transfer model
 import { validationResult } from "express-validator"; // For request validation
 
 /**

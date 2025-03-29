@@ -1,5 +1,5 @@
 import { WoredaInmate } from "../model/woredaInmate.model.js";
-import { Ttransfer } from "../model/transfer.model.js";
+import { Transfer } from "../model/transfer.model.js";
 import { Incident } from "../model/Incident.model.js";
 
 /**
@@ -13,7 +13,7 @@ export const getDashboardData = async (req, res) => {
     const totalPrisoners = await WoredaInmate.countDocuments();
 
     // Get pending transfers
-    const pendingTransfers = await Ttransfer.countDocuments({ status: "Pending" });
+    const pendingTransfers = await Transfer.countDocuments({ status: "Pending" });
 
     // Get urgent cases (high risk inmates and incidents)
     const highRiskInmates = await WoredaInmate.countDocuments({ riskLevel: "High" });
@@ -21,7 +21,7 @@ export const getDashboardData = async (req, res) => {
     const urgentCases = highRiskInmates + urgentIncidents;
 
     // Get recent transfers
-    const recentTransfers = await Ttransfer.find()
+    const recentTransfers = await Transfer.find()
       .sort({ createdAt: -1 })
       .limit(5);
 

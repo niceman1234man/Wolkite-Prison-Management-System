@@ -13,7 +13,7 @@ import About from "./welcome/About";
 import Help from "./welcome/Help";
 import Contact from "./welcome/Contact";
 import { ShieldCheckIcon, LockClosedIcon, XMarkIcon } from '@heroicons/react/24/outline';
-
+import southFlag from '../assets/southFlag.png'
 import backgroundImage from "../assets/gurageZone.png";
 import ethiopiaFlag from "../assets/centralEthiopiaFlag.png";
 import flagofEthiopia from "../assets/Flag-Ethiopia.png";
