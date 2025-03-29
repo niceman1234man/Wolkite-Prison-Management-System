@@ -8,17 +8,17 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import prisonImage from "../../assets/prisonLogin.webp"; // Import the prison image
 
-function Login() {
+function Login({ onClose, isVisitor = false }) {
   const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false); // Loading state
-  const [showPassword, setShowPassword] = useState(false); // State to toggle password visibility
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [user, setUsers] = useState({ email: "", password: "" });
 
   const handleChange = (e) => {
     setUsers({ ...user, [e.target.name]: e.target.value });
-    setError(""); // Clear errors on input change
+    setError("");
   };
 
   const handleSubmit = async (e) => {
@@ -28,50 +28,50 @@ function Login() {
       return;
     }
 
-    setIsLoading(true); // Start loading
+    setIsLoading(true);
     try {
-      const response = await axiosInstance.post("/user/login", user);
-      console.log("Login response:", response.data); // Debug log
+      const endpoint = "/user/login"; // Always use /user/login endpoint
+      const response = await axiosInstance.post(endpoint, user);
+      console.log("Login response:", response.data);
 
       if (response.data && response.data.accessToken) {
-        // Store the token
         localStorage.setItem("token", response.data.accessToken);
 
-        // Store user info
         if (response.data.userInfo) {
           dispatch(setUser(response.data.userInfo));
           localStorage.setItem("user", JSON.stringify(response.data.userInfo));
         }
 
-        // Navigate based on role
-        if (response.data.userInfo.isactivated) {
-          switch (response.data.userInfo.role) {
-            case "admin":
-              navigate("/admin-dashboard");
-              break;
-            case "visitor":
-              navigate("/visitor-dashboard");
-              break;
-            case "police-officer":
-              navigate("/policeOfficer-dashboard");
-              break;
-            case "inspector":
-              navigate("/inspector-dashboard");
-              break;
-            case "security":
-              navigate("/securityStaff-dashboard");
-              break;
-            case "court":
-              navigate("/court-dashboard");
-              break;
-            case "woreda":
-              navigate("/woreda-dashboard");
-              break;
-            default:
-              navigate("/login");
-          }
+        if (isVisitor) {
+          onClose();
+          window.location.href = "/visitor-dashboard";
         } else {
-          navigate("/block");
+          if (response.data.userInfo.isactivated) {
+            switch (response.data.userInfo.role) {
+              case "admin":
+                navigate("/admin-dashboard");
+                break;
+              case "police-officer":
+                navigate("/policeOfficer-dashboard");
+                break;
+              case "inspector":
+                navigate("/inspector-dashboard");
+                break;
+              case "security":
+                navigate("/securityStaff-dashboard");
+                break;
+              case "court":
+                navigate("/court-dashboard");
+                break;
+              case "woreda":
+                navigate("/woreda-dashboard");
+                break;
+              default:
+                navigate("/login");
+            }
+          } else {
+            navigate("/block");
+          }
         }
       } else {
         throw new Error("Invalid response format from server");
@@ -83,103 +83,72 @@ function Login() {
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
-      setIsLoading(false); // Stop loading
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col min-h-[40vh] bg-gradient-to-r from-green-50 to-teal-100">
-      {/* Main Content */}
-      <main className="flex-grow items-center justify-center px-4 py-6">
-        {/* Login Title */}
-        <h1 className="text-3xl font-bold text-center mb-6 text-gray-800">
-          Login
-        </h1>
+    <div className="w-full">
+      {/* <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Login</h2> */}
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4 text-center text-sm">
+          {error}
+        </div>
+      )}
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="relative">
+          <FaUser className="absolute left-3 top-3 text-gray-500" />
+          <input
+            type="email"
+            name="email"
+            placeholder="Email Address"
+            value={user.email}
+            onChange={handleChange}
+            className="pl-10 py-2 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-gray-900 bg-white placeholder-gray-500"
+            required
+          />
+        </div>
 
-        {/* Error Message */}
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4 text-center text-sm">
-            {error}
-          </div>
-        )}
-
-<<<<<<< HEAD
-          {/* Login Form */}
-          <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
-            {/* Email Input */}
-            <div className="relative">
-              <FaUser className="absolute left-3 top-3 text-gray-500" />
-              <input
-                name="email"
-                placeholder="Email Address"
-                value={user.email}
-                onChange={handleChange}
-                className="pl-10 py-2 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                required
-              />
-            </div>
-=======
-        {/* Login Form */}
-        <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
-          {/* Email Input */}
-          <div className="relative">
-            <FaUser className="absolute left-3 top-3 text-gray-500" />
-            <input
-              type="email"
-              name="email"
-              placeholder="Email Address"
-              value={user.email}
-              onChange={handleChange}
-              className="pl-10 py-2 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              required
-            />
-          </div>
->>>>>>> c99b42a2e188ca9d811c861d4d1a40e33db56634
-
-          {/* Password Input with Toggle */}
-          <div className="relative">
-            <FaLock className="absolute left-3 top-3 text-gray-500" />
-            <input
-              type={showPassword ? "text" : "password"} // Toggle input type
-              name="password"
-              placeholder="Password"
-              value={user.password}
-              onChange={handleChange}
-              className="pl-10 pr-10 py-2 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              required
-            />
-            {/* Toggle Password Visibility Button */}
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-3 text-gray-500 hover:text-gray-700 focus:outline-none"
-            >
-              {showPassword ? <FaEyeSlash /> : <FaEye />}{" "}
-              {/* Toggle between eye and eye-slash icons */}
-            </button>
-          </div>
-
-          {/* Login Button */}
+        <div className="relative">
+          <FaLock className="absolute left-3 top-3 text-gray-500" />
+          <input
+            type={showPassword ? "text" : "password"}
+            name="password"
+            placeholder="Password"
+            value={user.password}
+            onChange={handleChange}
+            className="pl-10 pr-10 py-2 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-gray-900 bg-white placeholder-gray-500"
+            required
+          />
           <button
-            type="submit"
-            className={`py-2 bg-teal-600 text-white font-semibold rounded-lg w-full transition duration-300 ${
-              user.email && user.password
-                ? "hover:bg-teal-700 transform hover:scale-105"
-                : "opacity-50 cursor-not-allowed"
-            }`}
-            disabled={!user.email || !user.password || isLoading}
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-3 text-gray-500 hover:text-gray-700 focus:outline-none"
           >
-            {isLoading ? (
-              <div className="flex items-center justify-center">
-                <FaSpinner className="animate-spin mr-2" />
-                Logging in...
-              </div>
-            ) : (
-              "Login"
-            )}
+            {showPassword ? <FaEyeSlash /> : <FaEye />}
           </button>
+        </div>
 
-          {/* Forgot Password & Register Links */}
+        <button
+          type="submit"
+          className={`py-2 bg-teal-600 text-white font-semibold rounded-lg w-full transition duration-300 ${
+            user.email && user.password
+              ? "hover:bg-teal-700 transform hover:scale-105"
+              : "opacity-50 cursor-not-allowed"
+          }`}
+          disabled={!user.email || !user.password || isLoading}
+        >
+          {isLoading ? (
+            <div className="flex items-center justify-center">
+              <FaSpinner className="animate-spin mr-2" />
+              Logging in...
+            </div>
+          ) : (
+            "Login"
+          )}
+        </button>
+
+        {!isVisitor && (
           <div className="text-center mt-3 space-y-2">
             <button
               onClick={() => navigate("/forgot-password")}
@@ -187,16 +156,9 @@ function Login() {
             >
               Forgot Password?
             </button>
-            <p className="text-gray-600 text-sm">or</p>
-            <button
-              onClick={() => navigate("/register")}
-              className="text-teal-600 hover:text-teal-700 hover:underline font-semibold transition duration-300 text-sm"
-            >
-              New Visitor? Register Here
-            </button>
           </div>
-        </form>
-      </main>
+        )}
+      </form>
     </div>
   );
 }

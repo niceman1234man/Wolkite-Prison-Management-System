@@ -28,6 +28,8 @@ import { notificationRouter } from "./router/notification.router.js";
 import woredaRouter from "./router/woreda.router.js";
 import dashboardRouter from "./router/dashboard.router.js";
 import { checkCustodyAlerts } from "./controller/notification.controller.js";
+import visitorAccountRouter from "./router/visitorAccount.router.js";
+import visitorScheduleRouter from "./router/visitorSchedule.router.js";
 
 // Load environment variables
 dotenv.config();
@@ -71,6 +73,8 @@ app.use("/api/woreda-inmate", woredaInmateRouter);
 app.use("/api/notification", notificationRouter);
 app.use("/api/woreda", woredaRouter);
 app.use("/api/dashboard", dashboardRouter);
+app.use("/api/auth", visitorAccountRouter);
+app.use("/api/visitor", visitorScheduleRouter);
 
 // Connect to database
 mongoose
