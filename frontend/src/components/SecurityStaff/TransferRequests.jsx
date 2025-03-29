@@ -4,6 +4,7 @@ import { toast } from "react-hot-toast";
 import DataTable from "react-data-table-component";
 import { FaEye, FaPrint, FaCheck, FaTimes, FaClock, FaUser } from "react-icons/fa";
 import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 
 const TransferRequests = () => {
   const [transfers, setTransfers] = useState([]);
@@ -15,6 +16,7 @@ const TransferRequests = () => {
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
   const [isUpdating, setIsUpdating] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchTransfers();
@@ -57,6 +59,70 @@ const TransferRequests = () => {
 
       await axiosInstance.put(`/transfer/update-transfer/${transferId}`, updateData);
       toast.success(`Transfer request ${newStatus} successfully`);
+
+      // If transfer is approved, navigate to add-inmate with the inmate data
+      if (newStatus === "approved") {
+        const transfer = transfers.find(t => t._id === transferId);
+        if (transfer?.inmateData) {
+          // Prepare inmate data for the form
+          const inmateData = {
+            firstName: transfer.inmateData.firstName,
+            middleName: transfer.inmateData.middleName,
+            lastName: transfer.inmateData.lastName,
+            birthDate: transfer.inmateData.dateOfBirth,
+            age: transfer.inmateData.age,
+            motherName: transfer.inmateData.motherName,
+            gender: transfer.inmateData.gender,
+            birthRegion: transfer.inmateData.birthRegion,
+            birthZone: transfer.inmateData.birthZone,
+            birthWereda: transfer.inmateData.birthWereda,
+            birthKebele: transfer.inmateData.birthKebele,
+            currentRegion: transfer.inmateData.currentRegion,
+            currentZone: transfer.inmateData.currentZone,
+            currentWereda: transfer.inmateData.currentWereda,
+            currentKebele: transfer.inmateData.currentKebele,
+            degreeLevel: transfer.inmateData.degreeLevel,
+            work: transfer.inmateData.work,
+            nationality: transfer.inmateData.nationality,
+            religion: transfer.inmateData.religion,
+            maritalStatus: transfer.inmateData.maritalStatus,
+            height: transfer.inmateData.height,
+            hairType: transfer.inmateData.hairType,
+            face: transfer.inmateData.face,
+            foreHead: transfer.inmateData.foreHead,
+            nose: transfer.inmateData.nose,
+            eyeColor: transfer.inmateData.eyeColor,
+            teeth: transfer.inmateData.teeth,
+            lip: transfer.inmateData.lip,
+            ear: transfer.inmateData.ear,
+            specialSymbol: transfer.inmateData.specialSymbol,
+            contactName: transfer.inmateData.contactName,
+            contactRegion: transfer.inmateData.contactRegion,
+            contactZone: transfer.inmateData.contactZone,
+            contactWereda: transfer.inmateData.contactWereda,
+            contactKebele: transfer.inmateData.contactKebele,
+            phoneNumber: transfer.inmateData.phoneNumber,
+            registrarWorkerName: transfer.inmateData.registrarWorkerName,
+            caseType: transfer.inmateData.crimeType,
+            startDate: transfer.inmateData.sentenceStartDate,
+            sentenceYear: transfer.inmateData.sentenceDuration,
+            releaseReason: transfer.inmateData.releaseReason,
+            releasedDate: transfer.inmateData.expectedReleaseDate,
+            assignedPrison: transfer.toPrison,
+            documents: transfer.inmateData.documents || []
+          };
+          
+          // Navigate to add-inmate with the inmate data
+          navigate('/securityStaff-dashboard/add-inmate', { 
+            state: { 
+              inmateData,
+              isTransferApproval: true,
+              transferId 
+            }
+          });
+        }
+      }
+
       fetchTransfers();
       setShowDialog(false);
       setRejectionReason("");
