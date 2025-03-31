@@ -11,6 +11,7 @@ import { connectDb } from "./config/db.js";
 // Import routes
 import { userRouter } from "./router/user.router.js";
 import { visitorRouter } from "./router/visitor.router.js";
+// import {Schedulerouter} from './router/visitorSchedule.router.js'
 import { incidentRouter } from "./router/incident.router.js";
 import { inmateRouter } from "./router/inmate.router.js";
 import { prisonRouter } from "./router/prison.router.js";
@@ -30,6 +31,8 @@ import dashboardRouter from "./router/dashboard.router.js";
 import { checkCustodyAlerts } from "./controller/notification.controller.js";
 import visitorAccountRouter from "./router/visitorAccount.router.js";
 import visitorScheduleRouter from "./router/visitorSchedule.router.js";
+import { EventEmitter } from 'events';
+EventEmitter.defaultMaxListeners = 15; // Increase from default 10
 
 // Load environment variables
 dotenv.config();
@@ -74,11 +77,11 @@ app.use("/api/notification", notificationRouter);
 app.use("/api/woreda", woredaRouter);
 app.use("/api/dashboard", dashboardRouter);
 app.use("/api/auth", visitorAccountRouter);
-app.use("/api/visitor", visitorScheduleRouter);
+app.use("/api/visitor/schedule", visitorScheduleRouter);
 
-// Connect to database
+// Connect to database 
 mongoose
-  .connect(process.env.MONGO_URI)
+.connect(process.env.MONGO_URI)
   .then(() => {
     console.log("Connected to MongoDB");
     // Start periodic custody alert check (every hour)

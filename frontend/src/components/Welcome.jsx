@@ -191,7 +191,12 @@ function Welcome() {
       });
 
       if (response.data && response.data.success) {
-        toast.success("Account created successfully! Please login.");
+        // Store token if provided
+        if (response.data.token) {
+          localStorage.setItem("token", response.data.token);
+        }
+        
+        // Reset form
         setFormData({
           firstName: "",
           middleName: "",
@@ -201,19 +206,14 @@ function Welcome() {
           confirmPassword: "",
           phone: "",
         });
-        setIsLoginOpen(true);
+        
+        return response;
       } else {
-        toast.error(response.data?.message || "Failed to create account.");
+        throw new Error(response.data?.message || "Failed to create account");
       }
     } catch (error) {
       console.error("API Error:", error);
-      if (error.response) {
-        toast.error(error.response.data?.message || "Failed to create account.");
-      } else if (error.request) {
-        toast.error("No response from the server. Please try again.");
-      } else {
-        toast.error("An unexpected error occurred. Please try again.");
-      }
+      throw error;
     }
   };
 
@@ -307,7 +307,7 @@ function Welcome() {
               </div>
             </div>
             <div className="bg-white">
-              <Login onClose={() => setIsLoginOpen(false)} isVisitor={false} />
+              <Login onClose={() => setIsLoginOpen(false)} isVisitor={true} />
             </div>
             <div className="mt-6 pt-6 border-t border-gray-200">
               <div className="flex items-center justify-center space-x-4 text-sm text-gray-600">

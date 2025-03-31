@@ -8,67 +8,117 @@ const axiosInstance = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  withCredentials: true, // Enable credentials for cross-origin requests
 });
+
+// List of public routes that don't require authentication
+const PUBLIC_ROUTES = [
+  "/auth/login",
+  "/auth/register",
+  "/auth/schedule",
+  "/managemessages/get-messages",
+  "/manageimages/get-side-images",
+  "/inmates/allInmates",
+  "/visitor/schedule/schedule",
+  "/visitor/schedule/schedules",
+  "/visitor/schedule/schedule/"
+];
 
 // Request interceptor
 axiosInstance.interceptors.request.use(
   (config) => {
-    // Only skip authentication for public routes
-    const publicRoutes = ["/user/login", "/user/register"];
-    const isPublicRoute = publicRoutes.some((route) =>
-      config.url.startsWith(route)
-    );
+    const isPublicRoute = PUBLIC_ROUTES.some(route => {
+      // Handle both full paths and relative paths
+      const requestUrl = config.url.startsWith('http') ? 
+        new URL(config.url).pathname : 
+        config.url;
+      return requestUrl.includes(route);
+    });
 
-    console.log("Request URL:", config.url);
-    console.log("Is public route:", isPublicRoute);
-
-    if (!isPublicRoute) {
-      const token = localStorage.getItem("token");
-      console.log("Token found:", !!token);
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-        console.log("Authorization header set:", config.headers.Authorization);
-      } else {
-        console.log("No token found in localStorage");
-      }
+    // Always add token if available, regardless of route
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // Handle FormData
+    // Special handling for FormData
     if (config.data instanceof FormData) {
-      config.headers["Content-Type"] = "multipart/form-data";
-      config.timeout = 60000;
+      // Remove the default Content-Type header for FormData
+      delete config.headers["Content-Type"];
+      config.timeout = 60000; // Longer timeout for file uploads
     }
 
     return config;
   },
   (error) => {
-    console.error("Request error:", error);
+    console.error("Request interceptor error:", error);
     return Promise.reject(error);
   }
 );
 
 // Response interceptor
 axiosInstance.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    return response;
+  },
   (error) => {
-    console.error("Response error:", error);
-    console.error("Response error details:", {
-      status: error.response?.status,
-      data: error.response?.data,
-      headers: error.response?.headers,
-    });
-
-    // Handle 401 for all routes except public ones
-    if (
-      error.response?.status === 401 &&
-      !error.config.url.startsWith("/user/login") &&
-      !error.config.url.startsWith("/user/register")
-    ) {
-      localStorage.removeItem("token");
-      window.location.href = "/login";
+    const originalRequest = error.config;
+    
+    // Handle network errors (server not responding)
+    if (error.code === "ERR_NETWORK") {
+      console.error("Network Error:", error);
+      throw new Error("Network error. Please check your internet connection.");
     }
 
-    return Promise.reject(error);
+    // Handle timeouts
+    if (error.code === "ECONNABORTED") {
+      console.error("Request timeout:", originalRequest.url);
+      throw new Error("Request timeout. Please try again.");
+    }
+
+    // Handle HTTP errors
+    if (error.response) {
+      const { status, data } = error.response;
+
+      // Handle 401 Unauthorized
+      if (status === 401) {
+        localStorage.removeItem("token");
+        window.location.href = "/login?session_expired=true";
+        return Promise.reject(error);
+      }
+
+      // Handle 403 Forbidden
+      if (status === 403) {
+        console.error("Forbidden access to:", originalRequest.url);
+        throw new Error("You don't have permission to access this resource.");
+      }
+
+      // Handle 404 Not Found
+      if (status === 404) {
+        console.error("Resource not found:", originalRequest.url);
+        throw new Error("The requested resource was not found.");
+      }
+
+      // Handle 409 Conflict (e.g., duplicate email)
+      if (status === 409) {
+        throw new Error(data.message || "Resource conflict occurred.");
+      }
+
+      // Handle 500 Server Error
+      if (status >= 500) {
+        console.error("Server error:", status, data);
+        throw new Error("Server error. Please try again later.");
+      }
+
+      // For other 4xx errors, use the server's error message if available
+      if (data && data.message) {
+        throw new Error(data.message);
+      }
+    }
+
+    // For all other errors
+    console.error("Unhandled API error:", error);
+    throw new Error("An unexpected error occurred. Please try again.");
   }
 );
 

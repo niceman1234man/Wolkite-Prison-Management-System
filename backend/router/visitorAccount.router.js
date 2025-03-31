@@ -1,16 +1,15 @@
 import express from "express";
-import { registerVisitor, loginVisitor, getVisitorProfile, updateVisitorProfile, changePassword } from "../controller/visitorAccount.controller.js";
-import { authenticateToken } from "../middleware/auth.js";
+import {
+  registerVisitor,
+  loginVisitor,
+  getVisitorProfile,
+} from "../controller/visitorAccount.controller.js";
+// import { protect } from "../middleware/authMiddleware.js";
 
-const router = express.Router();
+const visitorAccountrouter = express.Router();
 
-// Public routes
-router.post("/register", registerVisitor);
-router.post("/login", loginVisitor);
+visitorAccountrouter.post("/register", registerVisitor);
+visitorAccountrouter.post("/login", loginVisitor);
+// visitorAccountrouter.get("/profile", protect, getVisitorProfile);
 
-// Protected routes
-router.get("/profile", authenticateToken, getVisitorProfile);
-router.put("/profile", authenticateToken, updateVisitorProfile);
-router.put("/change-password", authenticateToken, changePassword);
-
-export default router; 
+export default visitorAccountrouter;

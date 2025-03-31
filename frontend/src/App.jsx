@@ -14,7 +14,7 @@ import SecurityStaff from "./page/SecurityStaff";
 import { ToastContainer } from "react-toastify";
 import RegisterVisitor from "./components/Visitor/RegisterVisitor.jsx";
 import Setting from "./components/PoliceOfficerDashboard/Setting";
-import List from "./components/Visitor/List";
+import List from "./components/Visitor/VisitorList";
 import InmateList from "./components/Inmates/List.jsx";
 import Parole from "./parole/Prole.jsx";
 import Insident from "./components/Incident/incident.jsx";
@@ -97,6 +97,11 @@ import AddWoredaInmate from "./components/Woreda/AddWoredaInmate";
 import ViewWoredaInmate from "./components/Woreda/ViewWoredaInmate";
 import ViewPrisoner from "./components/Woreda/ViewPrisoner";
 import TransferRequests from "./components/SecurityStaff/TransferRequests";
+import ScheduleVisit from "./components/visitorDashboaard/ScheduleVisit";
+import VisitHistory from "./components/visitorDashboaard/VisitHistory";
+import VisitorProfile from "./components/visitorDashboaard/VisitorProfile";
+import VisitSchedules from "./components/visitorDashboaard/VisitSchedules";
+import VisitorList from "./components/Visitor/VisitorList";
 
 function App() {
   return (
@@ -121,7 +126,7 @@ function App() {
             element={<PoliceOfficerDashboard />}
           >
             <Route index element={<PoliceOfficerSummary />} />
-            <Route path="visitors" element={<List />} />
+            <Route path="visitors" element={<VisitorList />} />
             <Route path="add" element={<RegisterVisitor />} />
             <Route path="edit/:id" element={<EditVisitor />} />
             <Route path="view/:id" element={<ViewVisitor />} />
@@ -206,10 +211,10 @@ function App() {
           {/*visitor Dashboard Routes */}
           <Route path="/visitor-dashboard" element={<VisitDashboard />}>
             <Route index element={<VisitorSummaryCard />} />
-            <Route path="schedule" element={<RegisterVisitor />} />
+            <Route path="schedule" element={<VisitSchedules />} />
             {/* {/* <Route path='notices' element={<Notices />} />          */}
-            <Route path="visit-history" element={<VisitorHistoryView />} />
-            <Route path="update-profile" element={<UpdateProfile />} />
+            <Route path="visit-history" element={<VisitHistory />} />
+            <Route path="setting" element={<VisitorProfile />} />
             <Route path="help" element={<HelpPage />} />
             <Route path="settingsPage" element={<SettingPage />} />
           </Route>

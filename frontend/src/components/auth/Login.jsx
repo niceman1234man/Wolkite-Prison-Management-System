@@ -30,16 +30,20 @@ function Login({ onClose, isVisitor = false }) {
 
     setIsLoading(true);
     try {
-      const endpoint = "/user/login"; // Always use /user/login endpoint
+      // Use different endpoints based on user type
+      const endpoint = isVisitor ? "/auth/login" : "/user/login";
       const response = await axiosInstance.post(endpoint, user);
       console.log("Login response:", response.data);
 
-      if (response.data && response.data.accessToken) {
-        localStorage.setItem("token", response.data.accessToken);
+      if (response.data && (response.data.accessToken || response.data.token)) {
+        // Handle both token formats
+        const token = response.data.accessToken || response.data.token;
+        localStorage.setItem("token", token);
 
-        if (response.data.userInfo) {
-          dispatch(setUser(response.data.userInfo));
-          localStorage.setItem("user", JSON.stringify(response.data.userInfo));
+        if (response.data.userInfo || response.data.data) {
+          const userInfo = response.data.userInfo || response.data.data;
+          dispatch(setUser(userInfo));
+          localStorage.setItem("user", JSON.stringify(userInfo));
         }
 
         if (isVisitor) {

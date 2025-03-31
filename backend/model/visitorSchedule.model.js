@@ -10,7 +10,35 @@ const visitorScheduleSchema = new mongoose.Schema(
     inmateId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Inmate",
+      required: false,
+      default: null,
+    },
+    firstName: {
+      type: String,
       required: true,
+      trim: true,
+    },
+    middleName: {
+      type: String,
+      trim: true,
+    },
+    lastName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    phone: {
+      type: String,
+      required: true,
+      trim: true,
+      validate: {
+        validator: function(v) {
+          // Ethiopian phone number regex pattern
+          const phoneRegex = /^(\+251|251|0)?[7-9][0-9]{8}$/;
+          return phoneRegex.test(v);
+        },
+        message: "Please provide a valid Ethiopian phone number"
+      }
     },
     visitDate: {
       type: Date,
@@ -53,6 +81,28 @@ const visitorScheduleSchema = new mongoose.Schema(
     notes: {
       type: String,
       trim: true,
+    },
+    idType: {
+      type: String,
+      required: true,
+      enum: ["passport", "nationalId", "driversLicense", "other"],
+    },
+    idNumber: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    idExpiryDate: {
+      type: Date,
+      required: true,
+    },
+    idPhoto: {
+      type: String,
+      required: true,
+    },
+    visitorPhoto: {
+      type: String,
+      required: false,
     },
     isActive: {
       type: Boolean,
