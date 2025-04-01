@@ -1,13 +1,19 @@
-import React, { useState, useEffect } from "react";
-import { Link, useLocation } from "react-router-dom";
+import React, { useState, useEffect, useRef } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import axiosInstance from "../utils/axiosInstance";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "react-hot-toast";
 import "@fontsource/poppins";
 import "@fontsource/roboto";
-import Login from "../components/auth/Login"; // Import the Login component
-
+import Login from "../components/auth/Login";
+import Header from "./welcome/Header";
+import Footer from "./welcome/Footer";
+import Home from "./welcome/Home";
+import Register from "./welcome/Register";
+import About from "./welcome/About";
+import Help from "./welcome/Help";
+import Contact from "./welcome/Contact";
+import { ShieldCheckIcon, LockClosedIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import southFlag from '../assets/southFlag.png'
 import backgroundImage from "../assets/gurageZone.png";
 import ethiopiaFlag from "../assets/centralEthiopiaFlag.png";
 import flagofEthiopia from "../assets/Flag-Ethiopia.png";
@@ -17,18 +23,44 @@ function Welcome() {
   const [messages, setMessages] = useState([]);
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [direction, setDirection] = useState(1);
   const [sideImages, setSideImages] = useState([]);
   const [time, setTime] = useState(new Date());
-  const [isLoginOpen, setIsLoginOpen] = useState(false); // State for login modal
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const [activeButton, setActiveButton] = useState('home');
+  const messageRef = useRef(null);
   const location = useLocation();
+  const navigate = useNavigate();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: "",
+    middleName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    phone: "",
+  });
+  const [inmates, setInmates] = useState([]);
 
   useEffect(() => {
-    // Check if redirected from logout
-    if (location.state?.fromLogout) {
-      setIsLoginOpen(true);
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.unobserve(entry.target);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (messageRef.current) {
+      observer.observe(messageRef.current);
     }
-  }, [location]);
+
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const fetchContent = async () => {
@@ -36,18 +68,26 @@ function Welcome() {
       try {
         const messagesResponse = await axiosInstance.get("/managemessages/get-messages");
         if (messagesResponse.data?.messages) {
-          setMessages(messagesResponse.data.messages);
+          const messagesWithFullUrls = messagesResponse.data.messages.map(msg => ({
+            ...msg,
+            image: msg.image ? `${import.meta.env.VITE_API_URL}${msg.image}` : null
+          }));
+          setMessages(messagesWithFullUrls);
         } else {
           toast.error("No messages found.");
         }
 
         const imagesResponse = await axiosInstance.get("/manageimages/get-side-images");
         if (imagesResponse.data?.images) {
-          setSideImages(imagesResponse.data.images);
+          const imagesWithFullUrls = imagesResponse.data.images.map(img => 
+            `${import.meta.env.VITE_API_URL}${img}`
+          );
+          setSideImages(imagesWithFullUrls);
         } else {
           toast.error("No images available.");
         }
       } catch (error) {
+        console.error("Error fetching content:", error);
         toast.error(`Failed to load content: ${error.response?.data?.message || error.message}`);
       } finally {
         setLoading(false);
@@ -59,14 +99,12 @@ function Welcome() {
   useEffect(() => {
     if (messages.length > 0) {
       const interval = setInterval(() => {
-        setDirection(1);
         setCurrentMessageIndex((prevIndex) => (prevIndex + 1) % messages.length);
       }, 5000);
       return () => clearInterval(interval);
     }
   }, [messages]);
 
-  // Update the clock every second
   useEffect(() => {
     const timer = setInterval(() => {
       setTime(new Date());
@@ -74,141 +112,218 @@ function Welcome() {
     return () => clearInterval(timer);
   }, []);
 
-  // Calculate rotation angles for watch hands
-  const secondsDeg = (time.getSeconds() / 60) * 360;
-  const minutesDeg = (time.getMinutes() / 60) * 360;
-  const hoursDeg = ((time.getHours() % 12) / 12) * 360 + (time.getMinutes() / 60) * 30;
+  useEffect(() => {
+    const path = location.pathname;
+    if (path === '/') setActiveButton('home');
+    else if (path === '/register') setActiveButton('register');
+    else if (path === '/about') setActiveButton('about');
+    else if (path === '/help') setActiveButton('help');
+    else if (path === '/contact') setActiveButton('contact');
+    else setActiveButton('home');
+  }, [location.pathname]);
 
-  return (
-    <div
-      className="flex flex-col h-screen font-[Poppins] text-gray-900 relative"
-      style={{
-        backgroundImage: `url(${backgroundImage})`,
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-        backgroundRepeat: "no-repeat",
-        backgroundAttachment: "fixed",
-      }}
-    >
-      <div className="relative flex flex-col h-full">
-        {/* Header */}
-        <header className="bg-teal-600 bg-opacity-90 text-gray-900 flex justify-between items-center px-5 py-4 shadow-md z-10">
-          <div className="flex items-center space-x-4">
-            <img src={ethiopiaFlag} alt="Central Ethiopia Flag" className="w-32 h-18 object-contain rounded shadow-md" />
-            <h1 className="font-bold text-4xl">Gurage Zone PMS</h1>
-            <img src={flagofEthiopia} alt="Ethiopian Flag" className="w-38 h-24 object-contain rounded shadow-md" />
-          </div>
-          <div className="flex space-x-6 items-center">
-            <Link to="/register" className="hover:underline text-xl">Register as Visitor</Link>
-            <Link to="/about" className="hover:underline text-xl">About</Link>
-            <Link to="/help" className="hover:underline text-xl">Help</Link>
-            <Link to="/contact" className="hover:underline text-xl">Contact Us</Link>
-            <button
-              onClick={() => setIsLoginOpen(true)} // Open login modal
-              className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded"
-            >
-              Login
-            </button>
-          </div>
-        </header>
+  useEffect(() => {
+    const fetchInmates = async () => {
+      setLoading(true);
+      try {
+        const response = await axiosInstance.get("/inmates/allInmates");
+        if (response.data?.inmates) {
+          setInmates(response.data.inmates);
+        } else {
+          console.error("Invalid API response:", response);
+        }
+      } catch (error) {
+        console.error("Error fetching inmates:", error);
+        toast.error(error.response?.data?.error || "Failed to fetch inmate data.");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-        {/* Static Image on the Left Side */}
-        <img
-          src={guragePrison}
-          alt="Prison"
-          className="absolute left-0 top-12 w-1/3 object-cover shadow-md border-r-4 border-gray-600"
-        />
+    if (isRegisterOpen) {
+      fetchInmates();
+    }
+  }, [isRegisterOpen]);
 
-        {/* Main Content */}
-        <main className="flex-grow flex items-center justify-center text-center p-10 z-10 relative">
-          {/* Left Side Image */}
-          {sideImages[0] && (
-            <img
-              src={sideImages[0]}
-              alt="Side Image Left"
-              className="w-1/5 h-auto rounded-lg shadow-md hidden md:block"
-            />
-          )}
+  const handleImageError = (e, fallbackUrl) => {
+    console.error("Image failed to load:", e.target.src);
+    e.target.src = fallbackUrl;
+  };
 
-          {/* Message Box */}
-          <motion.div
-            className="bg-white bg-opacity-10 p-12 rounded-lg shadow-2xl max-w-2xl w-full mx-6"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 1 }}
-          >
-            <h1 className="text-5xl font-bold mb-6 font-[Roboto] text-white">
-              Welcome to Gurage PMS
-            </h1>
+  const handleButtonClick = (buttonName) => {
+    if (buttonName === 'login') {
+      setIsLoginOpen(true);
+      setIsMobileMenuOpen(false);
+      return;
+    }
+    setActiveButton(buttonName);
+    setIsMobileMenuOpen(false);
+    if (buttonName === 'register') {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
 
-            {loading ? (
-              <p className="text-2xl text-gray-700 mb-6">Loading messages...</p>
-            ) : (
-              <div className="relative w-full h-32 overflow-hidden">
-                <AnimatePresence custom={direction} mode="wait">
-                  <motion.div
-                    key={currentMessageIndex}
-                    initial={{ x: direction * 100, opacity: 0, scale: 0.9 }}
-                    animate={{ x: 0, opacity: 1, scale: 1 }}
-                    exit={{ x: -direction * 100, opacity: 0, scale: 0.9 }}
-                    transition={{ duration: 1.2, ease: "easeInOut" }}
-                    className="absolute w-full p-8 text-white text-3xl rounded-lg h-32 bg-gradient-to-r from-blue-500 to-purple-500 shadow-xl"
-                  >
-                    {messages[currentMessageIndex]?.text}
-                  </motion.div>
-                </AnimatePresence>
-              </div>
-            )}
-          </motion.div>
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }));
+  };
 
-          {/* Real Wristwatch Clock with Numbers */}
-          <div className="absolute top-20 right-10 flex flex-col items-center">
-            <div className="w-40 h-40 flex items-center justify-center rounded-full bg-gray-900 text-white shadow-lg border-4 border-blue-500 relative">
-              {/* Clock Numbers */}
-              {[...Array(12)].map((_, i) => (
-                <div
-                  key={i}
-                  className="absolute text-xl font-bold"
-                  style={{
-                    transform: `rotate(${i * 30}deg) translate(60px) rotate(-${i * 30}deg)`,
-                  }}
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (formData.password !== formData.confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+
+    try {
+      const response = await axiosInstance.post("/auth/register", {
+        firstName: formData.firstName,
+        middleName: formData.middleName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+        phone: formData.phone,
+        role: "visitor"
+      });
+
+      if (response.data && response.data.success) {
+        // Store token if provided
+        if (response.data.token) {
+          localStorage.setItem("token", response.data.token);
+        }
+        
+        // Reset form
+        setFormData({
+          firstName: "",
+          middleName: "",
+          lastName: "",
+          email: "",
+          password: "",
+          confirmPassword: "",
+          phone: "",
+        });
+        
+        return response;
+      } else {
+        throw new Error(response.data?.message || "Failed to create account");
+      }
+    } catch (error) {
+      console.error("API Error:", error);
+      throw error;
+    }
+  };
+
+  const renderContent = () => {
+    switch (activeButton) {
+      case 'home':
+        return <Home 
+          messages={messages}
+          currentMessageIndex={currentMessageIndex}
+          sideImages={sideImages}
+          loading={loading}
+          time={time}
+          messageRef={messageRef}
+          isVisible={isVisible}
+        />;
+      case 'register':
+        return (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-800">Create Visitor Account</h2>
+                <button
+                  onClick={() => setActiveButton('home')}
+                  className="text-gray-500 hover:text-gray-700"
                 >
-                  {i === 0 ? 12 : i}
-                </div>
-              ))}
-
-              {/* Watch Hands */}
-              <div className="absolute w-2 h-12 bg-white top-10 left-[48%] origin-bottom rotate-[var(--hourDeg)]" style={{ "--hourDeg": `${hoursDeg}deg` }}></div>
-              <div className="absolute w-1.5 h-16 bg-blue-400 top-6 left-[49%] origin-bottom rotate-[var(--minuteDeg)]" style={{ "--minuteDeg": `${minutesDeg}deg` }}></div>
-              <div className="absolute w-1 h-16 bg-red-500 top-2 left-[50%] origin-bottom rotate-[var(--secondDeg)]" style={{ "--secondDeg": `${secondsDeg}deg` }}></div>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <Register 
+                formData={formData}
+                handleChange={handleChange}
+                handleSubmit={handleSubmit}
+                setShowLoginModal={() => setIsLoginOpen(true)}
+              />
             </div>
           </div>
-        </main>
+        );
+      case 'about':
+        return <About />;
+      case 'help':
+        return <Help />;
+      case 'contact':
+        return <Contact />;
+      default:
+        return <Home 
+          messages={messages}
+          currentMessageIndex={currentMessageIndex}
+          sideImages={sideImages}
+          loading={loading}
+          time={time}
+          messageRef={messageRef}
+          isVisible={isVisible}
+        />;
+    }
+  };
 
-        {/* Footer */}
-        <footer className="bg-teal-800 text-white text-center py-4">
-          <p className="text-sm">&copy; {new Date().getFullYear()} Wolkite Prison Management. All rights reserved.</p>
-        </footer>
-      </div>
+  return (
+    <div className="min-h-screen bg-gray-900 text-white">
+      <Header 
+        activeButton={activeButton}
+        handleButtonClick={handleButtonClick}
+        isMobileMenuOpen={isMobileMenuOpen}
+        setIsMobileMenuOpen={setIsMobileMenuOpen}
+      />
+      
+      <main className="pt-24">
+        {renderContent()}
+      </main>
 
-      {/* Login Popup */}
+      <Footer handleButtonClick={handleButtonClick} />
+
       {isLoginOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white w-full max-w-lg rounded-lg shadow-xl p-8 relative">
+          <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4 shadow-xl relative">
             <button
-              onClick={() => setIsLoginOpen(false)} // Close login modal
-              className="absolute top-4 right-4 text-gray-600 hover:text-gray-900"
+              onClick={() => setIsLoginOpen(false)}
+              className="absolute top-2 right-2 p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
+              aria-label="Close login modal"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <XMarkIcon className="h-6 w-6 text-gray-500 hover:text-gray-700" />
             </button>
-            <Login /> {/* Render the Login component */}
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="bg-teal-100 p-2 rounded-lg">
+                <ShieldCheckIcon className="h-8 w-8 text-teal-600" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-800">Welcome Back</h2>
+                <p className="text-sm text-gray-600">Please login to your account</p>
+              </div>
+            </div>
+            <div className="bg-white">
+              <Login onClose={() => setIsLoginOpen(false)} isVisitor={true} />
+            </div>
+            <div className="mt-6 pt-6 border-t border-gray-200">
+              <div className="flex items-center justify-center space-x-4 text-sm text-gray-600">
+                <div className="flex items-center">
+                  <LockClosedIcon className="h-5 w-5 text-teal-600 mr-1" />
+                  <span>Secure Login</span>
+                </div>
+                <div className="flex items-center">
+                  <ShieldCheckIcon className="h-5 w-5 text-teal-600 mr-1" />
+                  <span>Protected Data</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
-
-      <ToastContainer />
     </div>
   );
 }

@@ -207,6 +207,7 @@ const AddUser = ({setOpen}) => {
               <option value="police-officer">Police Officer</option>
               <option value="inspector">Inspector</option>
               <option value="court">Court</option>
+              <option value="woreda">Woreda</option>
             </select>
             {errors.role && (
               <p className="text-red-500 text-xs mt-1">{errors.role}</p>

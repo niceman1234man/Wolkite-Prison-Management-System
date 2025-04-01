@@ -112,19 +112,30 @@ export const addnewInmate = async (req, res) => {
 };
 
 export const getAllInmates = async (req, res) => {
-    try {
-      const Incidents = await Inmate.find();
-  
-      if (!Incidents) {
-        return res.status(400).json({ message: "Inmate does not exist" });
-      }
-  
-      res.status(200).json({ inmates: Incidents });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Server error" });
-    }
-  };
+  try {
+    const inmates = await Inmate.find().select('_id firstName middleName lastName prisonerId');
+
+    // Format inmates data to include fullName for easier display
+    const formattedInmates = inmates.map(inmate => ({
+      _id: inmate._id,
+      fullName: `${inmate.firstName} ${inmate.middleName || ''} ${inmate.lastName || ''}`.trim(),
+      prisonerId: inmate.prisonerId || 'No ID'
+    }));
+
+    return res.status(200).json({ 
+      success: true,
+      message: "Inmates retrieved successfully", 
+      data: formattedInmates 
+    });
+  } catch (error) {
+    console.error("Error fetching inmates:", error);
+    return res.status(500).json({ 
+      success: false,
+      message: "Failed to retrieve inmates",
+      error: error.message
+    });
+  }
+};
 
 
   export const updateInmate = async (req, res) => {

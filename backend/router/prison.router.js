@@ -1,9 +1,31 @@
-import express from 'express'
-import { authenticateToken } from '../utilities.js';
-import { addnewPrison, deletePrison, getAllPrisons, getPrison, updatePrison } from '../controller/prison.controller.js';
-export const prisonRouter=express.Router();
-prisonRouter.post('/new-prison',authenticateToken,addnewPrison);
-prisonRouter.get('/getall-prisons',authenticateToken,getAllPrisons);
-prisonRouter.get('/get-prison/:id',authenticateToken,getPrison);
-prisonRouter.put('/update-prison/:id',authenticateToken,updatePrison);
-prisonRouter.delete('/delete-prison/:id',authenticateToken,deletePrison);
+import express from "express";
+import {
+  createPrison,
+  getAllPrisons,
+  getPrisonById,
+  updatePrison,
+  deletePrison,
+} from "../controller/prison.controller.js";
+import { authenticateToken } from "../middleware/auth.js";
+
+const router = express.Router();
+
+// Apply authentication middleware to all routes
+router.use(authenticateToken);
+
+// Create new prison
+router.post("/new-prison", createPrison);
+
+// Get all prisons
+router.get("/getall-prisons", getAllPrisons);
+
+// Get single prison
+router.get("/:id", getPrisonById);
+
+// Update prison
+router.put("/:id", updatePrison);
+
+// Delete prison
+router.delete("/:id", deletePrison);
+
+export const prisonRouter = router;
