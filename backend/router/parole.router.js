@@ -5,6 +5,8 @@ import {
   getParoleRecordById,
   deleteParoleRecord,
   getAllParoleRecords,
+  paroleRequest,
+  updateResponse
 } from "../controller/parole.controller.js";
 
 export const paroleRouter = express.Router();
@@ -24,5 +26,8 @@ paroleRouter.post(
 
 paroleRouter.get("/", getAllParoleRecords);
 paroleRouter.get("/:inmateId", getParoleRecordById);
+paroleRouter.put("/request/:inmateId", paroleRequest);
+paroleRouter.put("/update/:inmateId", updateResponse);
 paroleRouter.delete("/:inmateId", deleteParoleRecord);
+
 

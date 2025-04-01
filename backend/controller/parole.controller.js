@@ -131,6 +131,106 @@ export const getAllParoleRecords = async (req, res) => {
 //   }
 // };
 
+
+
+export const paroleRequest = async (req, res) => {
+  try {
+    const { date, receiverName, referenceNumber, number } = req.body;
+    const { inmateId } = req.params;
+
+    let paroleRequest = await ParoleTracking.findOne({ inmateId });
+
+    if (!paroleRequest) {
+      return res.status(404).json({ message: "Parole request not found" });
+    }
+
+    // Update the request object
+    paroleRequest.request = {
+      isRequested: true,
+      date: date,
+      number: number,
+      receiverName: receiverName,
+      referenceNumber: referenceNumber,
+    };
+
+    // Save changes
+    await paroleRequest.save();
+
+    res.status(200).json({ message: "Parole request updated successfully", paroleRequest });
+  } catch (error) {
+    res.status(500).json({ message: "Internal server error", error: error.message });
+  }
+};
+
+// export const updateResponse = async (req, res) => {
+//   try {
+//     const { inmateId } = req.params;
+//     const {status, reason, date } = req.body;
+
+//     let paroleRequest = await ParoleTracking.findOne({ inmateId });
+
+//     if (!paroleRequest) {
+//       return res.status(404).json({ message: "Parole request not found" });
+//     }
+
+//     // Update the response object
+//     paroleRequest.response = {
+//       date,
+//      
+//       reason
+//     
+//     };
+
+//     // Save changes
+//     await paroleRequest.save();
+
+//     res.status(200).json({ message: "Parole response updated successfully", paroleRequest });
+//   } catch (error) {
+//     res.status(500).json({ message: "Internal server error", error: error.message });
+//   }
+// };
+
+
+export const updateResponse = async (req, res) => {
+  try {
+    const { date,reason,status } = req.body;
+    const { inmateId } = req.params;
+    console.log(inmateId,date,reason,status)
+
+    let paroleResponse = await ParoleTracking.findOne({ inmateId });
+
+    if (!paroleResponse) {
+      return res.status(404).json({ message: "Parole request not found" });
+    }
+
+    // Ensure the response object exists
+    paroleResponse.status=status;
+    paroleResponse.response = {
+      date:date,
+      reason: reason || "",
+    };
+   
+   
+
+    await paroleResponse.save();
+
+    res.status(200).json({
+      message: "Parole Response updated successfully",
+      paroleResponse
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      message: "Internal server error",
+      error: error.message
+    });
+  }
+};
+
+
+
+
+
 export const getParoleRecordById = async (req, res) => {
   const { inmateId } = req.params;
   try {

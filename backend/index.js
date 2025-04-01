@@ -22,6 +22,7 @@ import reportRoutes from "./router/reportRouter.js"; // Import report routes
 import prisonerRoutes from "./router/prisonerRouter.js"; // Import prisoner routes
 import transferRoutes from "./router/transferRouter.js"; // Import transfer routes
 
+
 // Define __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -50,6 +51,8 @@ app.use(cors({
  app.use("/api/reports", reportRoutes); // Use report routes
 app.use("/api/prisoners", prisonerRoutes); // Use prisoner routes
 app.use("/api/transfers", transferRoutes); // Use transfer routes
+
+
 
  connectDb();
 

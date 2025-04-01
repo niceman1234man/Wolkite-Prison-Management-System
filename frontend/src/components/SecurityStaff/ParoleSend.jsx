@@ -6,6 +6,7 @@ import { columns, InmateButtons } from "../../utils/ParoleSendHelper";
 import axiosInstance from "../../utils/axiosInstance";
 import { useSelector, useDispatch } from "react-redux";
 import { setInmate } from "../../redux/prisonSlice.js";
+import { toast } from 'react-toastify';
 
 const ParoleSend = () => {
   const dispatch = useDispatch();
@@ -20,28 +21,33 @@ const ParoleSend = () => {
     setLoading(true);
     try {
       const response = await axiosInstance.get("/parole-tracking");
-     console.log(response)
-      if (response.data && response.data?.parole) {
-        dispatch(setInmate(response.data.parole));
+     
+      if (response.data && response.data.parole) {
+        // Filter only eligible inmates
+        const eligibleInmates = response.data.parole.filter(inmate => inmate.paroleEligible);
+        
+        dispatch(setInmate(eligibleInmates));
         let sno = 1;
-        const formattedData = response.data.parole.map((parole) => ({
+        const formattedData = eligibleInmates.map((parole) => ({
           _id: parole.inmateId,
-          sno: sno++, // Auto-increment serial number
+          sno: sno++,
           inmate_name: parole.fullName || "N/A",
           age: parole.age || "N/A",
           gender: parole.gender || "N/A",
-          sentence: parole.releaseReason || "N/A",
-          action: <InmateButtons _id={parole.inmateId} onDelete={fetchInmates} />,
+          sentence: parole.caseType || "N/A",
+          status: parole.status || "N/A",
+          action: <InmateButtons _id={parole.inmateId} onDelete={fetchInmates} status={parole.status} />,
         }));
 
         setInmates(formattedData);
         setFilteredInmates(formattedData);
       } else {
         console.error("Invalid API response:", response);
+        toast.error("Failed to fetch eligible inmates");
       }
     } catch (error) {
       console.error("Error fetching inmates:", error);
-      alert(error.response?.data?.error || "Failed to fetch inmate data.");
+      toast.error(error.response?.data?.error || "Failed to fetch inmate data");
     } finally {
       setLoading(false);
     }
@@ -51,7 +57,7 @@ const ParoleSend = () => {
     fetchInmates();
   }, []);
 
-  // Instant Search (Without Debounce)
+  // Instant Search
   const handleSearch = (e) => {
     const query = e.target.value.toLowerCase();
     if (!query) {
@@ -59,7 +65,16 @@ const ParoleSend = () => {
       return;
     }
     const filtered = inmates.filter((inmate) =>
-      inmate.inmate_name.toLowerCase().includes(query)
+      (inmate.inmate_name?.toLowerCase() || "").includes(query) || 
+      (inmate.status?.toLowerCase() || "").includes(query)
+    );
+    setFilteredInmates(filtered);
+  };
+
+  // Filter by status
+  const filterByButton = (status) => {
+    const filtered = inmates.filter((inmate) => 
+      inmate.status.toLowerCase() === status.toLowerCase()
     );
     setFilteredInmates(filtered);
   };
@@ -78,22 +93,24 @@ const ParoleSend = () => {
         <FaArrowLeft className="mr-2 text-lg" /> Back
       </button>
 
-      <h3 className="text-3xl font-bold text-gray-800 text-center my-6">Manage Parole Requests</h3>
+      <h3 className="text-3xl font-bold text-gray-800 text-center my-6">
+        Eligible Parole Requests
+      </h3>
 
-      {/* Search & Add Inmate Button */}
+      {/* Search & Filter Buttons */}
       <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
         <input
           type="text"
-          placeholder="Search by inmate name..."
+          placeholder="Search by inmate name or status..."
           className="px-4 py-2 border border-gray-300 rounded-lg shadow-sm w-full md:w-1/3 focus:outline-none focus:ring-2 focus:ring-teal-500"
           onChange={handleSearch}
         />
         
-        
+        {/* Filter Buttons */}
         <div className="space-x-3">
           <button
             className="px-3 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700"
-            onClick={() => setFilteredLeaves(leaves)} // Reset to all
+            onClick={() => setFilteredInmates(inmates)}
           >
             All
           </button>
@@ -105,18 +122,17 @@ const ParoleSend = () => {
           </button>
           <button
             className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700"
-            onClick={() => filterByButton("Active")}
+            onClick={() => filterByButton("Accepted")}
           >
-            Active
+            Accepted
           </button>
           <button
             className="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700"
-            onClick={() => filterByButton("Revoked")}
+            onClick={() => filterByButton("Rejected")}
           >
-            Revoked
+            Rejected
           </button>
         </div>
-       
       </div>
 
       {/* Inmate List Table */}
@@ -124,7 +140,13 @@ const ParoleSend = () => {
         <div className="text-center text-gray-600">Loading inmates...</div>
       ) : (
         <div className="overflow-x-auto bg-white p-5 rounded-lg shadow-md">
-          <DataTable columns={columns} data={filteredInmates} pagination />
+          {filteredInmates.length > 0 ? (
+            <DataTable columns={columns} data={filteredInmates} pagination />
+          ) : (
+            <div className="text-center py-4 text-gray-600">
+              No eligible inmates found for parole
+            </div>
+          )}
         </div>
       )}
     </div>

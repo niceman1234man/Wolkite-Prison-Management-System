@@ -3,6 +3,7 @@ import axiosInstance from "../../../utils/axiosInstance";
 import { useParams, useNavigate } from "react-router-dom";
 import { TiArrowBack } from "react-icons/ti";
 import { toast } from "react-toastify";
+import 'react-toastify/dist/ReactToastify.css';
 import ParoleRejectModal from "./ParoleRejectModal";
 import ConfirmModal from "@/components/Modals/ConfirmModal";
 import ParoleAccept from "./ParoleAccept";
@@ -20,8 +21,9 @@ const ViewParole = ({ id }) => {
   useEffect(() => {
     const fetchInmateDetails = async () => {
       try {
+       
         const response = await axiosInstance.get(`/parole-tracking/${id}`);
-        console.log(response);
+        console.log(response.data.parole);
         setInmateData(response.data.parole);
       } catch (error) {
         console.error("Error fetching inmate details:", error);
@@ -32,14 +34,25 @@ const ViewParole = ({ id }) => {
     };
 
     fetchInmateDetails();
-  }, [id]);
+  }, [id]); 
 
   const handleRejectParole = async ({ reason, date }) => {
     try {
-      await axiosInstance.post(`/parole/reject/${id}`, { reason, date });
+       const status="rejected"
+      await axiosInstance.put(`/parole-tracking/update/${id}`, { reason, date,status });
       toast.success("Parole request rejected successfully.");
     } catch (error) {
       toast.error("Failed to reject parole request.");
+    }
+  };
+
+  const formatDate = (date) => {
+    if (!date) return '';
+    try {
+      return new Date(date).toISOString().split('T')[0];
+    } catch (error) {
+      console.error('Date formatting error:', error);
+      return '';
     }
   };
 
@@ -51,24 +64,30 @@ const ViewParole = ({ id }) => {
     return <div>No data available</div>;
   }
 
-  const acceptParole = () => {
-    return;
+  const acceptParole = async( {reason, date }) => {
+    try {
+      const status="accepted"
+      await axiosInstance.put(`/parole-tracking/update/${id}`, {reason, date,status });
+      toast.success("Parole request Accept successfully.");
+    } catch (error) {
+      toast.error("Failed to accept parole request.");
+    }
   };
+  
 
   return (
     <div className="w-full mx-auto  bg-white p-8 rounded-md shadow-md">
       <h2 className="text-3xl font-bold mb-6 text-center">
         Parole Request Details
       </h2>
-
       <CardContent>
         <div className="float-end">
           <div className="flex ">
             ቁጥር
-            <Input type="number" name="number" className="mb-2 ml-3 w-auto" />
+            <Input type="number" name="number" value={inmateData.request.number} className="mb-2 ml-3 w-auto" readOnly />
           </div>
           <div className="flex">
-            ቀን <Input type="date" name="date" className="mb-2 ml-3 w-auto" />
+            ቀን <Input type="date" name="date" value={formatDate(inmateData.request.date)} className="mb-2 ml-3 w-auto" readOnly />
           </div>
         </div>
         <br />
@@ -81,8 +100,9 @@ const ViewParole = ({ id }) => {
           <Input
             name="receiverName"
             placeholder="ለ"
+            value={inmateData.request.receiverName}
             className="mb-2 ml-3 w-auto"
-            required
+            readOnly
           />
           ፍ/ቤት
         </div>
@@ -91,7 +111,9 @@ const ViewParole = ({ id }) => {
           <Input
             name="referenceNumber"
             placeholder="የማጣቀሻ ቁጥር"
+            value={inmateData.request.referenceNumber}
             className="mb-2 ml-3 w-auto"
+            readOnly
           />
         </div>
         <div className="space-y-4">
@@ -102,35 +124,39 @@ const ViewParole = ({ id }) => {
               placeholder="የእስረኛው ስም"
               value={inmateData.fullName}
               className="mb-2 inline-block w-auto"
-              required
+              readOnly
             />
             የተባለው የህግ ታራሚ በአመክሮ መፈቻ ጥያቄ በተከሰሰበት
             <Input
               name="crimeType"
               placeholder="የወንጀሉ አይነት"
+              value={inmateData.caseType}
               className="mb-2 inline-block w-auto"
-              required
+              readOnly
             />
             ወንጀል እስራት እንዲቀጣ በወሰነው መሠረት ከዚህ ውስጥ 2/3ኛው
             <Input
               name="sentenceReduction"
               placeholder="ቅናሽ"
+              value={inmateData.durationToParole}
               className="mb-2 inline-block w-auto"
-              required
+              readOnly
             />
             በእስራት የፈጸመ ሲሆን 1/3ኛውን
             <Input
               name="additionalReduction"
               placeholder="ቅናሽ"
+              value={inmateData.durationFromParoleToEnd}
               className="mb-2 inline-block w-auto"
-              required
+              readOnly
             />
             ቅናሽ አግጋቶዋል፡፡ አሁንም በጠቅላላው ከተፈረደበት የእስራት ጊዜ ውስጥ ወደፊት የሚቀረው
             <Input
               name="remainingSentence"
               placeholder="ቀሪ"
+              value={inmateData.durationFromParoleToEnd}
               className="mb-2 inline-block w-auto"
-              required
+              readOnly
             />
           </p>
         </div>
@@ -141,10 +167,11 @@ const ViewParole = ({ id }) => {
         <div className="flex mt-4">
           1/ታራሚው ማ/ቤት የገባበት
           <Input
-            type="date"
             name="date"
+            value={formatDate(inmateData.startDate)}
             placeholder="የገባበት ቀን"
             className="mb-2 w-auto ml-3"
+            readOnly
           />
         </div>
         <div className="flex">
@@ -152,8 +179,10 @@ const ViewParole = ({ id }) => {
           <Input
             type="date"
             name="date"
+            value={formatDate(inmateData.releasedDate)}
             placeholder="የሚፈታበት ቀን"
             className="mb-2 w-auto ml-3"
+            readOnly
           />
         </div>
         <div className="flex">
@@ -161,8 +190,10 @@ const ViewParole = ({ id }) => {
           <Input
             type="date"
             name="date"
+            value={formatDate(inmateData.paroleDate)}
             placeholder="በ አመክሮ የሚፈታበት ቀን "
             className="mb-2 w-auto ml-3"
+            readOnly
           />
         </div>
         <div className="flex">
@@ -173,6 +204,7 @@ const ViewParole = ({ id }) => {
             placeholder="ጠቅላላ ነጥብ "
             value={inmateData.totalPoints}
             className="mb-2 w-auto ml-3"
+            readOnly
           />
         </div>
         5/ ስለጉዳት ካሣና እርቅ ማዉረድ የተሠጠ መግለጫ 6 ስለ ሙያና ሥራ ችሎታ ስለ መተዳደሪያ ከተቀመጠው ኮሚቴ
@@ -182,24 +214,67 @@ const ViewParole = ({ id }) => {
         <p className="float-end mt-4 mr-3">ከሠላምታ ጋር</p>
       </CardContent>
 
-      <div className="mt-6">
-        <button
-          onClick={() => setOpenAccept(true)}
-          className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded mr-4"
-        >
-          Accept
-        </button>
+      <div className="flex flex-col items-center">
+        {/* Status Message */}
+        {(inmateData.status === "accepted" || inmateData.status === "rejected") && (
+          <div className="mb-4 p-3 bg-gray-100 rounded-md text-center">
+            <p className="text-gray-700">
+              This parole request has already been {inmateData.status}
+            </p>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="flex space-x-4">
+          <button
+            onClick={() => {
+              if (inmateData.status === "accepted" || inmateData.status === "rejected") {
+                toast.info(`This parole request has already been ${inmateData.status}`, {
+                  position: "top-right",
+                  autoClose: 3000,
+                });
+              } else {
+                setOpenAccept(true);
+              }
+            }}
+            className={`font-bold py-2 px-4 rounded mr-4 ${
+              inmateData.status === "accepted" || inmateData.status === "rejected"
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-teal-600 hover:bg-teal-700 text-white"
+            }`}
+            disabled={inmateData.status === "accepted" || inmateData.status === "rejected"}
+          >
+            Accept
+          </button>
+
+          <button
+            onClick={() => {
+              if (inmateData.status === "accepted" || inmateData.status === "rejected") {
+                toast.info(`This parole request has already been ${inmateData.status}`, {
+                  position: "top-right",
+                  autoClose: 3000,
+                });
+              } else {
+                setIsRejectModalOpen(true);
+              }
+            }}
+            className={`font-bold py-2 px-4 rounded ${
+              inmateData.status === "accepted" || inmateData.status === "rejected"
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-red-600 hover:bg-red-700 text-white"
+            }`}
+            disabled={inmateData.status === "accepted" || inmateData.status === "rejected"}
+          >
+            Reject
+          </button>
+        </div>
+
+        {/* Modals */}
         <ParoleAccept
           isOpen={openAccept}
           onClose={() => setOpenAccept(false)}
           onSubmit={acceptParole}
         />
-        <button
-          className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-          onClick={() => setIsRejectModalOpen(true)}
-        >
-          Reject
-        </button>
       </div>
 
       {/* Parole Rejection Modal */}

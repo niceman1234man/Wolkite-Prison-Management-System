@@ -245,7 +245,7 @@ const InmateBehavior = () => {
     
       if (response.status === 201) {
         alert("Behavior log submitted successfully!");
-        navigate("/policeOfficer-dashboard/status/");
+        navigate(`policeOfficer-dashboard/parole`);
       } else {
         alert("Failed to submit behavior log.");
       }

@@ -189,8 +189,10 @@ const AddInmate = ({setOpen}) => {
     try {
       const response = await axiosInstance.post("/inmates/new-inmate", data);
       if (response.data) {
-         setFormData(false);
+         
         toast.success("Inmate Registered Successfully!");
+        setFormData(false);
+        navigate("/securityStaff-dashboard/inmates")
       } else {
         alert("Failed to add inmate.");
       }

@@ -40,9 +40,10 @@ export const columns = [
   },
 ];
 
-export const InmateButtons = ({ _id, onDelete }) => {
+export const InmateButtons = ({ _id, status, onDelete }) => {
   const navigate = useNavigate();
- const [view,setView]=useState(false)
+  const [view, setView] = useState(false);
+
   const handleDelete = async (id) => {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this inmate record?"
@@ -51,7 +52,7 @@ export const InmateButtons = ({ _id, onDelete }) => {
 
     try {
       const response = await axios.delete(
-        `https://localhost:5000/api/inmate/${id}`, // Updated API endpoint for inmate
+        `https://localhost:5000/api/inmate/${id}`, // API endpoint
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -74,15 +75,30 @@ export const InmateButtons = ({ _id, onDelete }) => {
   return (
     <div className="flex space-x-3 text-white text-center">
       <button
-        className="px-3 py-1 bg-green-600 rounded hover:bg-green-700"
-        onClick={() =>setView(true)}
+        className="px-3 py-1 bg-gray-600 rounded hover:bg-gray-700"
+        onClick={() => setView(true)}
       >
         View
       </button>
+
+      {status && (
+        <button
+          className={`px-3 py-1 rounded ${
+            status === "accepted"
+              ? "bg-green-600 hover:bg-green-700"
+              : status === "rejected"
+              ? "bg-red-600 hover:bg-red-700"
+              : "bg-yellow-600 hover:bg-yellow-700"
+          }`}
+        >
+          {status}
+        </button>
+      )}
+
       <AddModal open={view} setOpen={setView}>
-        <ViewParole id={_id}/>
+        <ViewParole id={_id} />
       </AddModal>
-      
     </div>
   );
 };
+

@@ -71,7 +71,7 @@ export const ParoleButtons = ({ _id }) => {
   return (
     <div className="flex space-x-3 text-white">
       <button
-        className="px-3 py-1 bg-green-600 rounded hover:bg-green-700"
+        className="px-3 py-1 bg-blue-600 rounded hover:bg-blue-700"
         onClick={() => navigate(`/policeOfficer-dashboard/ParoleList/${_id}`)}
       >
         Track Parole

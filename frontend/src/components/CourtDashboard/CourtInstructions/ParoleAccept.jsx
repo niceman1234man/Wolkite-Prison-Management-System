@@ -7,7 +7,7 @@ import { Textarea } from "../../ui/textarea";
 import { toast } from "react-toastify";  // Import toast
 
 const ParoleAccept = ({ isOpen, onClose, onSubmit }) => {
-  const [reason, setReason] = useState("");
+  const [reason, setAcceptReason] = useState("");
   const [date, setDate] = useState("");
 
   const handleSubmit = () => {
@@ -17,7 +17,7 @@ const ParoleAccept = ({ isOpen, onClose, onSubmit }) => {
     }
 
     onSubmit({ reason, date });
-    setReason("");
+    setAcceptReason("");
     setDate("");
     onClose();
   };
@@ -33,7 +33,7 @@ const ParoleAccept = ({ isOpen, onClose, onSubmit }) => {
           <Textarea 
             placeholder="Enter reason for Accept..." 
             value={reason} 
-            onChange={(e) => setReason(e.target.value)} 
+            onChange={(e) => setAcceptReason(e.target.value)} 
           />
           <Input 
             type="date" 
