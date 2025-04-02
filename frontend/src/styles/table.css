@@ -1,0 +1,286 @@
+/* Table Styles - Standardized and Responsive */
+
+/* Base table styles */
+.table-container {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  background-color: white;
+  margin-bottom: 1.5rem;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+/* Header styles */
+.table thead {
+  background-color: #f3f4f6;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.table th {
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  border-bottom: 1px solid #e5e7eb;
+  font-size: 0.75rem;
+}
+
+/* Row styles */
+.table tbody tr {
+  border-bottom: 1px solid #e5e7eb;
+  transition: background-color 0.2s;
+}
+
+.table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.table tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+/* Cell styles */
+.table td {
+  padding: 0.75rem 1rem;
+  color: #4b5563;
+  vertical-align: middle;
+}
+
+/* Status indicators */
+.table .status-indicator {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.table .status-pending {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.table .status-approved {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.table .status-rejected {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.table .status-cancelled {
+  background-color: #e5e7eb;
+  color: #1f2937;
+}
+
+.table .status-completed {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+/* Action buttons */
+.table .action-button {
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.table .action-button-primary {
+  background-color: #0ea5e9;
+  color: white;
+}
+
+.table .action-button-primary:hover {
+  background-color: #0284c7;
+}
+
+.table .action-button-secondary {
+  background-color: #6b7280;
+  color: white;
+}
+
+.table .action-button-secondary:hover {
+  background-color: #4b5563;
+}
+
+.table .action-button-danger {
+  background-color: #ef4444;
+  color: white;
+}
+
+.table .action-button-danger:hover {
+  background-color: #dc2626;
+}
+
+/* Empty state */
+.table-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  text-align: center;
+  color: #6b7280;
+}
+
+.table-empty-state svg {
+  width: 4rem;
+  height: 4rem;
+  color: #d1d5db;
+  margin-bottom: 1rem;
+}
+
+.table-empty-state h3 {
+  font-size: 1rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+  color: #374151;
+}
+
+.table-empty-state p {
+  color: #6b7280;
+  max-width: 24rem;
+  margin: 0 auto;
+}
+
+/* Pagination */
+.table-pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background-color: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+  font-size: 0.875rem;
+}
+
+.table-pagination-info {
+  color: #6b7280;
+}
+
+.table-pagination-controls {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.table-pagination-button {
+  padding: 0.375rem 0.75rem;
+  border-radius: 0.25rem;
+  background-color: white;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.table-pagination-button:hover {
+  background-color: #f3f4f6;
+}
+
+.table-pagination-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.table-pagination-button.active {
+  background-color: #0ea5e9;
+  color: white;
+  border-color: #0ea5e9;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .table th,
+  .table td {
+    padding: 0.625rem 0.75rem;
+    font-size: 0.75rem;
+  }
+  
+  .table th {
+    font-size: 0.625rem;
+  }
+  
+  .table .action-button {
+    padding: 0.25rem 0.5rem;
+  }
+  
+  .table-pagination {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  /* Optional: Hide less important columns on small screens */
+  .table .hide-sm {
+    display: none;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .table-container {
+    background-color: #1f2937;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.4), 0 1px 2px 0 rgba(0, 0, 0, 0.24);
+  }
+  
+  .table thead {
+    background-color: #111827;
+  }
+  
+  .table th {
+    color: #e5e7eb;
+    border-bottom: 1px solid #374151;
+  }
+  
+  .table tbody tr {
+    border-bottom: 1px solid #374151;
+  }
+  
+  .table tbody tr:hover {
+    background-color: #111827;
+  }
+  
+  .table td {
+    color: #d1d5db;
+  }
+  
+  .table-pagination {
+    background-color: #111827;
+    border-top: 1px solid #374151;
+  }
+  
+  .table-pagination-info {
+    color: #9ca3af;
+  }
+  
+  .table-pagination-button {
+    background-color: #1f2937;
+    color: #e5e7eb;
+    border: 1px solid #4b5563;
+  }
+  
+  .table-pagination-button:hover {
+    background-color: #374151;
+  }
+} 

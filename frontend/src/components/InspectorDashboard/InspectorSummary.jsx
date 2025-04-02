@@ -2,9 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { FaLandmark, FaBullhorn, FaClipboardList } from "react-icons/fa";
-import useNotices from "../../hooks/useNotice.jsx";  // 🛠️ Import the custom notice hook
-import NoticeButton from "../../utils/noticeButtons.jsx"; // 🛠️ Import reusable notice button
-import NoticeModal from "../modals/noticeModal.jsx"; // 🛠️ Import notice modal
+import NoticeWidget from "../Notices/NoticeWidget";
+import NotificationBell from "../Notices/NotificationBell";
 import SummaryCard from "./Summary.jsx";
 
 // Define colors for each data type
@@ -18,9 +17,6 @@ const InspectorSummary = () => {
   const [summary, setSummary] = useState(null);
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-
-  // 🛠️ Use the custom hook to fetch and manage notices
-  const { notices, isModalOpen, setIsModalOpen, markNoticeAsRead } = useNotices();
 
   useEffect(() => {
     const dummyData = {
@@ -72,13 +68,21 @@ const InspectorSummary = () => {
           <h3 className="text-2xl font-bold text-gray-800 text-center">
             Inspector Dashboard Overview
           </h3>
-
-          {/* 🛠️ Reusable Notice Button */}
-          <NoticeButton notices={notices} onClick={() => setIsModalOpen(true)} />
         </div>
 
         {/* Push content down to prevent overlap */}
         <div className="p-6 mt-24">
+          {/* Notice Widget */}
+          <div className="mb-6">
+            <NoticeWidget 
+              maxNotices={3}
+              variant="card"
+              dashboardType="inspector"
+              showMarkAsRead={true}
+              showViewAll={true}
+              hideWhenUnauthenticated={true}
+            />
+          </div>
 
           {/* Summary Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
@@ -123,18 +127,8 @@ const InspectorSummary = () => {
               </ResponsiveContainer>
             </div>
           </div>
-
         </div>
       </div>
-
-      {/* 🛠️ Reusable Notice Modal */}
-      <NoticeModal
-        notices={notices}
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSelectNotice={markNoticeAsRead}
-        selectedNotice={null}
-      />
     </div>
   );
 };

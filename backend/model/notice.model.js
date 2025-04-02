@@ -51,6 +51,11 @@ const noticeSchema = new mongoose.Schema(
     },
     isPosted: { type: Boolean, default: false },
     readBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Track users who read it
+    targetAudience: { 
+      type: String, 
+      enum: ["all", "visitors", "staff", "admin", "court", "security", "woreda"],
+      default: "all"
+    }
   },
   { timestamps: true }
 );

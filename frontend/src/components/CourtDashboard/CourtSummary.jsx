@@ -2,9 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { FaUserTie, FaHourglassHalf, FaCheckCircle, FaTimesCircle, FaGavel } from "react-icons/fa";
-import useNotices from "../../hooks/useNotice.jsx";
-import NoticeButton from "../../utils/noticeButtons.jsx";
-import NoticeModal from "../modals/noticeModal.jsx";
+import NoticeWidget from "../Notices/NoticeWidget";
 import SummaryCard from "./Summary.jsx";
 
 const COLORS = {
@@ -18,7 +16,6 @@ const CourtSummary = () => {
   const [summary, setSummary] = useState(null);
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const { notices, isModalOpen, setIsModalOpen, markNoticeAsRead } = useNotices();
 
   useEffect(() => {
     const dummyData = {
@@ -61,9 +58,19 @@ const CourtSummary = () => {
       <div className="flex-1 relative">
         <div className={`bg-white shadow-md p-4 fixed top-14 z-20 flex justify-between items-center transition-all duration-300 ml-2 ${isCollapsed ? "left-16 w-[calc(100%-5rem)]" : "left-64 w-[calc(100%-17rem)]"}`}>
           <h3 className="text-2xl font-bold text-gray-800 text-center">Court Dashboard Overview</h3>
-          <NoticeButton notices={notices} onClick={() => setIsModalOpen(true)} />
         </div>
         <div className="p-6 mt-24">
+          <div className="mb-6">
+            <NoticeWidget 
+              maxNotices={3}
+              variant="card"
+              dashboardType="court"
+              showMarkAsRead={true}
+              showViewAll={true}
+              hideWhenUnauthenticated={true}
+            />
+          </div>
+          
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
             <SummaryCard icon={<FaUserTie size={28} />} text="Total Parolees" number={summary.totalParolees} color="bg-blue-700" />
             <SummaryCard icon={<FaHourglassHalf size={28} />} text="Pending Parolees" number={summary.pendingParolees} color="bg-orange-600" />
@@ -88,7 +95,6 @@ const CourtSummary = () => {
           </div>
         </div>
       </div>
-      <NoticeModal notices={notices} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSelectNotice={markNoticeAsRead} selectedNotice={null} />
     </div>
   );
 };

@@ -1,7 +1,8 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem("token");
+  const location = useLocation();
 
   // Allow access to woreda routes without authentication
   if (window.location.pathname.startsWith("/woreda-dashboard")) {
@@ -10,7 +11,8 @@ const PrivateRoute = ({ children }) => {
 
   // For all other routes, require authentication
   if (!token) {
-    return <Navigate to="/login" />;
+    const redirectUrl = `/login?redirect=${encodeURIComponent(location.pathname)}`;
+    return <Navigate to={redirectUrl} />;
   }
 
   return children;

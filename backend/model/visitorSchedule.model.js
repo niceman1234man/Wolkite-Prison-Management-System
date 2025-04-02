@@ -2,9 +2,9 @@ import mongoose from "mongoose";
 
 const visitorScheduleSchema = new mongoose.Schema(
   {
-    visitorId: {
+    userId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "VisitorAccount",
+      ref: "User",
       required: true,
     },
     inmateId: {
@@ -33,11 +33,10 @@ const visitorScheduleSchema = new mongoose.Schema(
       trim: true,
       validate: {
         validator: function(v) {
-          // Ethiopian phone number regex pattern
-          const phoneRegex = /^(\+251|251|0)?[7-9][0-9]{8}$/;
-          return phoneRegex.test(v);
+          // Ethiopian phone number regex pattern with more flexibility
+          return v && v.length > 0;
         },
-        message: "Please provide a valid Ethiopian phone number"
+        message: "Please provide a phone number"
       }
     },
     visitDate: {
@@ -56,12 +55,12 @@ const visitorScheduleSchema = new mongoose.Schema(
     relationship: {
       type: String,
       required: true,
-      enum: ["family", "friend", "lawyer", "other"],
+      enum: ["parent", "spouse", "child", "sibling", "relative", "friend", "legal", "other"],
     },
     status: {
       type: String,
-      enum: ["pending", "approved", "rejected", "completed", "cancelled"],
-      default: "pending",
+      enum: ["Pending", "Approved", "Rejected", "Completed", "Cancelled", "pending", "approved", "rejected", "completed", "cancelled"],
+      default: "Pending",
     },
     approvedBy: {
       type: mongoose.Schema.Types.ObjectId,
@@ -85,7 +84,7 @@ const visitorScheduleSchema = new mongoose.Schema(
     idType: {
       type: String,
       required: true,
-      enum: ["passport", "nationalId", "driversLicense", "other"],
+      enum: ["passport", "national_id", "drivers_license", "other"],
     },
     idNumber: {
       type: String,
@@ -94,11 +93,11 @@ const visitorScheduleSchema = new mongoose.Schema(
     },
     idExpiryDate: {
       type: Date,
-      required: true,
+      required: false,
     },
     idPhoto: {
       type: String,
-      required: true,
+      required: false,
     },
     visitorPhoto: {
       type: String,

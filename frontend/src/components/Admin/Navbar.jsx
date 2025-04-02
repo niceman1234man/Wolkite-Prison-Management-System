@@ -2,10 +2,11 @@ import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router";
 import { useSelector } from "react-redux";
 import { getInitials } from "../getNameInitials.js";
-import { FaBars, FaBell, FaDungeon } from "react-icons/fa"; // Prison Icon
+import { FaBars, FaDungeon } from "react-icons/fa"; // Prison Icon
 import { FiSettings, FiHelpCircle, FiLogOut } from "react-icons/fi";
 import { AiOutlineUser } from "react-icons/ai";
 import axiosInstance from "../../utils/axiosInstance.js";
+import NotificationBell from "../Notices/NotificationBell";
 import "./Navbar.css"; // Import CSS for styling
 
 const Navbar = ({ toggleSidebar }) => {
@@ -13,31 +14,25 @@ const Navbar = ({ toggleSidebar }) => {
   const user = useSelector((state) => state.user.user);
   const fullName = user ? `${user.firstName} ${user.middleName}` : "Loading...";
   const initial = user ? getInitials(fullName) : "";
+  const userRole = user ? user.role?.toLowerCase() : "";
+  
+  // Map user role to dashboard type for the NotificationBell
+  const getDashboardType = () => {
+    if (!userRole) return "visitor"; // Default fallback
+    
+    if (userRole.includes("admin")) return "admin";
+    if (userRole.includes("police")) return "police";
+    if (userRole.includes("visit")) return "visitor";
+    if (userRole.includes("insp")) return "inspector";
+    if (userRole.includes("court")) return "court";
+    if (userRole.includes("secur")) return "security";
+    if (userRole.includes("wor")) return "woreda";
+    
+    return "visitor"; // Default fallback
+  };
 
-  const [notices, setNotices] = useState([]);
-  const [unreadNotices, setUnreadNotices] = useState([]);
-  const [showNoticeDropdown, setShowNoticeDropdown] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const dropdownRef = useRef(null);
-
-  useEffect(() => {
-    const fetchNotices = async () => {
-      try {
-        const response = await axiosInstance.get("/notice/getAllNotices");
-        if (response.data) {
-          const allNotices = response.data.notices.filter((n) => n.isPosted);
-          const unread = allNotices.filter((n) => !n.isRead);
-
-          setNotices(allNotices);
-          setUnreadNotices(unread);
-        }
-      } catch (error) {
-        console.error("Error fetching notices:", error);
-      }
-    };
-
-    fetchNotices();
-  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -51,10 +46,6 @@ const Navbar = ({ toggleSidebar }) => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
-
-  const handleNoticeClick = (notice) => {
-    setUnreadNotices((prev) => prev.filter((n) => n._id !== notice._id));
-  };
 
   const onLogout = () => {
     localStorage.clear();
@@ -84,18 +75,8 @@ const Navbar = ({ toggleSidebar }) => {
 
       {/* Right Section */}
       <div className="navbar-right flex items-center gap-4">
-        {/* Notification Bell */}
-        <div
-          className="relative cursor-pointer"
-          onClick={() => setShowNoticeDropdown(!showNoticeDropdown)}
-        >
-          <FaBell size={22} className="text-gray-700 hover:text-[#31708E] transition-colors duration-300" />
-          {unreadNotices.length > 0 && (
-            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full px-1.5">
-              {unreadNotices.length}
-            </span>
-          )}
-        </div>
+        {/* New Notification Bell Component */}
+        <NotificationBell dashboardType={getDashboardType()} />
 
         {/* User Profile */}
         <div className="relative" ref={dropdownRef}>
@@ -177,26 +158,6 @@ const Navbar = ({ toggleSidebar }) => {
           )}
         </div>
       </div>
-
-      {/* Notices Dropdown */}
-      {showNoticeDropdown && (
-        <div className="dropdown-menu notice-menu absolute right-5 mt-2 w-64 bg-white shadow-lg rounded-md p-2">
-          <div className="dropdown-header font-semibold">Unread Notices</div>
-          {unreadNotices.length > 0 ? (
-            unreadNotices.map((notice) => (
-              <div
-                key={notice._id}
-                className="dropdown-item unread p-2 hover:bg-gray-100 cursor-pointer"
-                onClick={() => handleNoticeClick(notice)}
-              >
-                {notice.title}
-              </div>
-            ))
-          ) : (
-            <p className="dropdown-item no-notices p-2 text-gray-600">No new notices</p>
-          )}
-        </div>
-      )}
     </div>
   );
 };

@@ -1,73 +1,52 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { toast } from "react-hot-toast";
 import axiosInstance from "../utils/axiosInstance";
 import { format } from "date-fns";
 
 const useVisitScheduleData = () => {
+  // Use useRef to store the actual data to prevent re-renders
+  const dataRef = useRef({
+    schedules: [],
+    visitors: []
+  });
+  
+  // State only for triggering renders when needed
   const [schedules, setSchedules] = useState([]);
-  const [filteredSchedules, setFilteredSchedules] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [filter, setFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [visitors, setVisitors] = useState([]);
   const [visitorLoading, setVisitorLoading] = useState(false);
+  // Add a version counter for controlled re-renders
+  const [version, setVersion] = useState(0);
+  
+  // Use ref to track mounted state to prevent state updates after unmount
+  const isMounted = useRef(true);
 
-  // Handle filter change
-  const handleFilterChange = (status) => {
-    setFilter(status);
-    filterSchedulesByStatus(status);
-  };
+  // Handle filter change - make these truly stable with useCallback
+  const handleStatusFilterChange = useCallback((status) => {
+    setStatusFilter(status);
+  }, []);
 
-  // Filter schedules by status
-  const filterSchedulesByStatus = (status) => {
-    if (status === "all") {
-      setFilteredSchedules(schedules);
-    } else {
-      const filtered = schedules.filter((schedule) => 
-        schedule.status && schedule.status.toLowerCase() === status.toLowerCase()
-      );
-      setFilteredSchedules(filtered);
-    }
-  };
+  // Handle search change - memoized
+  const handleSearchChange = useCallback((query) => {
+    setSearchQuery(query);
+  }, []);
 
-  // Fetch visitor data
-  const fetchVisitors = async () => {
-    try {
-      setVisitorLoading(true);
-      const response = await axiosInstance.get("/visitor/allVisitors");
-      
-      if (response.data && response.data.visitors) {
-        setVisitors(response.data.visitors);
-        console.log("Visitors loaded:", response.data.visitors.length);
-      } else {
-        console.error("Unexpected visitor data format:", response.data);
-        setVisitors([]);
-        toast.error("Failed to load visitor data");
-      }
-      return response.data.visitors || [];
-    } catch (error) {
-      console.error("Error fetching visitors:", error);
-      toast.error(error.response?.data?.error || "Failed to load visitors");
-      setVisitors([]);
-      return [];
-    } finally {
-      setVisitorLoading(false);
-    }
-  };
-
-  // Utility function to link visitors with schedules
-  const linkVisitorsToSchedules = (schedules, visitors) => {
-    if (!visitors.length || !schedules.length) return schedules;
+  // Utility function to link visitors with schedules - memoized
+  const linkVisitorsToSchedules = useCallback((schedulesData, visitorsData) => {
+    if (!visitorsData?.length || !schedulesData?.length) return schedulesData;
     
-    return schedules.map(schedule => {
+    return schedulesData.map(schedule => {
       // Try to match visitor by user ID or visitor ID if available
-      const visitor = visitors.find(v => 
+      const visitor = visitorsData.find(v => 
         (v._id && schedule.visitorId && v._id === schedule.visitorId) || 
-        (v.user && schedule.user && v.user === schedule.user)
+        (v.user && schedule.userId && v.user === schedule.userId)
       );
       
       // If no direct ID match, try to match by name and relationship
-      const matchByDetails = !visitor ? visitors.find(v => {
+      const matchByDetails = !visitor ? visitorsData.find(v => {
         // If we have names in both places, try to match
         if (
           schedule.relationship && 
@@ -88,109 +67,188 @@ const useVisitScheduleData = () => {
         } : null
       };
     });
-  };
+  }, []);
+
+  // Safe update function to prevent unnecessary re-renders
+  const safeUpdateData = useCallback((newSchedules, newVisitors) => {
+    if (!isMounted.current) return;
+    
+    // Only update state if data actually changed
+    let hasChanged = false;
+    
+    if (newSchedules && JSON.stringify(dataRef.current.schedules) !== JSON.stringify(newSchedules)) {
+      dataRef.current.schedules = newSchedules;
+      setSchedules(newSchedules);
+      hasChanged = true;
+    }
+    
+    if (newVisitors && JSON.stringify(dataRef.current.visitors) !== JSON.stringify(newVisitors)) {
+      dataRef.current.visitors = newVisitors;
+      setVisitors(newVisitors);
+      hasChanged = true;
+    }
+    
+    // Only increment version if data actually changed
+    if (hasChanged) {
+      setVersion(v => v + 1);
+    }
+  }, []);
+
+  // Fetch visitors data
+  const fetchVisitors = useCallback(async () => {
+    if (!isMounted.current) return [];
+    
+    try {
+      setVisitorLoading(true);
+      console.log("Fetching visitors...");
+      
+      const response = await axiosInstance.get("/visitor/allVisitors");
+      
+      if (!isMounted.current) return [];
+      
+      // Handle the correct response format from the API
+      if (response.data && response.data.visitors) {
+        console.log("Visitors fetched successfully:", response.data.visitors.length);
+        const newVisitors = response.data.visitors;
+        
+        // Update with safe function
+        safeUpdateData(null, newVisitors);
+        
+        return newVisitors;
+      } else {
+        console.error("Unexpected visitor data format:", response.data);
+        if (isMounted.current) {
+          toast.error("Failed to load visitor data");
+        }
+        return [];
+      }
+    } catch (error) {
+      console.error('Error fetching visitors:', error);
+      if (isMounted.current) {
+        toast.error(error.response?.data?.error || 'Failed to load visitor data');
+      }
+      return [];
+    } finally {
+      if (isMounted.current) {
+        setVisitorLoading(false);
+      }
+    }
+  }, [safeUpdateData]);
 
   // Fetch schedule data
-  const fetchSchedules = async () => {
+  const fetchSchedules = useCallback(async () => {
+    if (!isMounted.current) return [];
+    
     try {
       setLoading(true);
       setError(null);
+      
+      console.log("Fetching visitor schedules...");
       const response = await axiosInstance.get("/visitor/schedule/schedules");
       
+      if (!isMounted.current) return [];
+      
       if (response.data.success) {
+        console.log("Schedules fetched successfully:", response.data.data.length);
+        
+        // Use visitors from ref to avoid circular dependencies
+        const currentVisitors = dataRef.current.visitors;
+        
         // Process schedules with visitor data
-        const enrichedSchedules = linkVisitorsToSchedules(response.data.data, visitors);
-        setSchedules(enrichedSchedules);
-        filterSchedulesByStatus(filter);
-        return Promise.resolve(enrichedSchedules);
+        const enrichedSchedules = linkVisitorsToSchedules(response.data.data, currentVisitors);
+        
+        // Update with safe function
+        safeUpdateData(enrichedSchedules, null);
+        
+        return enrichedSchedules;
       } else {
+        console.error("Error in schedule response:", response.data);
         setError(response.data.message || 'Failed to fetch schedules');
-        toast.error(response.data.message || 'Failed to fetch schedules');
-        return Promise.reject(new Error(response.data.message || 'Failed to fetch schedules'));
+        if (isMounted.current) {
+          toast.error(response.data.message || 'Failed to fetch schedules');
+        }
+        return [];
       }
     } catch (error) {
       console.error('Error fetching schedules:', error);
+      if (error.response) {
+        console.error('Response status:', error.response.status);
+        console.error('Response data:', error.response.data);
+      }
       setError('Error fetching schedules');
-      toast.error('Failed to load schedules. Please try again.');
-      return Promise.reject(error);
+      if (isMounted.current) {
+        toast.error('Failed to load schedules. Please try again.');
+      }
+      return [];
     } finally {
-      setLoading(false);
+      if (isMounted.current) {
+        setLoading(false);
+      }
     }
-  };
+  }, [linkVisitorsToSchedules, safeUpdateData]);
 
-  // Handle cancel schedule
-  const handleCancelSchedule = async (scheduleId) => {
+  // Cancel schedule
+  const cancelSchedule = useCallback(async (scheduleId) => {
+    if (!isMounted.current) return false;
+    
     try {
       const loadingId = toast.loading("Cancelling visit...");
-      const response = await axiosInstance.put(`/visitor/schedule/schedule/${scheduleId}/cancel`);
+      const response = await axiosInstance.put(`/visitor/schedule/${scheduleId}/cancel`);
       
-      // Always dismiss the loading toast
-      toast.dismiss(loadingId);
+      // Always dismiss the loading toast if still mounted
+      if (isMounted.current) {
+        toast.dismiss(loadingId);
+      }
       
       if (response.data.success) {
-        toast.success("Visit cancelled successfully");
-        fetchSchedules();
+        if (isMounted.current) {
+          toast.success("Visit cancelled successfully");
+          fetchSchedules();
+        }
         return true;
       } else {
-        toast.error(response.data.message || "Failed to cancel visit");
+        if (isMounted.current) {
+          toast.error(response.data.message || "Failed to cancel visit");
+        }
         return false;
       }
     } catch (error) {
       // Dismiss all toasts to prevent stale UI
-      toast.dismiss();
-      console.error("Error cancelling schedule:", error);
-      toast.error(error.response?.data?.message || "Failed to cancel visit");
-      return false;
-    }
-  };
-
-  // Handle delete schedule
-  const handleDeleteSchedule = async (scheduleId) => {
-    try {
-      const loadingId = toast.loading("Deleting visit...");
-      const response = await axiosInstance.delete(`/visitor/schedule/schedule/${scheduleId}`);
-      
-      toast.dismiss(loadingId);
-      
-      if (response.data.success) {
-        toast.success("Visit deleted successfully");
-        fetchSchedules();
-        return true;
-      } else {
-        toast.error(response.data.message || "Failed to delete visit");
-        return false;
+      if (isMounted.current) {
+        toast.dismiss();
+        console.error("Error cancelling schedule:", error);
+        toast.error(error.response?.data?.message || "Failed to cancel visit");
       }
-    } catch (error) {
-      toast.dismiss();
-      console.error("Error deleting schedule:", error);
-      toast.error(error.response?.data?.message || "Failed to delete visit");
       return false;
     }
-  };
+  }, [fetchSchedules]);
 
   // Initialize data fetch on mount
   useEffect(() => {
+    // Mark as mounted
+    isMounted.current = true;
+    
     const loadData = async () => {
-      const visitorData = await fetchVisitors();
-      await fetchSchedules();
-      // Re-link visitors if we have new data
-      if (visitorData.length > 0 && schedules.length > 0) {
-        const enrichedSchedules = linkVisitorsToSchedules(schedules, visitorData);
-        setSchedules(enrichedSchedules);
-        filterSchedulesByStatus(filter);
+      if (isMounted.current) {
+        const newVisitors = await fetchVisitors();
+        // Store visitors first, then fetch schedules to use them
+        if (newVisitors.length > 0) {
+          dataRef.current.visitors = newVisitors;
+        }
+        await fetchSchedules();
       }
     };
     
     loadData();
-  }, []);
-
-  // Update filtered schedules when filter changes
-  useEffect(() => {
-    filterSchedulesByStatus(filter);
-  }, [schedules, filter]);
+    
+    // Cleanup function
+    return () => {
+      isMounted.current = false;
+    };
+  }, [fetchVisitors, fetchSchedules]);
 
   // Get status color utility function
-  const getStatusColor = (status) => {
+  const getStatusColor = useCallback((status) => {
     switch (status) {
       case "pending":
         return "bg-yellow-100 text-yellow-800";
@@ -203,24 +261,23 @@ const useVisitScheduleData = () => {
       default:
         return "bg-blue-100 text-blue-800";
     }
-  };
+  }, []);
 
   return {
     schedules,
-    filteredSchedules,
+    visitors,
     loading,
     error,
-    filter,
-    visitors,
+    statusFilter,
+    searchQuery,
     visitorLoading,
-    setSchedules,
-    setFilteredSchedules,
-    fetchSchedules,
     fetchVisitors,
-    handleFilterChange,
-    handleCancelSchedule,
-    handleDeleteSchedule,
-    getStatusColor
+    fetchSchedules,
+    handleStatusFilterChange,
+    handleSearchChange,
+    cancelSchedule,
+    getStatusColor,
+    version // Include version in returned values to help with memoization in components
   };
 };
 

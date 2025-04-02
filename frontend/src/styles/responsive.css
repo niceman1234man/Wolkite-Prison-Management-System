@@ -1,0 +1,166 @@
+/* Responsive Utility Classes for Visitor Dashboard
+   This file contains reusable responsive styles for the visitor dashboard components
+*/
+
+/* Container Spacing - Consistent padding across components */
+.visitor-container {
+  @apply p-3 sm:p-4 md:p-6 transition-all duration-300;
+}
+
+/* Card and Section Styles */
+.visitor-card {
+  @apply bg-white rounded-lg shadow-md p-3 sm:p-4 md:p-6 mb-3 sm:mb-4 md:mb-6;
+}
+
+.visitor-section {
+  @apply mb-3 sm:mb-4 md:mb-6;
+}
+
+/* Header Styles */
+.visitor-header {
+  @apply flex flex-col sm:flex-row justify-between items-center gap-2 sm:gap-3 w-full;
+}
+
+.visitor-title {
+  @apply flex items-center gap-1 sm:gap-2 w-full justify-center sm:justify-start mb-3 sm:mb-0;
+}
+
+.visitor-title-icon {
+  @apply text-lg sm:text-xl md:text-2xl text-teal-600;
+}
+
+.visitor-title-text {
+  @apply text-lg sm:text-xl md:text-2xl font-bold text-gray-800;
+}
+
+/* Action Button Groups */
+.visitor-actions {
+  @apply flex flex-wrap gap-2 w-full sm:w-auto;
+}
+
+.visitor-button {
+  @apply flex-1 sm:flex-none text-xs sm:text-sm font-medium px-2 sm:px-3 py-1.5 sm:py-2 rounded-md 
+         focus:outline-none focus:ring-2 focus:ring-offset-2 transition-colors
+         flex items-center justify-center gap-1 sm:gap-2;
+}
+
+.visitor-button-primary {
+  @apply bg-teal-600 hover:bg-teal-700 text-white focus:ring-teal-500;
+}
+
+.visitor-button-secondary {
+  @apply bg-gray-600 hover:bg-gray-700 text-white focus:ring-gray-500;
+}
+
+.visitor-button-danger {
+  @apply bg-red-600 hover:bg-red-700 text-white focus:ring-red-500;
+}
+
+.visitor-button-light {
+  @apply bg-gray-200 hover:bg-gray-300 text-gray-800 focus:ring-gray-400;
+}
+
+/* Filter and Search Controls */
+.visitor-controls {
+  @apply flex flex-col sm:flex-row gap-2 sm:gap-4 my-3 sm:my-4;
+}
+
+.visitor-control-group {
+  @apply flex flex-1 flex-col sm:flex-row gap-2;
+}
+
+.visitor-input {
+  @apply w-full px-3 py-2 text-sm border border-gray-300 rounded-md 
+         focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500;
+}
+
+.visitor-select {
+  @apply w-full px-2 py-1.5 text-sm border border-gray-300 rounded-md 
+         focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500;
+}
+
+/* Tables */
+.visitor-table-container {
+  @apply overflow-x-auto rounded-md border border-gray-200 shadow-sm;
+}
+
+.visitor-table {
+  @apply min-w-full divide-y divide-gray-200 text-xs sm:text-sm;
+}
+
+.visitor-table th {
+  @apply px-2 sm:px-3 py-2 text-left text-xs sm:text-sm font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap;
+}
+
+.visitor-table td {
+  @apply px-2 sm:px-3 py-2 whitespace-nowrap border-b border-gray-100;
+}
+
+.visitor-table tr:hover {
+  @apply bg-gray-50;
+}
+
+/* Status Badges */
+.visitor-badge {
+  @apply px-2 py-0.5 sm:px-3 sm:py-1 inline-flex items-center text-xs leading-5 
+         font-semibold rounded-full border;
+}
+
+/* Cards for Mobile Display */
+.visitor-card-grid {
+  @apply grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4;
+}
+
+.visitor-item-card {
+  @apply bg-white rounded-lg shadow p-3 sm:p-4 border border-gray-200 
+         hover:shadow-md transition-shadow duration-200;
+}
+
+/* Empty States */
+.visitor-empty-state {
+  @apply flex flex-col items-center justify-center py-8 sm:py-12 text-gray-500 text-center p-4;
+}
+
+.visitor-empty-icon {
+  @apply text-3xl sm:text-4xl mb-3 text-gray-400;
+}
+
+.visitor-empty-text {
+  @apply text-sm sm:text-base text-gray-500 max-w-md mx-auto;
+}
+
+/* Loading States */
+.visitor-loading {
+  @apply flex justify-center items-center p-8 sm:p-12;
+}
+
+.visitor-spinner {
+  @apply animate-spin rounded-full h-8 w-8 sm:h-10 sm:w-10 border-b-2 border-teal-600;
+}
+
+/* Form Layouts */
+.visitor-form {
+  @apply space-y-3 sm:space-y-4;
+}
+
+.visitor-form-grid {
+  @apply grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4;
+}
+
+.visitor-form-field {
+  @apply mb-2 sm:mb-3;
+}
+
+.visitor-form-label {
+  @apply block text-xs sm:text-sm font-medium text-gray-700 mb-1;
+}
+
+.visitor-form-input {
+  @apply w-full px-3 py-2 text-sm border border-gray-300 rounded-md 
+         focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500;
+}
+
+/* Phone-specific bottom padding to account for navigation bars */
+.visitor-page-bottom-space {
+  @apply h-16 sm:h-0;
+} 

@@ -12,6 +12,7 @@ import PoliceOfficerDashboard from "./page/PoliceOfficerDashboard";
 import Inspector from "./page/Inspector";
 import SecurityStaff from "./page/SecurityStaff";
 import { ToastContainer } from "react-toastify";
+import 'react-toastify/dist/ReactToastify.css';
 import RegisterVisitor from "./components/Visitor/RegisterVisitor.jsx";
 import Setting from "./components/PoliceOfficerDashboard/Setting";
 import List from "./components/Visitor/VisitorList";
@@ -102,6 +103,8 @@ import VisitHistory from "./components/visitorDashboaard/VisitHistory";
 import VisitorProfile from "./components/visitorDashboaard/VisitorProfile";
 import VisitSchedules from "./components/visitorDashboaard/VisitSchedules";
 import VisitorList from "./components/Visitor/VisitorList";
+import DashboardNoticeList from "./components/Notices/DashboardNoticeList";
+import NoticeView from "./components/Notices/NoticeView";
 
 function App() {
   return (
@@ -109,7 +112,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Welcome />} />
         <Route path="/block" element={<Block />} />
-        <Route path="/login" element={<Login />} />
+        <Route path="/login" element={<Login isVisitor={false} />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/reset-password/:id/:token" element={<ResetPassword />} />
         {/* <Route path='/admin' element={<Admin />} /> */}
@@ -141,6 +144,8 @@ function App() {
             <Route path="update-profile" element={<UpdateProfile />} />
             <Route path="help" element={<HelpPage />} />
             <Route path="settingsPage" element={<SettingPage />} />
+            <Route path="notices" element={<DashboardNoticeList dashboardType="police" />} />
+            <Route path="notices/view/:id" element={<NoticeView />} />
           </Route>
 
           {/* Admin Dashboard Routes */}
@@ -154,6 +159,8 @@ function App() {
             <Route path="help" element={<HelpPage />} />
             <Route path="settingsPage" element={<SettingPage />} />
             <Route path="reports" element={<AccountReport />} />
+            <Route path="notices" element={<DashboardNoticeList dashboardType="admin" />} />
+            <Route path="notices/view/:id" element={<NoticeView />} />
           </Route>
 
           {/* Inspector Dashboard Routes */}
@@ -183,12 +190,12 @@ function App() {
             <Route path="view/:id" element={<ViewInstruction />} />
             <Route path="view-request/:id" element={<ViewParole />} />
             <Route path="edit/:id" element={<EditInstruction />} />
-            {/* {/* <Route path='notices' element={<Notices />} />          */}
             <Route path="courtInstructions" element={<CourtInstructions />} />
             <Route path="update-profile" element={<UpdateProfile />} />
             <Route path="help" element={<HelpPage />} />
             <Route path="settingsPage" element={<SettingPage />} />
-         
+            <Route path="notices" element={<DashboardNoticeList dashboardType="court" />} />
+            <Route path="notices/view/:id" element={<NoticeView />} />
           </Route>
           {/*Woreda Dashboard Routes */}
           <Route path="/woreda-dashboard" element={<WoredaDashboard />}>
@@ -207,16 +214,21 @@ function App() {
             <Route path="settingsPage" element={<SettingPage />} />
             <Route path="prisoner-list" element={<PrisonerList />} />
             <Route path="prisoner/:id" element={<ViewPrisoner />} />
+            <Route path="notices" element={<DashboardNoticeList dashboardType="woreda" />} />
+            <Route path="notices/view/:id" element={<NoticeView />} />
           </Route>
           {/*visitor Dashboard Routes */}
           <Route path="/visitor-dashboard" element={<VisitDashboard />}>
             <Route index element={<VisitorSummaryCard />} />
-            <Route path="schedule" element={<VisitSchedules />} />
-            {/* {/* <Route path='notices' element={<Notices />} />          */}
+            <Route path="schedules" element={<ScheduleVisit />} />
             <Route path="visit-history" element={<VisitHistory />} />
             <Route path="setting" element={<VisitorProfile />} />
+            <Route path="schedule-visit" element={<VisitSchedules />} />
+            <Route path="update-profile" element={<UpdateProfile />} />
             <Route path="help" element={<HelpPage />} />
-            <Route path="settingsPage" element={<SettingPage />} />
+            {/* <Route path="setting" element={<SettingPage />} /> */}
+            <Route path="notices" element={<DashboardNoticeList dashboardType="visitor" />} />
+            <Route path="notices/view/:id" element={<NoticeView />} />
           </Route>
 
           {/*securityStaff Dashboard Routes */}
@@ -247,11 +259,23 @@ function App() {
             <Route path="view-clearance/:id" element={<ViewClearance />} />
             {/* <Route path="edit-clearance" element={<editClearance />} /> */}
             {/* <Route path='clearance' element={<clearanceLogic />} />  */}
-          
+            <Route path="notices" element={<DashboardNoticeList dashboardType="security" />} />
+            <Route path="notices/view/:id" element={<NoticeView />} />
           </Route>
         </Route>
       </Routes>
-      <ToastContainer />
+      <ToastContainer
+        position="top-center"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
     </>
   );
 }

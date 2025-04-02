@@ -2,9 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { FaShieldAlt, FaExclamationTriangle, FaUsers } from "react-icons/fa";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import useNotices from "../../hooks/useNotice.jsx";
-import NoticeButton from "../../utils/noticeButtons.jsx";
-import NoticeModal from "../modals/noticeModal.jsx"; // 🛠️ Import notice modal
+import NoticeWidget from "../Notices/NoticeWidget";
 import SummaryCard from "./Summary.jsx";
 
 const COLORS = {
@@ -18,8 +16,6 @@ const PoliceOfficerSummary = () => {
   const [summary, setSummary] = useState(null);
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-
-  const { notices, isModalOpen, setIsModalOpen, markNoticeAsRead } = useNotices();
 
   useEffect(() => {
     const dummyData = {
@@ -76,13 +72,22 @@ const PoliceOfficerSummary = () => {
           <h3 className="text-2xl font-bold text-gray-800 text-center">
             Police Officer Dashboard Overview
           </h3>
-
-          {/* 🛠️ Reusable Notice Button */}
-          <NoticeButton notices={notices} onClick={() => setIsModalOpen(true)} />
         </div>
 
         {/* Push content down to prevent overlap */}
         <div className="p-6 mt-20"> {/* Adjusted margin top to avoid overlap with the header */}
+          {/* Notice Widget */}
+          <div className="mb-6">
+            <NoticeWidget 
+              maxNotices={3}
+              variant="card"
+              dashboardType="police"
+              showMarkAsRead={true}
+              showViewAll={true}
+              hideWhenUnauthenticated={true}
+            />
+          </div>
+          
           {/* Summary Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
             <SummaryCard icon={<FaShieldAlt size={28} />} text="Total Cases" number={summary.totalCases} color="bg-blue-700" />
@@ -128,15 +133,6 @@ const PoliceOfficerSummary = () => {
           </div>
         </div>
       </div>
-
-      {/* 🛠️ Reusable Notice Modal */}
-      <NoticeModal
-        notices={notices}
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSelectNotice={markNoticeAsRead}
-        selectedNotice={null}
-      />
     </div>
   );
 };

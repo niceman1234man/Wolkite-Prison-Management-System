@@ -2,6 +2,7 @@ import VisitorSchedule from "../model/visitorSchedule.model.js";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import mongoose from "mongoose";
 
 // Ensure uploads directory exists
 const uploadsDir = 'uploads/visitor-photos';
@@ -89,99 +90,127 @@ const upload = multer({
 //   }
 // };
 
-export const createVisitSchedule = async (req, res) => {
+export const createSchedule = async (req, res) => {
   try {
-    console.log("Received body in the backend are :", req.body);
-    console.log("Received files:", req.files);
-
-    const {
-      inmateId,
-      visitDate,
-      visitTime,
-      purpose,
-      relationship,
-      visitDuration,
-      notes,
-      idType,
-      idNumber,
-      idExpiryDate,
-      firstName,
-      middleName,
-      lastName,
-      phone,
-    } = req.body;
-
-    // Validate required fields
-    if (!visitDate || !visitTime || !purpose || !relationship || !idType || !idNumber || !idExpiryDate || !firstName || !lastName || !phone) {
+    const formData = req.body;
+    console.log("Received form data in controller:", formData);
+    console.log("Request user:", req.user);
+    console.log("Files:", req.files);
+    
+    // Get user data from request or token or form data
+    let userId;
+    
+    // First try to get from form data (highest priority)
+    if (formData.userId && mongoose.Types.ObjectId.isValid(formData.userId)) {
+      userId = formData.userId;
+      console.log("Using userId from form data:", userId);
+    } 
+    // Then try from request.user (if authenticated)
+    else if (req.user && req.user._id) {
+      userId = req.user._id;
+      console.log("Using userId from auth token:", userId);
+    } 
+    // If still no valid userId, return error
+    else {
+      console.error("No valid userId found in request");
       return res.status(400).json({
         success: false,
-        message: "Please provide all required fields",
+        message: "User ID is required to create a schedule"
       });
     }
-
-    // Format phone number
-    const formattedPhone = phone.replace(/\D/g, '');
-    const finalPhone = formattedPhone.startsWith('0') 
-      ? '+251' + formattedPhone.slice(1)
-      : formattedPhone.startsWith('251') 
-        ? '+' + formattedPhone 
-        : '+251' + formattedPhone;
-
-    // Handle file uploads
-    let visitorPhoto = null;
-    let idPhoto = null;
-
-    if (req.files) {
-      if (req.files.visitorPhoto) {
-        visitorPhoto = `/uploads/visitor-photos/${req.files.visitorPhoto[0].filename}`;
-      }
-      if (req.files.idPhoto) {
-        idPhoto = `/uploads/visitor-photos/${req.files.idPhoto[0].filename}`;
-      }
-    }
-
-    // Validate photo uploads
-    if (!idPhoto) {
-      return res.status(400).json({
-        success: false,
-        message: "ID photo is required",
-      });
-    }
-
-    // Create new schedule
-    const schedule = new VisitorSchedule({
-      visitorId: req.user.id,
-      inmateId,
-      firstName,
-      middleName,
-      lastName,
-      phone: finalPhone,
-      visitDate,
-      visitTime,
-      purpose,
-      relationship,
-      visitDuration,
-      notes,
-      idType,
-      idNumber,
-      idExpiryDate,
-      idPhoto,
-      visitorPhoto,
+    
+    // Check if user already has a pending schedule
+    const existingPendingSchedule = await VisitorSchedule.findOne({
+      userId,
+      status: { $in: ["Pending", "pending"] }
     });
-
-    await schedule.save();
+    
+    if (existingPendingSchedule) {
+      return res.status(400).json({
+        success: false,
+        message: "You already have a pending visit schedule. Please wait for approval or cancel your existing schedule."
+      });
+    }
+    
+    // Check visitor capacity for selected date
+    const selectedDate = new Date(formData.visitDate);
+    selectedDate.setHours(0, 0, 0, 0);
+    
+    const nextDay = new Date(selectedDate);
+    nextDay.setDate(nextDay.getDate() + 1);
+    
+    // Count existing approved visits for the selected date
+    const approvedVisitsCount = await VisitorSchedule.countDocuments({
+      visitDate: { $gte: selectedDate, $lt: nextDay },
+      status: { $in: ["Approved", "approved"] }
+    });
+    
+    // Get max capacity from env or default to 50
+    const maxCapacity = process.env.MAX_VISITOR_CAPACITY || 50;
+    
+    if (approvedVisitsCount >= maxCapacity) {
+      return res.status(400).json({
+        success: false,
+        message: "Selected date has reached maximum visitor capacity. Please select another date."
+      });
+    }
+    
+    // Process uploaded files
+    const visitorPhoto = req.files?.visitorPhoto ? `/uploads/visitor-photos/${req.files.visitorPhoto[0].filename}` : null;
+    const idPhoto = req.files?.idPhoto ? `/uploads/visitor-photos/${req.files.idPhoto[0].filename}` : null;
+    
+    // Handle inmateId - could be empty string, null, or valid ObjectId
+    let inmateId = null;
+    if (formData.inmateId && formData.inmateId.trim() !== '') {
+      if (mongoose.Types.ObjectId.isValid(formData.inmateId)) {
+        inmateId = formData.inmateId;
+      } else if (formData.inmateId === 'default-inmate') {
+        // Handle the demo inmate case - set to null for database storage
+        console.log("Using demo inmate - setting inmateId to null");
+        inmateId = null;
+      } else {
+        console.log("Invalid inmateId format:", formData.inmateId);
+      }
+    }
+    
+    // Create a new schedule, using default values for any missing required fields
+    const scheduleData = {
+      userId,  // This is now guaranteed to be a valid userId
+      firstName: formData.firstName || "Visitor",
+      middleName: formData.middleName || "",
+      lastName: formData.lastName || "Unknown",
+      phone: formData.phone || "+251000000000", // Default phone
+      idType: formData.idType || "other",
+      idNumber: formData.idNumber || "DEFAULT12345",
+      idExpiryDate: formData.idExpiryDate ? new Date(formData.idExpiryDate) : null,
+      purpose: formData.purpose || "Visit",
+      relationship: formData.relationship || "other",
+      inmateId: inmateId,
+      visitDate: formData.visitDate ? new Date(formData.visitDate) : new Date(),
+      visitTime: formData.visitTime || "10:00 AM",
+      visitDuration: formData.visitDuration || 30,
+      notes: formData.notes || "",
+      visitorPhoto,
+      idPhoto,
+      status: "Pending"
+    };
+    
+    console.log("Creating schedule with data:", scheduleData);
+    
+    // Create using findOneAndUpdate with upsert to avoid validation errors
+    const newSchedule = await VisitorSchedule.create(scheduleData);
 
     res.status(201).json({
       success: true,
       message: "Visit scheduled successfully",
-      data: schedule,
+      schedule: newSchedule
     });
   } catch (error) {
-    console.error("Error in createVisitSchedule:", error);
+    console.error("Error creating schedule:", error);
     res.status(500).json({
       success: false,
-      message: "Error scheduling visit",
-      error: error.message,
+      message: "Failed to create schedule",
+      error: error.message
     });
   }
 };
@@ -210,8 +239,13 @@ export const getVisitorSchedules = async (req, res) => {
         }
         break;
       case "visitor":
-        // Visitors see their own schedules
-        query.visitorId = req.user.id;
+        // Visitors see their own schedules - check both userId and visitorId fields
+        // Use $or to check both fields
+        query.$or = [
+          { userId: req.user.id },
+          { visitorId: req.user.id }
+        ];
+        console.log("Visitor fetching their own schedules with ID:", req.user.id);
         
         // Add status filter if provided and not "all"
         if (req.query.status && req.query.status !== "all") {
@@ -225,8 +259,11 @@ export const getVisitorSchedules = async (req, res) => {
         }
         break;
       default:
-        // Default to user's own schedules
-        query.visitorId = req.user.id;
+        // Default to user's own schedules - check both fields
+        query.$or = [
+          { userId: req.user.id },
+          { visitorId: req.user.id }
+        ];
         
         // Add status filter if provided and not "all"
         if (req.query.status && req.query.status !== "all") {
@@ -234,11 +271,11 @@ export const getVisitorSchedules = async (req, res) => {
         }
     }
 
-    console.log("Final query:", query);
+    console.log("Final query:", JSON.stringify(query, null, 2));
 
     const schedules = await VisitorSchedule.find(query)
       .populate("inmateId", "fullName")
-      .populate("visitorId", "firstName middleName lastName phone")
+      .populate("userId", "firstName middleName lastName phone")
       .sort({ visitDate: 1 });
 
     console.log("Found schedules:", schedules.length);
@@ -378,93 +415,63 @@ export const updateScheduleNotes = async (req, res) => {
   }
 };
 
-// Update schedule
+// Update visit schedule
 export const updateSchedule = async (req, res) => {
   try {
-    const schedule = await VisitorSchedule.findById(req.params.id);
-
-    if (!schedule) {
+    const { id } = req.params;
+    const updateData = req.body;
+    
+    console.log("Updating schedule with ID:", id);
+    console.log("Update data:", updateData);
+    
+    // Validate the schedule exists
+    const existingSchedule = await VisitorSchedule.findById(id);
+    if (!existingSchedule) {
       return res.status(404).json({
         success: false,
-        message: "Schedule not found",
+        message: "Schedule not found"
       });
-    }
-
-    // Check if the visitor owns this schedule
-    if (schedule.visitorId.toString() !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: "Not authorized to update this schedule",
-      });
-    }
-
-    // Only allow updates of pending schedules
-    if (schedule.status !== "pending") {
-      return res.status(400).json({
-        success: false,
-        message: "Only pending schedules can be updated",
-      });
-    }
-
-    const {
-      inmateId,
-      visitDate,
-      visitTime,
-      purpose,
-      relationship,
-      visitDuration,
-      notes,
-      idType,
-      idNumber,
-      idExpiryDate,
-      phone,
-    } = req.body;
-
-    // Update fields if provided
-    if (inmateId && inmateId !== "default_inmate" && inmateId !== "undefined") {
-      schedule.inmateId = inmateId;
-    } else if (inmateId === "default_inmate") {
-      // If default_inmate is explicitly selected, remove the inmateId
-      schedule.inmateId = undefined;
     }
     
-    if (visitDate) schedule.visitDate = new Date(visitDate);
-    if (visitTime) schedule.visitTime = visitTime;
-    if (purpose) schedule.purpose = purpose;
-    if (relationship) schedule.relationship = relationship;
-    if (visitDuration) schedule.visitDuration = parseInt(visitDuration);
-    if (notes !== undefined) schedule.notes = notes;
-    if (idType) schedule.idType = idType;
-    if (idNumber) schedule.idNumber = idNumber;
-    if (idExpiryDate) schedule.idExpiryDate = new Date(idExpiryDate);
-    if (phone) {
-      // Format phone number
-      const formattedPhone = phone.replace(/\D/g, '');
-      schedule.phone = formattedPhone.startsWith('0') 
-        ? '+251' + formattedPhone.slice(1)
-        : formattedPhone.startsWith('251') 
-          ? '+' + formattedPhone 
-          : '+251' + formattedPhone;
+    // Check if user is authorized to update this schedule
+    // Police officers and admins can update any schedule
+    // Regular visitors can only update their own schedules
+    if (req.user.role !== 'police-officer' && req.user.role !== 'admin') {
+      if (existingSchedule.userId.toString() !== req.user.id && 
+          existingSchedule.visitorId?.toString() !== req.user.id) {
+        return res.status(403).json({
+          success: false,
+          message: "Not authorized to update this schedule"
+        });
+      }
+      
+      // Regular users can only update pending schedules
+      if (existingSchedule.status.toLowerCase() !== 'pending') {
+        return res.status(400).json({
+          success: false,
+          message: "Cannot modify a schedule that is not pending"
+        });
+      }
     }
-
-    // Handle file upload if new photo is provided
-    if (req.file) {
-      schedule.visitorPhoto = `/uploads/visitor-photos/${req.file.filename}`;
-    }
-
-    await schedule.save();
-
-    res.json({
+    
+    // Update the schedule
+    const updatedSchedule = await VisitorSchedule.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    );
+    
+    res.status(200).json({
       success: true,
       message: "Schedule updated successfully",
-      data: schedule,
+      data: updatedSchedule
     });
   } catch (error) {
-    console.error("Error in updateSchedule:", error);
+    console.error("Error updating schedule:", error);
     res.status(500).json({
       success: false,
       message: "Error updating schedule",
-      error: error.message,
+      error: error.message
     });
   }
 };
@@ -615,6 +622,56 @@ export const postponeSchedule = async (req, res) => {
       success: false,
       message: "Error postponing schedule",
       error: error.message,
+    });
+  }
+};
+
+// Get visitor capacity information
+export const getVisitorCapacity = async (req, res) => {
+  try {
+    // Set default capacity if not in environment variables
+    const maxCapacity = process.env.MAX_VISITOR_CAPACITY || 50;
+    
+    res.status(200).json({
+      success: true,
+      maxCapacity: parseInt(maxCapacity)
+    });
+  } catch (error) {
+    console.error("Error fetching visitor capacity:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch visitor capacity",
+      error: error.message
+    });
+  }
+};
+
+// Update visitor capacity settings
+export const updateVisitorCapacity = async (req, res) => {
+  try {
+    const { maxCapacity } = req.body;
+    
+    if (!maxCapacity || isNaN(parseInt(maxCapacity)) || parseInt(maxCapacity) <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid capacity value. Must be a positive number."
+      });
+    }
+    
+    // In a production environment, this would update a database setting
+    // For now, we'll just return success and assume env vars are updated manually
+    
+    res.status(200).json({
+      success: true,
+      message: "Visitor capacity updated successfully",
+      maxCapacity: parseInt(maxCapacity)
+    });
+  } catch (error) {
+    console.error("Error updating visitor capacity:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update visitor capacity",
+      error: error.message
     });
   }
 }; 

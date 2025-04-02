@@ -1,7 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-hot-toast";
 import { FaArrowLeft } from "react-icons/fa";
 import { useSelector } from "react-redux";
 import axiosInstance from "../../utils/axiosInstance";
@@ -21,27 +20,86 @@ const PostNotice = ({setOpen}) => {
   const roleOptions = ["Visitor", "Police Officer", "Security Staff", "Admin", "Court"];
   const priorityOptions = ["Low", "Normal", "High", "Urgent"];
 
+  // Function to determine target audience based on selected roles
+  const determineTargetAudience = (selectedRoles) => {
+    if (selectedRoles.length === 0) return "all";
+    
+    // If only one role is selected, map it to the corresponding audience
+    if (selectedRoles.length === 1) {
+      const role = selectedRoles[0];
+      if (role === "Visitor") return "visitors";
+      if (role === "Police Officer") return "staff";
+      if (role === "Security Staff") return "security";
+      if (role === "Admin") return "admin";
+      if (role === "Court") return "court";
+    }
+    
+    // If all roles are selected, target all
+    if (selectedRoles.length === roleOptions.length) return "all";
+    
+    // If multiple but not all roles are selected, determine best match
+    // For now default to "all" for mixed selections
+    return "all";
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title || !description || !date || roles.length === 0) {
       toast.error("Please fill in all fields and select at least one role.");
       return;
     }
+    
     setLoading(true);
     try {
-      await axiosInstance.post("/notice/add-notice", { title, description, date, priority, roles, isPosted });
-      toast.success("Notice posted successfully!");
-      setOpen(false)
-      setTitle("");
-      setDescription("");
-      setDate("");
-      setPriority("Normal");
-      setRoles([]);
-      setIsPosted(false);
-      navigate("/inspector-dashboard/notices");
+      // Determine target audience based on selected roles
+      const targetAudience = determineTargetAudience(roles);
+      
+      // Format data to match backend expectations
+      const noticeData = {
+        title,
+        description,
+        date,
+        priority,
+        roles,
+        isPosted,
+        targetAudience
+      };
+      
+      console.log("Submitting notice with data:", noticeData);
+      
+      const response = await axiosInstance.post("/notice/add-notice", noticeData);
+      console.log("API Response:", response.data);
+      
+      if (response.data && response.data.success) {
+        toast.success("Notice created successfully!");
+        
+        // If the notice was set to be posted immediately, show a special message
+        if (isPosted) {
+          toast.success("Notice published and is now visible to users!");
+        }
+        
+        if (setOpen) {
+          setOpen(false);
+        }
+        
+        // Reset form
+        setTitle("");
+        setDescription("");
+        setDate("");
+        setPriority("Normal");
+        setRoles([]);
+        setIsPosted(false);
+        
+        // Navigate back to notices list if not in a modal
+        if (!setOpen) {
+          navigate("/Inspector-dashboard/notices");
+        }
+      } else {
+        throw new Error(response.data?.message || "Failed to create notice");
+      }
     } catch (error) {
-      console.error("Error:", error);
-      toast.error("Failed to post notice.");
+      console.error("Error creating notice:", error);
+      toast.error(error.response?.data?.message || "Failed to create notice. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -110,18 +168,20 @@ const PostNotice = ({setOpen}) => {
 
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700">Mark as Posted</label>
-              <input
-                type="checkbox"
-                checked={isPosted}
-                onChange={() => setIsPosted(!isPosted)}
-                className="mr-2"
-              />
-              <span>{isPosted ? "Yes" : "No"}</span>
+              <div className="flex items-center mt-1">
+                <input
+                  type="checkbox"
+                  checked={isPosted}
+                  onChange={() => setIsPosted(!isPosted)}
+                  className="mr-2 h-4 w-4"
+                />
+                <span>{isPosted ? "Yes - This notice will be visible immediately" : "No - Save as draft"}</span>
+              </div>
             </div>
 
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700">Select Roles</label>
-              <div className="grid grid-cols-2 gap-2">
+              <label className="block text-sm font-medium text-gray-700">Select Target Audience</label>
+              <div className="grid grid-cols-2 gap-2 mt-1">
                 {roleOptions.map((role) => (
                   <label key={role} className="flex items-center space-x-2">
                     <input
@@ -135,19 +195,24 @@ const PostNotice = ({setOpen}) => {
                           setRoles(roles.filter((r) => r !== role));
                         }
                       }}
+                      className="h-4 w-4"
                     />
                     <span>{role}</span>
                   </label>
                 ))}
               </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Depending on which roles you select, the notice will be shown in the appropriate dashboards.
+              </p>
+              {roles.length === 0 && <p className="text-xs text-red-500 mt-1">Please select at least one role</p>}
             </div>
 
             <button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-md transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
               disabled={loading}
             >
-              {loading ? "Posting..." : "Post Notice"}
+              {loading ? "Creating..." : "Create Notice"}
             </button>
           </form>
         </div>

@@ -1,11 +1,30 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext, createContext, useCallback, useRef, useMemo } from "react";
 import DataTable from "react-data-table-component";
 import { useSelector } from "react-redux";
-import { FaArrowLeft, FaSearch, FaSync, FaCheckCircle, FaTimesCircle, FaCalendarAlt, FaEye } from "react-icons/fa";
-import { columns as defaultColumns, UserButtons } from "../../utils/VisitorHelper.jsx";
-import UpdateVisitorModal from "../Modals/UpdateVisitorModal.jsx";
+import { 
+  FaArrowLeft, 
+  FaSearch, 
+  FaSync, 
+  FaEye, 
+  FaCheckCircle, 
+  FaTimesCircle, 
+  FaCalendarAlt, 
+  FaUserPlus, 
+  FaUserMinus, 
+  FaUsers, 
+  FaTimes,
+  FaEdit,
+  FaFilter,
+  FaChartBar,
+  FaExclamationTriangle,
+  FaExchangeAlt,
+  FaInfoCircle
+} from "react-icons/fa";
+import { columns as defaultColumns } from "../../utils/VisitorHelper.jsx";
+import UpdateVisitorModal from "./partials/UpdateVisitorModal";
 import AddModal from "../Modals/AddModal.jsx";    
 import RegisterVisitor from './RegisterVisitor.jsx';
+import Register from '../welcome/Register.jsx'
 import { toast } from "react-hot-toast";
 
 // Import custom components and hooks
@@ -14,27 +33,199 @@ import PostponeModal from "./partials/PostponeModal";
 import VisitorDetailModal from "./partials/VisitorDetailModal";
 import useVisitorListData from "../../hooks/useVisitorListData";
 import useVisitorActions from "../../hooks/useVisitorActions";
+import axiosInstance from "../../utils/axiosInstance.js";
+import useVisitScheduleData from "../../hooks/useVisitScheduleData";
+import ScheduleDetailModal from "../visitorDashboaard/partials/ScheduleDetailModal";
+
+// Import the new update modals
+import UpdateScheduleModal from "../Modals/UpdateScheduleModal";
+
+// Error Boundary component to catch rendering errors
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("Error caught by boundary:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+          <h2 className="text-lg font-semibold text-red-800 mb-2">Something went wrong</h2>
+          <p className="text-red-700 mb-4">
+            {this.state.error?.message || "An unexpected error occurred"}
+          </p>
+          <button
+            onClick={() => this.setState({ hasError: false, error: null })}
+            className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded"
+          >
+            Try again
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+// Create context for sharing visitor capacity across components
+export const VisitorCapacityContext = createContext({
+  visitorCapacity: {
+    maxCapacity: 50,
+    currentCount: 0,
+    pendingCount: 0,
+    approvedCount: 0,
+    isLoading: true
+  },
+  updateVisitorCapacity: () => {},
+  refreshCapacity: () => {},
+  isCapacityReached: false
+});
 
 // Custom styles for the table
 const customStyles = {
   headCells: {
     style: {
-      backgroundColor: "#D2B48C",
-      color: "#5A3E1B",
+      backgroundColor: "#075985", // Dark blue header (sky-900)
+      color: "white",
       fontWeight: "bold",
       fontSize: "14px",
       textTransform: "uppercase",
+      padding: "16px",
+      borderBottom: "1px solid #0c4a6e",
     },
   },
   rows: {
     style: {
+      fontSize: "14px",
+      minHeight: "60px",
+      borderBottom: "1px solid #e5e7eb",
+      "&:nth-of-type(odd)": {
+        backgroundColor: "#f9fafb",
+      },
       "&:hover": {
-        backgroundColor: "#F5DEB3",
+        backgroundColor: "#f0f9ff",
         cursor: "pointer",
         transition: "background-color 0.2s ease-in-out",
       },
     },
   },
+  cells: {
+    style: {
+      padding: "16px",
+    }
+  },
+  pagination: {
+    style: {
+      backgroundColor: "#f9fafb",
+      color: "#374151",
+      borderTop: "1px solid #e5e7eb",
+      fontSize: "14px",
+    },
+    pageButtonsStyle: {
+      backgroundColor: "white",
+      border: "1px solid #d1d5db",
+      borderRadius: "0.375rem",
+      color: "#374151",
+      fill: "#374151",
+      "&:hover:not(:disabled)": {
+        backgroundColor: "#f3f4f6",
+      },
+      "&:focus": {
+        backgroundColor: "#e5e7eb",
+      },
+    },
+  },
+};
+
+// Visitor capacity provider component
+export const VisitorCapacityProvider = ({ children }) => {
+  const [visitorCapacity, setVisitorCapacity] = useState({
+    maxCapacity: 50,
+    currentCount: 0,
+    pendingCount: 0,
+    approvedCount: 0,
+    isLoading: true
+  });
+  
+  const refreshCapacity = async () => {
+    try {
+      setVisitorCapacity(prev => ({ ...prev, isLoading: true }));
+      const response = await axiosInstance.get('/visitor/schedule/capacity');
+      
+      if (response.data && response.data.success) {
+        setVisitorCapacity({
+          maxCapacity: response.data.maxCapacity || 50,
+          currentCount: response.data.approvedCount || 0,
+          pendingCount: response.data.pendingCount || 0,
+          approvedCount: response.data.approvedCount || 0,
+          isLoading: false
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching visitor capacity:", error);
+      setVisitorCapacity(prev => ({ ...prev, isLoading: false }));
+    }
+  };
+  
+  const updateVisitorCapacity = async (newCapacity) => {
+    try {
+      const response = await axiosInstance.put('/visitor/schedule/capacity', {
+        maxCapacity: newCapacity
+      });
+      
+      if (response.data && response.data.success) {
+        setVisitorCapacity(prev => ({
+          ...prev,
+          maxCapacity: newCapacity
+        }));
+        toast.success("Visitor capacity updated successfully");
+        return true;
+      } else {
+        toast.error("Failed to update visitor capacity");
+        return false;
+      }
+    } catch (error) {
+      console.error("Error updating visitor capacity:", error);
+      toast.error("Failed to update visitor capacity");
+      return false;
+    }
+  };
+  
+  // Check if capacity is reached
+  const isCapacityReached = visitorCapacity.currentCount >= visitorCapacity.maxCapacity;
+  
+  // Fetch capacity on mount
+  useEffect(() => {
+    refreshCapacity();
+    
+    // Set up capacity polling (every 1 minute)
+    const intervalId = setInterval(() => {
+      refreshCapacity();
+    }, 60000);
+    
+    return () => clearInterval(intervalId);
+  }, []);
+
+  return (
+    <VisitorCapacityContext.Provider value={{ 
+      visitorCapacity, 
+      updateVisitorCapacity, 
+      refreshCapacity,
+      isCapacityReached 
+    }}>
+      {children}
+    </VisitorCapacityContext.Provider>
+  );
 };
 
 const VisitorList = () => {
@@ -64,13 +255,88 @@ const VisitorList = () => {
     closePostponeModal
   } = useVisitorActions(fetchVisitors);
 
+  // Get visitor capacity from context
+  const { 
+    visitorCapacity, 
+    updateVisitorCapacity, 
+    refreshCapacity,
+    isCapacityReached 
+  } = useContext(VisitorCapacityContext);
+
   // Local state
   const [selectedVisitor, setSelectedVisitor] = useState(null);
   const [open, setOpen] = useState(false);
   const [userData, setUserData] = useState(null);
+  const [showCapacityModal, setShowCapacityModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showVisitSchedules, setShowVisitSchedules] = useState(false);
   
   // Get sidebar state from Redux
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
+
+  // Additional state for pre-fetched schedules data
+  const [pendingSchedulesData, setPendingSchedulesData] = useState(null);
+  const [loadingPendingSchedules, setLoadingPendingSchedules] = useState(false);
+
+  // Add a toggle timeout ref for debouncing
+  const toggleTimeoutRef = useRef(null);
+
+  // Update the state management to include the new update modal states
+  const [showUpdateVisitorModal, setShowUpdateVisitorModal] = useState(false);
+  const [showUpdateScheduleModal, setShowUpdateScheduleModal] = useState(false);
+
+  // Function to format date
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString;
+    return new Intl.DateTimeFormat('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    }).format(date);
+  };
+
+  // Define status badge component
+  const StatusBadge = ({ status }) => {
+    let bgColor, textColor, icon;
+    
+    switch(status?.toLowerCase()) {
+      case 'approved':
+        bgColor = "bg-green-100";
+        textColor = "text-green-800";
+        icon = <FaCheckCircle className="mr-1" />;
+        break;
+      case 'rejected':
+        bgColor = "bg-red-100";
+        textColor = "text-red-800";
+        icon = <FaTimesCircle className="mr-1" />;
+        break;
+      case 'postponed':
+        bgColor = "bg-yellow-100";
+        textColor = "text-yellow-800";
+        icon = <FaCalendarAlt className="mr-1" />;
+        break;
+      case 'completed':
+        bgColor = "bg-blue-100";
+        textColor = "text-blue-800";
+        icon = <FaCheckCircle className="mr-1" />;
+        break;
+      case 'pending':
+      default:
+        bgColor = "bg-gray-100";
+        textColor = "text-gray-800";
+        icon = <FaSync className="mr-1" />;
+        break;
+    }
+    
+    return (
+      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${bgColor} ${textColor} border border-${textColor.replace('text-', '')}`}>
+        {icon}
+        {status ? status.charAt(0).toUpperCase() + status.slice(1).toLowerCase() : 'Pending'}
+      </span>
+    );
+  };
 
   // Define police officer columns inside the component
   const policeOfficerColumns = [
@@ -83,260 +349,522 @@ const VisitorList = () => {
     },
     {
       name: "Name",
-      selector: (row) => `${row.firstName} ${row.middleName} ${row.lastName}`,
+      selector: (row) => `${row.firstName || ''} ${row.middleName || ''} ${row.lastName || ''}`,
       sortable: true,
       wrap: true,
-      center: true,
+      cell: (row) => (
+        <div className="font-medium text-gray-900">
+          {`${row.firstName || ''} ${row.middleName || ''} ${row.lastName || ''}`}
+        </div>
+      ),
     },
     {
       name: "Phone",
       selector: (row) => row.phone,
       sortable: true,
       wrap: true,
-      center: true,
+      cell: (row) => (
+        <div className="text-gray-700">
+          {row.phone || 'N/A'}
+        </div>
+      ),
     },
     {
       name: "Purpose",
       selector: (row) => row.purpose,
       sortable: true,
       wrap: true,
-      center: true,
+      cell: (row) => (
+        <div className="text-gray-700">
+          {row.purpose || 'N/A'}
+        </div>
+      ),
     },
     {
       name: "Visit Date",
       selector: (row) => row.date,
       sortable: true,
-      center: true,
+      cell: (row) => (
+        <div className="text-gray-700">
+          {formatDate(row.date)}
+        </div>
+      ),
     },
     {
       name: "Status",
       selector: (row) => row.status || 'Pending',
       sortable: true,
       center: true,
-      cell: (row) => (
-        <span className={`px-2 py-1 rounded-full text-sm ${getStatusColor(row.status || 'Pending')}`}>
-          {row.status || 'Pending'}
-        </span>
-      ),
+      cell: (row) => <StatusBadge status={row.status || 'Pending'} />,
     },
     {
       name: "Actions",
       cell: (row) => (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 justify-center">
           <button
             onClick={() => handleViewDetails(row)}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-sm flex items-center"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm flex items-center"
           >
             <FaEye className="mr-1" /> View
           </button>
-          {(row.status?.toLowerCase() === 'pending') && (userData?.role === 'police-officer' || userData?.role === 'admin') && (
-            <>
-              {/* Uncomment these if you need them */}
-              {/* <button
-                onClick={() => handleApproveClick(row._id)}
-                className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-sm flex items-center"
-              >
-                <FaCheckCircle className="mr-1" /> Approve
-              </button>
-              <button
-                onClick={() => handleRejectClick(row._id)}
-                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-sm flex items-center"
-              >
-                <FaTimesCircle className="mr-1" /> Reject
-              </button>
-              <button
-                onClick={() => handlePostponeClick(row._id)}
-                className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-md text-sm flex items-center"
-              >
-                <FaCalendarAlt className="mr-1" /> Postpone
-              </button> */}
-            </>
-          )}
           <button
             onClick={() => handleUpdate(row)}
-            className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-md text-sm flex items-center"
+            className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-md text-sm flex items-center"
           >
-            <FaSync className="mr-1" /> Update
+            <FaEdit className="mr-1" /> Update
           </button>
         </div>
       ),
-      width: "200px",
-      center: true,
+      width: "180px",
     },
-];
+  ];
 
+  // Handle approve with capacity check
+  const handleApproveWithCheck = async (visitorId) => {
+    // Check if capacity has been reached
+    if (isCapacityReached) {
+      toast.error("Maximum visitor capacity reached. Please increase capacity or wait for visits to complete.");
+      // Show capacity modal for admins and police officers
+      if (userData?.role === 'police-officer' || userData?.role === 'admin') {
+        setShowCapacityModal(true);
+      }
+      return;
+    }
+    
+    await handleApproveClick(visitorId);
+    
+    // Refresh capacity data after approval
+    setTimeout(() => {
+      refreshCapacity();
+    }, 1000);
+  };
 
   // Set up component on mount
   useEffect(() => {
     // Get user data from localStorage
     const user = JSON.parse(localStorage.getItem("user"));
     setUserData(user);
+    
+    // Get saved schedule view preference
+    try {
+      const savedScheduleView = localStorage.getItem('showVisitSchedules');
+      if (savedScheduleView !== null) {
+        setShowVisitSchedules(JSON.parse(savedScheduleView));
+      }
+    } catch (error) {
+      console.error('Error retrieving schedule view preference:', error);
+    }
   }, []);
 
+  // Refresh visitor data when capacity changes
+  useEffect(() => {
+    if (!visitorCapacity.isLoading) {
+      fetchVisitors();
+    }
+  }, [visitorCapacity.maxCapacity]);
+
+  // Pre-fetch pending schedules when component mounts
+  useEffect(() => {
+    const fetchPendingSchedules = async () => {
+      try {
+        setLoadingPendingSchedules(true);
+        // Directly use axiosInstance instead of the hook to avoid dependency issues
+        const response = await axiosInstance.get("/visitor/schedule/schedules?status=pending");
+        if (response.data.success) {
+          console.log("Pre-fetched pending schedules:", response.data.data.length);
+          setPendingSchedulesData(response.data.data);
+        }
+      } catch (error) {
+        console.error("Error pre-fetching pending schedules:", error);
+      } finally {
+        setLoadingPendingSchedules(false);
+      }
+    };
+
+    fetchPendingSchedules();
+  }, []);
+
+  // Update the handleUpdate function to show the UpdateVisitorModal
   const handleUpdate = (visitor) => {
+    console.log("Updating visitor:", visitor);
     setSelectedVisitor(visitor);
-    setOpen(true);
+    setShowUpdateVisitorModal(true);
+  };
+
+  // Add a new function to handle schedule updates
+  const handleUpdateSchedule = (schedule) => {
+    console.log("Updating schedule:", schedule);
+    setSelectedSchedule(schedule);
+    setShowUpdateScheduleModal(true);
+  };
+
+  // Modify the toggle function to avoid rapid toggling
+  const toggleVisitSchedules = useCallback(() => {
+    // Set directly without timeout since we're now using pre-fetched data
+    setShowVisitSchedules(prev => !prev);
+    
+    // Save the new value to localStorage
+    try {
+      const newState = !showVisitSchedules;
+      localStorage.setItem('showVisitSchedules', JSON.stringify(newState));
+    } catch (error) {
+      console.error('Error saving schedule view preference:', error);
+    }
+  }, [showVisitSchedules]);
+
+  // Modal for capacity management
+  const CapacityManagementModal = () => {
+    const [newCapacity, setNewCapacity] = useState(visitorCapacity.maxCapacity);
+
+    const handleSubmit = async () => {
+      const success = await updateVisitorCapacity(newCapacity);
+      if (success) {
+        setShowCapacityModal(false);
+      }
   };
 
   return (
-    <div className="flex">
-      {/* Sidebar */}
-      <div className={`transition-all duration-300 ${isCollapsed ? "w-16" : "w-64"}`} />
-      
-      {/* Main Content */}
-      <div className="flex-1 relative min-h-screen">
-        {/* Top Bar */}
-        <div
-          className={`bg-white shadow-md p-4 fixed top-14 z-20 flex flex-wrap items-center justify-between transition-all duration-300 ml-2 gap-2 ${
-            isCollapsed ? "left-16 w-[calc(100%-5rem)]" : "left-64 w-[calc(100%-17rem)]"
-          }`}
-        >
-          {/* Back Button */}
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-xl">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-gray-800">
+              Manage Visitor Capacity
+            </h2>
           <button
-            className="flex items-center text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg shadow-md transition duration-300"
-            onClick={() => window.history.back()}
+              onClick={() => setShowCapacityModal(false)}
+              className="text-gray-500 hover:text-gray-700"
           >
-            <FaArrowLeft className="mr-2 text-lg" /> Back
+              <FaTimes size={20} />
           </button>
-          <h2 className="text-xl md:text-2xl font-bold text-gray-800 mb-4">Visitor List</h2>
-          
-          {/* Search Input */}
-          <div className="flex-1" />
-          <div className="relative flex items-center w-full md:w-60 lg:w-1/3">
-            <FaSearch className="absolute left-3 text-gray-500" />
-            <input
-              type="text"
-              placeholder="Search visitors..."
-              className="h-10 px-4 py-2 border border-gray-300 rounded-md w-full pl-10"
-              onChange={(e) => handleSearch(e.target.value)}
-            />
           </div>
           
-          {/* Refresh Button */}
-          <button
-            onClick={() => {
-              const refreshId = toast.loading("Refreshing visitor data...");
-              fetchVisitors()
-                .then(() => {
-                  toast.dismiss(refreshId);
-                  toast.success("Visitor data refreshed successfully");
-                })
-                .catch(() => {
-                  toast.dismiss(refreshId);
-                  toast.error("Failed to refresh visitor data");
-                });
-            }}
-            className="h-10 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center justify-center"
-          >
-            <FaSync className={`mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
-          
-          {/* Add New Visitor Button */}
-          <button
-            onClick={() => setOpen(true)}
-            className="h-10 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-md flex items-center justify-center min-w-[150px] md:w-auto"
-          >
-            Add New Visitor
-          </button>
-          <AddModal open={open} setOpen={setOpen}>
-            <RegisterVisitor setOpen={setOpen} onSuccess={() => {
-              setOpen(false);
-              fetchVisitors();
-              toast.success("New visitor added successfully");
-            }} />
-          </AddModal>
-        </div>
-
-        {/* Visitor List Table */}
-        <div className="p-4 md:p-6 mt-32">
-        {error && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
-              <p className="text-red-600">{error}</p>
-            </div>
-          )}
-          
-          {loading ? (
-            <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
-            </div>
-          ) : filteredVisitors.length === 0 ? (
-            <div className="text-center py-6 bg-white rounded-lg shadow-md">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <h3 className="text-lg font-medium text-gray-500">No visitors found</h3>
-              <p className="text-gray-400 mt-2">Try a different search or filter</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              {/* Status Filter */}
-              <StatusFilter 
-                statusFilter={filter} 
-                onStatusChange={handleFilterChange} 
-              />
-              
-              {/* Data Table */}
-              <div className="mt-4 border rounded-lg overflow-hidden bg-white">
-                <DataTable
-                  columns={userData?.role === "police-officer" || userData?.role === "admin" ? policeOfficerColumns : defaultColumns}
-                  data={filteredVisitors}
-                  pagination
-                  customStyles={customStyles}
-                  highlightOnHover
-                  responsive
-                  persistTableHead
-                  progressPending={loading}
-                  progressComponent={
-                    <div className="flex justify-center items-center h-64">
-                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
-                    </div>
-                  }
-                  noDataComponent={
-                    <div className="text-center py-6">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <h3 className="text-lg font-medium text-gray-500">No visitors found</h3>
-                      <p className="text-gray-400 mt-2">Try a different search or filter</p>
-                    </div>
-                  }
-                />
+          <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <FaInfoCircle className="h-5 w-5 text-blue-500" />
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-blue-700">
+                  Setting the visitor capacity helps manage the number of visitors allowed per day.
+                </p>
               </div>
             </div>
-          )}
+          </div>
+          
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-medium mb-2">
+              Current visitor statistics:
+            </label>
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                <p className="text-xs text-gray-500">Current Capacity</p>
+                <p className="text-lg font-semibold">{visitorCapacity.maxCapacity}</p>
+              </div>
+              <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                <p className="text-xs text-gray-500">Approved Visitors</p>
+                <p className="text-lg font-semibold">{visitorCapacity.approvedCount}</p>
+              </div>
+              <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                <p className="text-xs text-gray-500">Pending Requests</p>
+                <p className="text-lg font-semibold">{visitorCapacity.pendingCount}</p>
+              </div>
+              <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                <p className="text-xs text-gray-500">Available Slots</p>
+                <p className="text-lg font-semibold">
+                  {Math.max(0, visitorCapacity.maxCapacity - visitorCapacity.approvedCount)}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="mb-6">
+            <label htmlFor="capacity" className="block text-gray-700 text-sm font-medium mb-2">
+              New Maximum Capacity:
+            </label>
+            <input
+              type="number"
+              id="capacity"
+              value={newCapacity}
+              onChange={(e) => setNewCapacity(Math.max(1, parseInt(e.target.value) || 1))}
+              className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border"
+              min="1"
+            />
+            {newCapacity < visitorCapacity.approvedCount && (
+              <p className="mt-2 text-sm text-red-600">
+                Warning: New capacity is less than current approved visitors.
+              </p>
+            )}
+          </div>
+          
+          <div className="flex justify-end gap-3">
+            <button
+              type="button"
+              className="bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
+              onClick={() => setShowCapacityModal(false)}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onClick={handleSubmit}
+            >
+              Save Changes
+            </button>
+          </div>
         </div>
       </div>
+    );
+  };
 
-      {/* Detail Modal */}
-      <VisitorDetailModal
-        isOpen={showDetailModal}
-        visitor={viewVisitor}
-        onClose={closeDetailModal}
-        onApprove={handleApproveClick}
-        onReject={handleRejectClick}
-        onPostpone={handlePostponeClick}
-        userRole={userData?.role}
+  // Show capacity warning if near capacity
+  const CapacityWarning = () => {
+    if (visitorCapacity.isLoading) return null;
+    
+    const availableSlots = visitorCapacity.maxCapacity - visitorCapacity.approvedCount;
+    const percentFull = (visitorCapacity.approvedCount / visitorCapacity.maxCapacity) * 100;
+    
+    if (percentFull < 80) return null;
+    
+    return (
+      <div className={`mb-4 p-4 rounded-lg flex items-center
+        ${percentFull >= 100 ? 'bg-red-50 border border-red-200' : 'bg-yellow-50 border border-yellow-200'}`
+      }>
+        <FaExclamationTriangle className={percentFull >= 100 ? 'text-red-500' : 'text-yellow-500'} size={20} />
+        <div className="ml-3">
+          <p className={`text-sm font-medium ${percentFull >= 100 ? 'text-red-800' : 'text-yellow-800'}`}>
+            {percentFull >= 100 ? 'Visitor capacity reached!' : 'Visitor capacity almost reached!'} 
+          </p>
+          <p className="text-sm mt-1">
+            {availableSlots <= 0 
+              ? 'No slots available. Increase capacity or wait for visits to complete.'
+              : `Only ${availableSlots} slots available out of ${visitorCapacity.maxCapacity}.`
+            }
+          </p>
+        </div>
+        {(userData?.role === 'police-officer' || userData?.role === 'admin') && (
+          <button
+            onClick={() => setShowCapacityModal(true)}
+            className={`ml-auto px-3 py-1 text-sm rounded
+              ${percentFull >= 100 ? 'bg-red-100 text-red-800 hover:bg-red-200' : 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'}`}
+          >
+            Manage Capacity
+          </button>
+        )}
+      </div>
+    );
+  };
+
+  // Update the memoized component to use the pre-fetched data
+  const memoizedSchedulesComponent = useMemo(() => (
+    <ErrorBoundary>
+      <PendingSchedulesTable 
+        scheduleData={pendingSchedulesData}
+        isLoading={loadingPendingSchedules}
+        refreshData={() => {
+          setLoadingPendingSchedules(true);
+          axiosInstance.get("/visitor/schedule/schedules?status=pending")
+            .then(response => {
+              if (response.data.success) {
+                setPendingSchedulesData(response.data.data);
+              }
+            })
+            .catch(error => console.error("Error refreshing pending schedules:", error))
+            .finally(() => setLoadingPendingSchedules(false));
+        }}
       />
+    </ErrorBoundary>
+  ), [pendingSchedulesData, loadingPendingSchedules]);
 
-      {/* Postpone Modal */}
-      <PostponeModal
-        isOpen={showPostponeModal}
-        onClose={closePostponeModal}
-        onSubmit={handlePostponeSubmit}
-        visitor={viewVisitor}
-      />
+  return (
+    <div className={`p-6 mt-10 transition-all duration-300 ease-in-out ${
+      isCollapsed ? "ml-16" : "ml-64"
+    }`}>
+      {/* Visitor List Content */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-800 flex items-center">
+            <FaUsers className="mr-2 text-blue-600" />
+            Visitor Management
+          </h1>
+          
+          <div className="flex flex-wrap gap-3 mt-4 md:mt-0">
+            {/* Toggle between Visitor List and Visit Schedules */}
+            <button
+              onClick={toggleVisitSchedules}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md flex items-center"
+            >
+              <FaExchangeAlt className="mr-2" />
+              {showVisitSchedules ? "Show Visitor List" : "Show Visit Schedules"}
+            </button>
+          
+            {/* Capacity Management (for admin/police) */}
+            {(userData?.role === 'police-officer' || userData?.role === 'admin') && (
+              <button
+                onClick={() => setShowCapacityModal(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center"
+              >
+                <FaChartBar className="mr-2" />
+                Manage Capacity
+              </button>
+            )}
+            
+            {/* Refresh Button */}
+            <button
+              onClick={() => {
+                fetchVisitors();
+                refreshCapacity();
+              }}
+              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md flex items-center"
+            >
+              <FaSync className="mr-2" />
+              Refresh List
+            </button>
+          </div>
+        </div>
 
-      {/* Update Visitor Modal */}
-      {selectedVisitor && (
-        <UpdateVisitorModal 
-          open={open} 
-          setOpen={setOpen} 
-          visitor={selectedVisitor} 
-          onSuccess={() => {
+        {/* Show capacity warning for both visitor list and schedules */}
+        <CapacityWarning />
+        
+        {/* Search and Filter (only show for visitor list) */}
+        {!showVisitSchedules && (
+          <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+            <div className="w-full md:w-1/2 relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FaSearch className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search visitors by name, purpose, or status..."
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-md w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  handleSearch(e.target.value);
+                }}
+              />
+            </div>
+            
+            <div className="w-full md:w-auto flex flex-wrap gap-3">
+              <div className="flex items-center bg-gray-100 p-2 rounded-md">
+                <FaFilter className="text-gray-500 mr-2" />
+                <select
+                  value={filter}
+                  onChange={(e) => handleFilterChange(e.target.value)}
+                  className="bg-transparent border-none focus:outline-none text-gray-700"
+                >
+                  <option value="all">All Visitors</option>
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                  <option value="postponed">Postponed</option>
+                  <option value="completed">Completed</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Conditional rendering based on toggle state */}
+        {showVisitSchedules ? (
+          // Use memoized component to prevent re-creation
+          memoizedSchedulesComponent
+        ) : (
+          // Show the regular visitor list table
+          <div className="overflow-hidden border border-gray-200 rounded-lg">
+              <DataTable
+              columns={policeOfficerColumns}
+                data={filteredVisitors}
+                pagination
+              paginationPerPage={10}
+              paginationRowsPerPageOptions={[10, 20, 30, 50]}
+              highlightOnHover
+              pointerOnHover
+              responsive
+              progressPending={loading}
+              progressComponent={
+                <div className="flex justify-center items-center p-10">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+                </div>
+              }
+                customStyles={customStyles}
+              noDataComponent={
+                <div className="flex flex-col items-center justify-center p-10">
+                  <FaUsers className="text-gray-300 text-5xl mb-4" />
+                  <p className="text-gray-500 text-lg">No visitors found</p>
+                  <p className="text-gray-400 text-sm mt-2">
+                    {filter !== 'all' 
+                      ? `Try changing the filter from "${filter}" to see more results` 
+                      : "No visitors have been registered in the system yet"}
+                  </p>
+                </div>
+              }
+              />
+            </div>
+          )}
+        </div>
+
+      {/* Modals - keep these unchanged */}
+      {open && selectedVisitor && (
+        <UpdateVisitorModal
+          isOpen={open}
+          onClose={() => setOpen(false)}
+          visitor={selectedVisitor}
+          onUpdate={() => {
             setOpen(false);
             fetchVisitors();
+            refreshCapacity();
+          }}
+        />
+      )}
+
+      {showDetailModal && viewVisitor && (
+        <VisitorDetailModal
+          isOpen={showDetailModal}
+          onClose={closeDetailModal}
+          visitor={viewVisitor}
+          capacityReached={isCapacityReached}
+          onApprove={handleApproveWithCheck}
+          onReject={handleRejectClick}
+          onPostpone={handlePostponeClick}
+          onUpdate={handleUpdate}
+          userRole={userData?.role}
+        />
+      )}
+
+      {showPostponeModal && (
+        <PostponeModal
+          isOpen={showPostponeModal}
+          onClose={closePostponeModal}
+          onSubmit={handlePostponeSubmit}
+        />
+      )}
+
+      {showCapacityModal && <CapacityManagementModal />}
+
+      {showUpdateVisitorModal && selectedVisitor && (
+        <UpdateVisitorModal
+          isOpen={showUpdateVisitorModal}
+          onClose={() => setShowUpdateVisitorModal(false)}
+          visitor={selectedVisitor}
+          onSuccess={() => {
+            setShowUpdateVisitorModal(false);
+            fetchVisitors();
+            refreshCapacity();
             toast.success("Visitor updated successfully");
+          }}
+        />
+      )}
+
+      {showUpdateScheduleModal && selectedSchedule && (
+        <UpdateScheduleModal
+          isOpen={showUpdateScheduleModal}
+          onClose={() => setShowUpdateScheduleModal(false)}
+          schedule={selectedSchedule}
+          onSuccess={() => {
+            setShowUpdateScheduleModal(false);
+            refreshData && refreshData();
+            toast.success("Schedule updated successfully");
           }}
         />
       )}
@@ -344,4 +872,350 @@ const VisitorList = () => {
   );
 };
 
-export default VisitorList;
+// Create a simplified table component specifically for pending schedules
+const PendingSchedulesTable = ({ scheduleData, isLoading, refreshData }) => {
+  const [selectedSchedule, setSelectedSchedule] = useState(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showPostponeModal, setShowPostponeModal] = useState(false);
+  const [scheduleToPostpone, setScheduleToPostpone] = useState(null);
+  const [userData, setUserData] = useState(null);
+  
+  // Add state for update modal
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  
+  // Get visitor capacity from context
+  const { isCapacityReached, refreshCapacity } = useContext(VisitorCapacityContext);
+  
+  // Get user data from localStorage when component mounts
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("user"));
+    setUserData(user);
+  }, []);
+  
+  // Format the date for display
+  const formatDate = useCallback((dateString) => {
+    if (!dateString) return "N/A";
+    
+    const options = { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    };
+    
+    return new Date(dateString).toLocaleDateString('en-US', options);
+  }, []);
+  
+  // View schedule details
+  const viewScheduleDetails = useCallback((schedule) => {
+    setSelectedSchedule(schedule);
+    setShowDetailModal(true);
+  }, []);
+  
+  // Handle update schedule
+  const handleUpdateSchedule = useCallback((schedule) => {
+    setSelectedSchedule(schedule);
+    setShowUpdateModal(true);
+  }, []);
+  
+  // Approve a schedule
+  const approveSchedule = useCallback(async (scheduleId) => {
+    // Check if capacity is reached
+    if (isCapacityReached) {
+      toast.error("Maximum visitor capacity reached. Please increase capacity or wait for visits to complete.");
+      return false;
+    }
+    
+    try {
+      const loadingId = toast.loading("Approving visit...");
+      const response = await axiosInstance.put(`/visitor/schedule/schedule/${scheduleId}/approve`);
+      
+      toast.dismiss(loadingId);
+      
+      if (response.data.success) {
+        toast.success("Visit approved successfully");
+        refreshData(); // Refresh the data after approval
+        refreshCapacity(); // Refresh capacity data
+        return true;
+      } else {
+        toast.error(response.data.message || "Failed to approve visit");
+        return false;
+      }
+    } catch (error) {
+      toast.dismiss();
+      console.error("Error approving schedule:", error);
+      toast.error(error.response?.data?.message || "Failed to approve visit");
+      return false;
+    }
+  }, [refreshData, isCapacityReached, refreshCapacity]);
+  
+  // Reject a schedule
+  const rejectSchedule = useCallback(async (scheduleId) => {
+    try {
+      const loadingId = toast.loading("Rejecting visit...");
+      const response = await axiosInstance.put(`/visitor/schedule/schedule/${scheduleId}/reject`);
+      
+      toast.dismiss(loadingId);
+      
+      if (response.data.success) {
+        toast.success("Visit rejected successfully");
+        refreshData(); // Refresh the data after rejection
+        return true;
+      } else {
+        toast.error(response.data.message || "Failed to reject visit");
+        return false;
+      }
+    } catch (error) {
+      toast.dismiss();
+      console.error("Error rejecting schedule:", error);
+      toast.error(error.response?.data?.message || "Failed to reject visit");
+      return false;
+    }
+  }, [refreshData]);
+  
+  // Handle postpone click
+  const handlePostponeClick = useCallback((scheduleId) => {
+    setScheduleToPostpone(scheduleId);
+    setShowPostponeModal(true);
+  }, []);
+  
+  // Handle postpone submit
+  const handlePostponeSubmit = useCallback(async (date) => {
+    try {
+      const loadingId = toast.loading("Postponing visit...");
+      const response = await axiosInstance.put(`/visitor/schedule/schedule/${scheduleToPostpone}/postpone`, {
+        newDate: date
+      });
+      
+      toast.dismiss(loadingId);
+      
+      if (response.data.success) {
+        toast.success("Visit postponed successfully");
+        setShowPostponeModal(false);
+        refreshData(); // Refresh the data after postponing
+        return true;
+      } else {
+        toast.error(response.data.message || "Failed to postpone visit");
+        return false;
+      }
+    } catch (error) {
+      toast.dismiss();
+      console.error("Error postponing schedule:", error);
+      toast.error(error.response?.data?.message || "Failed to postpone visit");
+      return false;
+    }
+  }, [scheduleToPostpone, refreshData]);
+  
+  // Cancel a schedule
+  const cancelSchedule = useCallback(async (scheduleId) => {
+    try {
+      const loadingId = toast.loading("Cancelling visit...");
+      const response = await axiosInstance.put(`/visitor/schedule/schedule/${scheduleId}/cancel`);
+      
+      toast.dismiss(loadingId);
+      
+      if (response.data.success) {
+        toast.success("Visit cancelled successfully");
+        refreshData(); // Refresh the data after cancellation
+        return true;
+      } else {
+        toast.error(response.data.message || "Failed to cancel visit");
+        return false;
+      }
+    } catch (error) {
+      toast.dismiss();
+      console.error("Error cancelling schedule:", error);
+      toast.error(error.response?.data?.message || "Failed to cancel visit");
+      return false;
+    }
+  }, [refreshData]);
+  
+  // Status badge component
+  const ScheduleStatusBadge = useCallback(({ status }) => {
+    return (
+      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 border border-gray-200">
+        <FaSync className="mr-1" />
+        Pending
+      </span>
+    );
+  }, []);
+  
+  // Check if user is police officer or admin
+  const isPoliceOrAdmin = userData?.role === 'police-officer' || userData?.role === 'admin';
+  
+  // Define columns
+  const columns = useMemo(() => [
+    {
+      name: "Visitor Name",
+      selector: (row) => row.visitorName || 'N/A',
+      sortable: true,
+      wrap: true,
+      cell: (row) => (
+        <div className="font-medium text-gray-900">
+          {row.visitorName || 'N/A'}
+        </div>
+      ),
+    },
+    {
+      name: "Purpose",
+      selector: (row) => row.purpose,
+      sortable: true,
+      wrap: true,
+      cell: (row) => (
+        <div className="text-gray-700">
+          {row.purpose || 'N/A'}
+        </div>
+      ),
+    },
+    {
+      name: "Visit Date",
+      selector: (row) => row.visitDate,
+      sortable: true,
+      cell: (row) => (
+        <div className="text-gray-700">
+          {formatDate(row.visitDate)}
+        </div>
+      ),
+    },
+    {
+      name: "Status",
+      selector: (row) => 'Pending',
+      sortable: false,
+      center: true,
+      cell: (row) => <ScheduleStatusBadge status="pending" />,
+    },
+    {
+      name: "Created At",
+      selector: (row) => row.createdAt,
+      sortable: true,
+      cell: (row) => (
+        <div className="text-gray-700">
+          {formatDate(row.createdAt)}
+        </div>
+      ),
+    },
+    {
+      name: "Actions",
+      cell: (row) => (
+        <div className="flex flex-wrap gap-2 justify-center">
+          <button
+            onClick={() => viewScheduleDetails(row)}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm flex items-center"
+          >
+            <FaEye className="mr-1" /> View
+          </button>
+          <button
+            onClick={() => handleUpdateSchedule(row)}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-md text-sm flex items-center"
+          >
+            <FaEdit className="mr-1" /> Update
+          </button>
+        </div>
+      ),
+      width: "180px",
+    },
+  ], [formatDate, viewScheduleDetails, handleUpdateSchedule, ScheduleStatusBadge]);
+  
+  return (
+    <>
+      <div className="bg-indigo-50 p-4 mb-4 rounded-lg border border-indigo-100">
+        <p className="text-indigo-800 flex items-center">
+          <FaInfoCircle className="mr-2" />
+          Viewing pending schedule requests. These are visits awaiting approval.
+        </p>
+      </div>
+      
+      <div className="flex justify-end mb-4">
+        <button
+          onClick={refreshData}
+          className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md flex items-center"
+        >
+          <FaSync className="mr-2" />
+          Refresh
+        </button>
+      </div>
+      
+      <div className="overflow-hidden border border-gray-200 rounded-lg">
+        <DataTable
+          columns={columns}
+          data={scheduleData || []}
+          pagination
+          paginationPerPage={10}
+          paginationRowsPerPageOptions={[10, 20, 30, 50]}
+          highlightOnHover
+          pointerOnHover
+          responsive
+          progressPending={isLoading}
+          progressComponent={
+            <div className="flex justify-center items-center p-10">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+          }
+          customStyles={customStyles}
+          noDataComponent={
+            <div className="flex flex-col items-center justify-center p-10">
+              <FaCalendarAlt className="text-gray-300 text-5xl mb-4" />
+              <p className="text-gray-500 text-lg">No pending schedules found</p>
+              <p className="text-gray-400 text-sm mt-2">
+                All schedule requests have been processed
+              </p>
+            </div>
+          }
+        />
+      </div>
+      
+      {/* Schedule Detail Modal */}
+      {showDetailModal && selectedSchedule && (
+        <ScheduleDetailModal
+          isOpen={showDetailModal}
+          onClose={() => setShowDetailModal(false)}
+          schedule={selectedSchedule}
+          onCancel={cancelSchedule}
+          onUpdate={(schedule) => {
+            setShowDetailModal(false);
+            // Add logic here to handle schedule updates if needed
+            toast.success("Schedule update feature will be implemented soon");
+          }}
+          onApprove={approveSchedule}
+          onReject={rejectSchedule}
+          onPostpone={handlePostponeClick}
+          capacityReached={isCapacityReached}
+          userRole={userData?.role}
+        />
+      )}
+      
+      {/* Postpone Modal */}
+      {showPostponeModal && (
+        <PostponeModal
+          isOpen={showPostponeModal}
+          onClose={() => setShowPostponeModal(false)}
+          onSubmit={handlePostponeSubmit}
+        />
+      )}
+
+      {/* Update Modal */}
+      {showUpdateModal && selectedSchedule && (
+        <UpdateScheduleModal
+          isOpen={showUpdateModal}
+          onClose={() => setShowUpdateModal(false)}
+          schedule={selectedSchedule}
+          onSuccess={() => {
+            setShowUpdateModal(false);
+            refreshData && refreshData();
+            toast.success("Schedule updated successfully");
+          }}
+        />
+      )}
+    </>
+  );
+};
+
+// Export the wrapped component with context provider
+export default function VisitorListWithCapacity() {
+  return (
+    <VisitorCapacityProvider>
+      <VisitorList />
+    </VisitorCapacityProvider>
+  );
+}

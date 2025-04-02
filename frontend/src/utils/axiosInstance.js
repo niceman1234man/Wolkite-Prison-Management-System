@@ -14,6 +14,7 @@ const axiosInstance = axios.create({
 // List of public routes that don't require authentication
 const PUBLIC_ROUTES = [
   "/auth/login",
+  "/user/login",
   "/auth/register",
   "/auth/schedule",
   "/managemessages/get-messages",
@@ -34,6 +35,12 @@ axiosInstance.interceptors.request.use(
         config.url;
       return requestUrl.includes(route);
     });
+    
+    // Special logging for login attempts
+    if (config.url.includes('/auth/login') || config.url.includes('/user/login')) {
+      console.log(`Making ${config.url} request with payload:`, 
+        { ...config.data, password: config.data.password ? '***' : undefined });
+    }
 
     // Always add token if available, regardless of route
     const token = localStorage.getItem("token");
@@ -59,6 +66,20 @@ axiosInstance.interceptors.request.use(
 // Response interceptor
 axiosInstance.interceptors.response.use(
   (response) => {
+    // Special handling for login responses
+    if (response.config.url.includes('/auth/login') || response.config.url.includes('/user/login')) {
+      console.log(`Login success for ${response.config.url}:`, response.status);
+      console.log("Response data structure:", Object.keys(response.data));
+      
+      // Log token presence (without revealing the actual token)
+      if (response.data.token) {
+        console.log("Visitor token received ✓");
+      } else if (response.data.accessToken) {
+        console.log("Staff token received ✓");
+      } else {
+        console.warn("No token found in response!");
+      }
+    }
     return response;
   },
   (error) => {
@@ -79,12 +100,32 @@ axiosInstance.interceptors.response.use(
     // Handle HTTP errors
     if (error.response) {
       const { status, data } = error.response;
+      console.error(`API Error (${status}):`, originalRequest.url, data);
 
-      // Handle 401 Unauthorized
+      // Handle 401 Unauthorized - but check if it's a login attempt or token expiration
       if (status === 401) {
-        localStorage.removeItem("token");
-        window.location.href = "/login?session_expired=true";
-        return Promise.reject(error);
+        // Check if this is a login attempt
+        const isLoginAttempt = originalRequest.url.includes('/auth/login') || originalRequest.url.includes('/user/login');
+        
+        if (isLoginAttempt) {
+          // For login attempts, just return the error to be handled by the login component
+          console.error(`Authentication failed for ${originalRequest.url} with email: ${originalRequest.data?.email || 'unknown'}`);
+          console.error("Error response:", data);
+          return Promise.reject(error);
+        } else {
+          // For other requests, it means the token has expired or is invalid
+          console.error("Token expired or invalid, logging out user");
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          
+          // Check if we're in the visitor area
+          if (window.location.pathname.includes('visitor-dashboard')) {
+            window.location.href = "/";
+          } else {
+            window.location.href = "/login?session_expired=true";
+          }
+          return Promise.reject(error);
+        }
       }
 
       // Handle 403 Forbidden

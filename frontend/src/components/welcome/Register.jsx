@@ -4,6 +4,21 @@ import axiosInstance from "../../utils/axiosInstance";
 import { toast } from "react-hot-toast";
 import { EyeIcon, EyeSlashIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
+// Toast configuration with closeOnClick enabled
+const toastConfig = {
+  duration: 3000,
+  position: 'top-center',
+  closeOnClick: true,
+  pauseOnHover: true,
+  style: {
+    background: '#fff',
+    color: '#333',
+    padding: '12px',
+    borderRadius: '8px',
+    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+  },
+};
+
 function Register({ formData, handleChange, handleSubmit, setShowLoginModal }) {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -95,7 +110,7 @@ function Register({ formData, handleChange, handleSubmit, setShowLoginModal }) {
 
     // Check if there are any errors
     if (Object.keys(errors).length > 0) {
-      toast.error('Please fix the errors in the form');
+      toast.error('Please fix the errors in the form', toastConfig);
       return;
     }
 
@@ -103,14 +118,14 @@ function Register({ formData, handleChange, handleSubmit, setShowLoginModal }) {
     try {
       const response = await handleSubmit(e);
       if (response?.data?.success) {
-        toast.success('Account created successfully! Please login.');
+        toast.success('Account created successfully! Please login.', toastConfig);
         setShowLoginModal();
       } else {
-        toast.error(response?.data?.message || 'Failed to create account');
+        toast.error(response?.data?.message || 'Failed to create account', toastConfig);
       }
     } catch (error) {
       console.error('Registration error:', error);
-      toast.error(error.response?.data?.message || 'An error occurred during registration');
+      toast.error(error.response?.data?.message || 'An error occurred during registration', toastConfig);
     } finally {
       setIsSubmitting(false);
     }

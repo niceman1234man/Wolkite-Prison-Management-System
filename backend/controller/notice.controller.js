@@ -138,7 +138,7 @@ import { Notice } from "../model/notice.model.js";
 // ✅ Add a New Notice
 export const addNotice = async (req, res) => {
   try {
-    const { title, description, roles, date, priority } = req.body;
+    const { title, description, roles, date, priority, isPosted, targetAudience } = req.body;
     if (!title || !description || !roles.length || !date) {
       return res.status(400).json({ success: false, message: "All fields are required" });
     }
@@ -154,6 +154,8 @@ export const addNotice = async (req, res) => {
       roles,
       date,
       priority: priority || "Normal",
+      isPosted: isPosted || false, // Default to false if not provided
+      targetAudience: targetAudience || "all" // Default to all if not provided
     });
 
     await newNotice.save();
@@ -166,9 +168,25 @@ export const addNotice = async (req, res) => {
 // ✅ Get All Notices
 export const getAllNotices = async (req, res) => {
   try {
-    const notices = await Notice.find();
+    // Get the user ID from the auth token
+    const userId = req.user.id;
+    console.log(`Getting all notices for user: ${userId}`);
+    
+    // Find all notices
+    const notices = await Notice.find()
+      .populate('readBy', 'id firstName lastName') // Populate readBy to get user details if needed
+      .lean(); // Use lean() for better performance
+    
+    console.log(`Found ${notices.length} notices`);
+    
+    // For debugging, log the first notice's readBy array if it exists
+    if (notices.length > 0 && notices[0].readBy) {
+      console.log(`First notice readBy array: ${JSON.stringify(notices[0].readBy)}`);
+    }
+    
     res.status(200).json({ success: true, data: notices });
   } catch (error) {
+    console.error("Error in getAllNotices:", error);
     res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };
@@ -191,7 +209,7 @@ export const getNotice = async (req, res) => {
 export const updateNotice = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, description, roles, date, priority } = req.body;
+    const { title, description, roles, date, priority, targetAudience } = req.body;
 
     if (!title || !description || !roles || !date || !priority) {
       return res.status(400).json({ success: false, message: "All fields are required" });
@@ -199,7 +217,7 @@ export const updateNotice = async (req, res) => {
 
     const updatedNotice = await Notice.findByIdAndUpdate(
       id,
-      { title, description, roles, date, priority },
+      { title, description, roles, date, priority, targetAudience },
       { new: true }
     );
 
@@ -249,20 +267,77 @@ export const postNotice = async (req, res) => {
 export const markAsRead = async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // Check if req.user exists
+    if (!req.user || !req.user.id) {
+      console.log(`User authentication issue - req.user:`, req.user);
+      return res.status(401).json({ success: false, message: "User not authenticated" });
+    }
+    
     const userId = req.user.id;
+    console.log(`Marking notice ${id} as read for user ${userId}`);
 
     const notice = await Notice.findById(id);
-    if (!notice) return res.status(404).json({ success: false, message: "Notice not found" });
-
-    if (notice.readBy.includes(userId)) {
-      return res.status(200).json({ success: true, message: "Already read" });
+    if (!notice) {
+      console.log(`Notice ${id} not found`);
+      return res.status(404).json({ success: false, message: "Notice not found" });
     }
 
-    notice.readBy.push(userId);
-    await notice.save();
+    // Initialize readBy array if it doesn't exist
+    if (!notice.readBy) {
+      notice.readBy = [];
+      console.log(`ReadBy array was undefined, initializing empty array`);
+    }
 
-    res.status(200).json({ success: true, message: "Notice marked as read" });
+    console.log(`Current readBy array: ${JSON.stringify(notice.readBy)}`);
+    
+    // Normalize user ID (ensure it's a string for comparison)
+    const normalizedUserId = userId.toString();
+    
+    // Check if user ID is already in the readBy array (with better string comparison)
+    const isAlreadyRead = notice.readBy.some(readerId => {
+      if (!readerId) return false;
+      
+      try {
+        // Handle both ObjectId and String cases
+        const readerIdStr = typeof readerId === 'object' && readerId !== null ? 
+          readerId.toString() : String(readerId);
+        return readerIdStr === normalizedUserId;
+      } catch (error) {
+        console.error(`Error comparing reader IDs:`, error);
+        return false;
+      }
+    });
+    
+    if (isAlreadyRead) {
+      console.log(`Notice ${id} already read by user ${userId}`);
+      return res.status(200).json({ 
+        success: true, 
+        message: "Already read",
+        data: { 
+          noticeId: id,
+          readBy: notice.readBy
+        }
+      });
+    }
+
+    // Add user ID to the readBy array
+    notice.readBy.push(userId);
+    
+    // Save the updated notice
+    const updatedNotice = await notice.save();
+    console.log(`Updated readBy array: ${JSON.stringify(updatedNotice.readBy)}`);
+
+    res.status(200).json({ 
+      success: true, 
+      message: "Notice marked as read",
+      data: { 
+        noticeId: id,
+        readBy: updatedNotice.readBy
+      }
+    });
   } catch (error) {
+    console.error(`Error marking notice as read: ${error.message}`);
     res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axiosInstance from "../../utils/axiosInstance";
-import { toast } from "react-toastify";
+import { toast } from "react-hot-toast";
 
 const UpdateNoticeModal = ({ open, setOpen, notice, setNotice }) => {
   const [title, setTitle] = useState("");
@@ -8,13 +8,14 @@ const UpdateNoticeModal = ({ open, setOpen, notice, setNotice }) => {
   const [roles, setRoles] = useState([]); // Always an array
   const [date, setDate] = useState("");
   const [priority, setPriority] = useState("Normal");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (notice) {
       setTitle(notice.title || "");
       setDescription(notice.description || "");
       setRoles(notice.roles || []);
-      setDate(notice.date || "");
+      setDate(notice.date ? notice.date.substring(0, 10) : "");
       setPriority(notice.priority || "Normal");
     }
   }, [notice]);
@@ -22,26 +23,64 @@ const UpdateNoticeModal = ({ open, setOpen, notice, setNotice }) => {
   const roleOptions = ["Visitor", "Police Officer", "Security Staff", "Admin", "Court"];
   const priorityOptions = ["Low", "Normal", "High", "Urgent"];
 
+  // Function to determine target audience based on selected roles
+  const determineTargetAudience = (selectedRoles) => {
+    if (selectedRoles.length === 0) return "all";
+    
+    // If only one role is selected, map it to the corresponding audience
+    if (selectedRoles.length === 1) {
+      const role = selectedRoles[0];
+      if (role === "Visitor") return "visitors";
+      if (role === "Police Officer") return "staff";
+      if (role === "Security Staff") return "security";
+      if (role === "Admin") return "admin";
+      if (role === "Court") return "court";
+    }
+    
+    // If all roles are selected, target all
+    if (selectedRoles.length === roleOptions.length) return "all";
+    
+    // If multiple but not all roles are selected, determine best match
+    // For now default to "all" for mixed selections
+    return "all";
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title || !description || !date || roles.length === 0) {
-      alert("Please fill in all fields and select at least one role.");
+      toast.error("Please fill in all fields and select at least one role.");
       return;
     }
 
+    setLoading(true);
     try {
+      // Determine target audience based on selected roles
+      const targetAudience = determineTargetAudience(roles);
+      
       const response = await axiosInstance.put(`/notice/update-notice/${notice._id}`, {
         title,
         description,
         date,
         priority,
         roles,
+        targetAudience
       });
-      setNotice(response.data.notice);
-      toast.success("Notice updated successfully!");
-      setOpen(false); // Close modal and stay on the Notice List
+      
+      if (response.data && response.data.success) {
+        toast.success("Notice updated successfully!");
+        // Update the notice in the parent component if the function is provided
+        if (typeof setNotice === 'function') {
+          setNotice(response.data.data);
+        }
+        setOpen(false); // Close modal
+      } else {
+        throw new Error(response.data?.message || "Failed to update notice");
+      }
     } catch (error) {
-      toast.error("Failed to update notice.");
+      console.error("Error updating notice:", error);
+      toast.error(error.response?.data?.message || "Failed to update notice. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -98,7 +137,7 @@ const UpdateNoticeModal = ({ open, setOpen, notice, setNotice }) => {
             ))}
           </select>
 
-          <label className="block font-bold text-lg mb-4">Select Roles:</label>
+          <label className="block font-bold text-lg mb-2">Select Target Audience:</label>
           <div className="grid grid-cols-2 gap-2">
             {roleOptions.map((role) => (
               <label key={role} className="flex items-center space-x-2">
@@ -113,17 +152,23 @@ const UpdateNoticeModal = ({ open, setOpen, notice, setNotice }) => {
                       setRoles(roles.filter((r) => r !== role));
                     }
                   }}
+                  className="h-4 w-4"
                 />
                 <span>{role}</span>
               </label>
             ))}
           </div>
+          <p className="text-xs text-gray-500 mt-1">
+            Depending on which roles you select, the notice will be shown in the appropriate dashboards.
+          </p>
+          {roles.length === 0 && <p className="text-xs text-red-500 mt-1">Please select at least one role</p>}
 
           <button
             type="submit"
-            className="w-full mt-6 bg-teal-600 hover:bg-teal-700 text-white py-3 rounded-lg"
+            className="w-full mt-6 bg-teal-600 hover:bg-teal-700 text-white py-3 rounded-lg disabled:bg-gray-400 disabled:cursor-not-allowed"
+            disabled={loading}
           >
-            Update Notice
+            {loading ? "Updating..." : "Update Notice"}
           </button>
         </form>
       </div>

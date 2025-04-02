@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import axiosInstance from "../utils/axiosInstance";
 import { toast } from "react-hot-toast";
@@ -13,11 +13,21 @@ import About from "./welcome/About";
 import Help from "./welcome/Help";
 import Contact from "./welcome/Contact";
 import { ShieldCheckIcon, LockClosedIcon, XMarkIcon } from '@heroicons/react/24/outline';
-import southFlag from '../assets/southFlag.png'
-import backgroundImage from "../assets/gurageZone.png";
-import ethiopiaFlag from "../assets/centralEthiopiaFlag.png";
-import flagofEthiopia from "../assets/Flag-Ethiopia.png";
-import guragePrison from "../assets/guragePrison.jpg";
+
+// Toast configuration with closeOnClick enabled
+const toastConfig = {
+  duration: 3000,
+  position: 'top-center',
+  closeOnClick: true,
+  pauseOnHover: true,
+  style: {
+    background: '#fff',
+    color: '#333',
+    padding: '12px',
+    borderRadius: '8px',
+    boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+  },
+};
 
 function Welcome() {
   const [messages, setMessages] = useState([]);
@@ -74,7 +84,7 @@ function Welcome() {
           }));
           setMessages(messagesWithFullUrls);
         } else {
-          toast.error("No messages found.");
+          toast.error("No messages found.", toastConfig);
         }
 
         const imagesResponse = await axiosInstance.get("/manageimages/get-side-images");
@@ -84,11 +94,11 @@ function Welcome() {
           );
           setSideImages(imagesWithFullUrls);
         } else {
-          toast.error("No images available.");
+          toast.error("No images available.", toastConfig);
         }
       } catch (error) {
         console.error("Error fetching content:", error);
-        toast.error(`Failed to load content: ${error.response?.data?.message || error.message}`);
+        toast.error(`Failed to load content: ${error.response?.data?.message || error.message}`, toastConfig);
       } finally {
         setLoading(false);
       }
@@ -134,7 +144,7 @@ function Welcome() {
         }
       } catch (error) {
         console.error("Error fetching inmates:", error);
-        toast.error(error.response?.data?.error || "Failed to fetch inmate data.");
+        toast.error(error.response?.data?.error || "Failed to fetch inmate data.", toastConfig);
       } finally {
         setLoading(false);
       }
@@ -150,7 +160,8 @@ function Welcome() {
     e.target.src = fallbackUrl;
   };
 
-  const handleButtonClick = (buttonName) => {
+  // Optimize the button click handler with useCallback
+  const handleButtonClick = useCallback((buttonName) => {
     if (buttonName === 'login') {
       setIsLoginOpen(true);
       setIsMobileMenuOpen(false);
@@ -161,7 +172,7 @@ function Welcome() {
     if (buttonName === 'register') {
       window.scrollTo({ top: 0, behavior: "smooth" });
     }
-  };
+  }, [setIsLoginOpen, setIsMobileMenuOpen, setActiveButton]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -175,7 +186,7 @@ function Welcome() {
     e.preventDefault();
     
     if (formData.password !== formData.confirmPassword) {
-      toast.error("Passwords do not match");
+      toast.error("Passwords do not match", toastConfig);
       return;
     }
 
@@ -217,6 +228,11 @@ function Welcome() {
     }
   };
 
+  // Use useCallback for the close handler to prevent recreation on each render
+  const handleLoginClose = useCallback(() => {
+    setIsLoginOpen(false);
+  }, []);
+
   const renderContent = () => {
     switch (activeButton) {
       case 'home':
@@ -231,25 +247,27 @@ function Welcome() {
         />;
       case 'register':
         return (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-800">Create Visitor Account</h2>
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-0 sm:p-4">
+            <div className="bg-white rounded-lg w-full h-full sm:h-auto sm:max-w-2xl sm:w-full mx-0 sm:mx-4 max-h-full sm:max-h-[90vh] overflow-y-auto">
+              <div className="sticky top-0 z-10 flex justify-between items-center p-4 sm:p-8 bg-white border-b border-gray-200">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Create Visitor Account</h2>
                 <button
                   onClick={() => setActiveButton('home')}
-                  className="text-gray-500 hover:text-gray-700"
+                  className="p-2 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
                 </button>
               </div>
-              <Register 
-                formData={formData}
-                handleChange={handleChange}
-                handleSubmit={handleSubmit}
-                setShowLoginModal={() => setIsLoginOpen(true)}
-              />
+              <div className="p-4 sm:p-8">
+                <Register 
+                  formData={formData}
+                  handleChange={handleChange}
+                  handleSubmit={handleSubmit}
+                  setShowLoginModal={() => setIsLoginOpen(true)}
+                />
+              </div>
             </div>
           </div>
         );
@@ -281,42 +299,42 @@ function Welcome() {
         setIsMobileMenuOpen={setIsMobileMenuOpen}
       />
       
-      <main className="pt-24">
+      <main className="pt-16 sm:pt-24">
         {renderContent()}
       </main>
 
       <Footer handleButtonClick={handleButtonClick} />
 
       {isLoginOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-8 max-w-md w-full mx-4 shadow-xl relative">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-4 sm:p-8 w-full max-w-md sm:max-w-md shadow-xl relative">
             <button
-              onClick={() => setIsLoginOpen(false)}
+              onClick={handleLoginClose}
               className="absolute top-2 right-2 p-2 rounded-full hover:bg-gray-100 transition-colors duration-200"
               aria-label="Close login modal"
             >
-              <XMarkIcon className="h-6 w-6 text-gray-500 hover:text-gray-700" />
+              <XMarkIcon className="h-5 sm:h-6 w-5 sm:w-6 text-gray-500 hover:text-gray-700" />
             </button>
-            <div className="flex items-center space-x-3 mb-6">
+            <div className="flex items-center space-x-3 mb-4 sm:mb-6">
               <div className="bg-teal-100 p-2 rounded-lg">
-                <ShieldCheckIcon className="h-8 w-8 text-teal-600" />
+                <ShieldCheckIcon className="h-6 sm:h-8 w-6 sm:w-8 text-teal-600" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold text-gray-800">Welcome Back</h2>
-                <p className="text-sm text-gray-600">Please login to your account</p>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Welcome Back</h2>
+                <p className="text-xs sm:text-sm text-gray-600">Please login to your account</p>
               </div>
             </div>
             <div className="bg-white">
-              <Login onClose={() => setIsLoginOpen(false)} isVisitor={true} />
+              <Login onClose={handleLoginClose} isVisitor={true} />
             </div>
             <div className="mt-6 pt-6 border-t border-gray-200">
-              <div className="flex items-center justify-center space-x-4 text-sm text-gray-600">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-0 sm:space-x-4 text-xs sm:text-sm text-gray-600">
                 <div className="flex items-center">
-                  <LockClosedIcon className="h-5 w-5 text-teal-600 mr-1" />
+                  <LockClosedIcon className="h-4 sm:h-5 w-4 sm:w-5 text-teal-600 mr-1" />
                   <span>Secure Login</span>
                 </div>
                 <div className="flex items-center">
-                  <ShieldCheckIcon className="h-5 w-5 text-teal-600 mr-1" />
+                  <ShieldCheckIcon className="h-4 sm:h-5 w-4 sm:w-5 text-teal-600 mr-1" />
                   <span>Protected Data</span>
                 </div>
               </div>

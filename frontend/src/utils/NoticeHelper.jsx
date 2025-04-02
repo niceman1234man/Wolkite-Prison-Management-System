@@ -1,5 +1,3 @@
-
-
 export const columns = [
   {
     name: "Title",
@@ -46,7 +44,7 @@ export const columns = [
 ];
 
   
-  import React from "react";
+import React from "react";
 import { useNavigate } from "react-router-dom";
 
 import axiosInstance from "./axiosInstance";
@@ -62,7 +60,7 @@ export const NoticeButtons = ({ _id, onDelete }) => {
 
     try {
       const response = await axiosInstance.delete(
-        `/notice/delete-notice/${id}`, // Adjusted endpoint for notices
+        `/notice/delete-notice/${id}`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -70,15 +68,17 @@ export const NoticeButtons = ({ _id, onDelete }) => {
         }
       );
 
-      if (response.data) {
+      if (response.data && response.data.success) {
         alert("Notice deleted successfully.");
-        onDelete();
+        if (typeof onDelete === 'function') {
+          onDelete();
+        }
       } else {
-        alert("Failed to delete the notice.");
+        throw new Error(response.data?.message || "Failed to delete the notice");
       }
     } catch (error) {
-      console.error("Error:", error);
-      alert(error.response?.data?.error || "Error deleting the notice.");
+      console.error("Error deleting notice:", error);
+      alert(error.response?.data?.message || "Error deleting the notice. Please try again.");
     }
   };
 
@@ -96,7 +96,12 @@ export const NoticeButtons = ({ _id, onDelete }) => {
       >
         Edit
       </button>
-     
+      <button
+        className="px-3 py-1 bg-red-600 rounded hover:bg-red-700"
+        onClick={() => handleDelete(_id)}
+      >
+        Delete
+      </button>
     </div>
   );
 };

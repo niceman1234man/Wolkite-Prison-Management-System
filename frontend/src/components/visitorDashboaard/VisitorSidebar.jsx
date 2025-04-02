@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { toggleSidebar, setSidebarState } from "../../redux/sidebarSlice";
-import { FaBars, FaHome, FaCalendarCheck, FaHistory, FaUserCog } from "react-icons/fa";
+import { FaBars, FaHome, FaCalendarCheck, FaHistory, FaUserCog, FaBell } from "react-icons/fa";
 
 const VisitorSidebar = () => {
   const dispatch = useDispatch();
@@ -56,7 +56,7 @@ const VisitorSidebar = () => {
           </NavLink>
 
           <NavLink
-            to="/visitor-dashboard/schedule"
+            to="/visitor-dashboard/schedule-visit"
             className={({ isActive }) =>
               `flex items-center p-2 rounded-lg hover:bg-teal-600 transition-colors ${
                 isActive ? "bg-teal-600" : ""
@@ -90,6 +90,18 @@ const VisitorSidebar = () => {
           >
             <FaUserCog className="h-6 w-6" />
             {!isCollapsed && <span className="ml-3">Profile Settings</span>}
+          </NavLink>
+
+          <NavLink
+            to="/visitor-dashboard/notices"
+            className={({ isActive }) =>
+              `flex items-center p-2 rounded-lg hover:bg-teal-600 transition-colors ${
+                isActive ? "bg-teal-600" : ""
+              } ${isCollapsed ? "justify-center" : "justify-start"}`
+            }
+          >
+            <FaBell className="h-6 w-6" />
+            {!isCollapsed && <span className="ml-3">Notices</span>}
           </NavLink>
         </nav>
       </div>

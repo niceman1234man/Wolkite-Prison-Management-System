@@ -13,12 +13,9 @@ import {
 import SummaryCard from "./SummaryCard.jsx";
 import { useSelector } from "react-redux";
 import axiosInstance from "../../utils/axiosInstance"; // Import axiosInstance
-import NoticeButton from "../../utils/noticeButtons.jsx"; // 🛠️ Import reusable notice button
-import NoticeModal from "../modals/noticeModal.jsx"; // 🛠️ Import notice modal
-import useNotices from "../../hooks/useNotice.jsx"; // 🛠️ Import the custom notice hook
+import NoticeWidget from "../Notices/NoticeWidget";
 
 const AdminSummary = () => {
-  const [notice, setNotice] = useState([]);
   const [loading, setLoading] = useState(true); // Add loading state
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768); // Track mobile view
 
@@ -31,17 +28,11 @@ const AdminSummary = () => {
   // Get sidebar state from Redux
   const isSidebarCollapsed = useSelector((state) => state.sidebar.isCollapsed);
 
-  // 🛠️ Use the custom hook to fetch and manage notices
-  const { notices, isModalOpen, setIsModalOpen, markNoticeAsRead } = useNotices();
-
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch notices
-        const noticeResponse = await axiosInstance.get("/notice/getAllNotices");
-        if (noticeResponse.data) {
-          setNotice(noticeResponse.data.notices);
-        }
+        // Fetch any additional data needed for the dashboard
+        // ...
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -79,15 +70,23 @@ const AdminSummary = () => {
           <h3 className="text-2xl font-bold text-gray-800 text-center">
             Admin Dashboard Overview
           </h3>
-
-          {/* 🛠️ Reusable Notice Button */}
-          <NoticeButton notices={notices} onClick={() => setIsModalOpen(true)} />
         </div>
 
         {/* Push content down to prevent overlap */}
         <div className="p-6 mt-24">
-        {/* Dashboard Overview */}
+          {/* Notice Widget */}
+          <div className="mb-6">
+            <NoticeWidget 
+              maxNotices={3}
+              variant="card"
+              dashboardType="admin"
+              showMarkAsRead={true}
+              showViewAll={true}
+              hideWhenUnauthenticated={true}
+            />
+          </div>
           
+          {/* Dashboard Overview */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-10">
             <SummaryCard
               icon={<FaUsers />}
@@ -153,15 +152,6 @@ const AdminSummary = () => {
           </div>
         </div>
       </div>
-
-      {/* 🛠️ Reusable Notice Modal */}
-      <NoticeModal
-        notices={notices}
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSelectNotice={markNoticeAsRead}
-        selectedNotice={null}
-      />
     </div>
   );
 };
