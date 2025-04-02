@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState,useEffect } from "react";
 import axiosInstance from "../../utils/axiosInstance";
 import { toast } from 'react-toastify'; 
 import 'react-toastify/dist/ReactToastify.css'; 
@@ -11,7 +11,7 @@ const AddUser = ({setOpen}) => {
   const navigate = useNavigate();
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-
+ const [prisons, setPrisons] = useState([]);
   // Initial user state
   const initialUser = {
     firstName: "",
@@ -21,6 +21,7 @@ const AddUser = ({setOpen}) => {
     gender: "",
     role: "",
     password: "",
+    prison: "",
   };
 
   const [user, setUsers] = useState(initialUser);
@@ -37,6 +38,25 @@ const AddUser = ({setOpen}) => {
       });
     }
   };
+const fetchPrisons = async () => {
+  
+    try {
+      const response = await axiosInstance.get("/prison/getall-prisons");
+      console.log(response.data.prisons)
+      if (response.data?.success) {
+        setPrisons(response.data.prisons);
+       
+      }
+    } catch (error) {
+      console.error("Error fetching prisons:", error);
+      toast.error("Failed to fetch prison data");
+    } 
+  };
+
+  useEffect(() => {
+    fetchPrisons();
+  }, []);
+
 
   // Handle form submission
   const handleSubmit = async (e) => {
@@ -64,6 +84,7 @@ const AddUser = ({setOpen}) => {
     formData.append("role", user.role);
     formData.append("gender", user.gender);
     formData.append("password", user.password);
+    formData.append("prison", user.prison);
     formData.append("photo", photo);
   
     try {
@@ -211,6 +232,28 @@ const AddUser = ({setOpen}) => {
             </select>
             {errors.role && (
               <p className="text-red-500 text-xs mt-1">{errors.role}</p>
+            )}
+          </div>
+
+          {/* Add Prison Selection field after Role Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Select Prison</label>
+            <select
+              name="prison"
+              value={user.prison}
+              onChange={handleChange}
+              className={`mt-1 p-2 block w-full border ${errors.prison ? "border-red-500" : "border-gray-300"} rounded-md`}
+              required
+            >
+              <option value="">Select Prison</option>
+              {prisons.map((prison) => (
+                <option key={prison._id} value={prison._id}>
+                  {prison.prison_name}
+                </option>
+              ))}
+            </select>
+            {errors.prison && (
+              <p className="text-red-500 text-xs mt-1">{errors.prison}</p>
             )}
           </div>
 
