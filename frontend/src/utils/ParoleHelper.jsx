@@ -7,33 +7,47 @@ export const columns = [
     name: "S No",
     selector: (row) => row.sno,
     width: "70px",
-    
+    center:true,
   },
   {
     name: "Inmate Name",
     selector: (row) => row.inmate_name, // Adjust field based on your API response
     sortable: true,
+    center:true,
   },
   {
     name: "Age",
     selector: (row) => row.age || "N/A",
     sortable: true,
     width: "70px",
+    center:true,
   },
   {
     name: "Gender",
     selector: (row) => row.gender || "N/A",
     sortable: true,
     width: "90px",
+    center:true,
   },
   {
     name: "Sentence",
     selector: (row) => row.sentence || "N/A",
     sortable: true,
+    width: "100px",
+    center:true,
   },
+  {
+    name: "Status",
+    selector: (row) => row.status || "N/A",
+    sortable: true,
+    width: "100px",
+    center:true,
+  },
+
   {
     name: "Action",
     selector: (row) => row.action,
+    center:true,
   },
 ];
 

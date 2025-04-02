@@ -58,7 +58,7 @@ app.use(
 // Serve static files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// Routes
+// Routesre
 app.use("/api/user", userRouter);
 app.use("/api/visitor", visitorRouter);
 app.use("/api/incidents", incidentRouter);

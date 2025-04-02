@@ -18,8 +18,7 @@ const Prole = () => {
     setLoadingInmates(true);
     try {
       const response = await axiosInstance.get("/inmates/allInmates");
-      console.log("inmate data", response.data);
-
+      console.log("inmate data", response.data.inmates)
       if (response.data && response.data?.inmates) {
         let sno = 1;
         const formattedData = response.data.inmates.map((inmate) => ({
