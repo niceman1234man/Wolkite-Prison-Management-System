@@ -136,25 +136,150 @@ export const getClearanceById = async (req, res) => {
 // Create a new clearance
 export const createClearance = async (req, res) => {
   try {
-    const { date, inmate, reason, remark, sign,registrar } = req.body;
-    const newClearance = new Clearance({ date, inmate, reason, remark, sign,registrar });
+    const { 
+      date, 
+      inmate, 
+      reason, 
+      remark, 
+      sign, 
+      registrar, 
+      clearanceId, 
+      propertyStatus, 
+      fineStatus, 
+      medicalStatus, 
+      notes 
+    } = req.body;
+    console.log( date, 
+      inmate, 
+      reason, 
+      remark, 
+      sign, 
+      registrar, 
+      clearanceId, 
+      propertyStatus, 
+      fineStatus, 
+      medicalStatus, 
+      notes )
+    
+    // Check for required fields
+    if (!date || !inmate || !reason || !remark || !registrar || !clearanceId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Missing required fields. Date, inmate, reason, remark, registrar, and clearanceId are required." 
+      });
+    }
+    
+    // Create new clearance with all fields
+    const newClearance = new Clearance({ 
+      date, 
+      inmate, 
+      reason, 
+      remark, 
+      sign, 
+      registrar, 
+      clearanceId,
+      propertyStatus: propertyStatus || "Returned",
+      fineStatus: fineStatus || "No Outstanding",
+      medicalStatus: medicalStatus || "Cleared",
+      notes: notes || ""
+    });
+    
     await newClearance.save();
-    res.status(201).json({ success: true, message: "Clearance created successfully", newClearance });
+    res.status(201).json({ 
+      success: true, 
+      message: "Clearance created successfully", 
+      newClearance 
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to create clearance" });
+    if (error.code === 11000) { // Duplicate key error (for unique clearanceId)
+      return res.status(400).json({ 
+        success: false, 
+        message: "Clearance ID already exists. Please generate a new one." 
+      });
+    }
+    console.error("Error creating clearance:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to create clearance",
+      error: error.message 
+    });
   }
 };
 
 // Update a clearance
 export const updateClearance = async (req, res) => {
   try {
-    const updatedClearance = await Clearance.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const { 
+      date, 
+      inmate, 
+      reason, 
+      remark, 
+      sign, 
+      registrar, 
+      clearanceId, 
+      propertyStatus, 
+      fineStatus, 
+      medicalStatus, 
+      notes 
+    } = req.body;
+    
+    console.log( date, 
+      inmate, 
+      reason, 
+      remark, 
+      sign, 
+      registrar, 
+      clearanceId, 
+      propertyStatus, 
+      fineStatus, 
+      medicalStatus, 
+      notes )
+    // Prepare update data
+    const updateData = {};
+    
+    if (date) updateData.date = date;
+    if (inmate) updateData.inmate = inmate;
+    if (reason) updateData.reason = reason;
+    if (remark) updateData.remark = remark;
+    if (sign) updateData.sign = sign;
+    if (registrar) updateData.registrar = registrar;
+    if (clearanceId) updateData.clearanceId = clearanceId;
+    if (propertyStatus) updateData.propertyStatus = propertyStatus;
+    if (fineStatus) updateData.fineStatus = fineStatus;
+    if (medicalStatus) updateData.medicalStatus = medicalStatus;
+    if (notes !== undefined) updateData.notes = notes;
+    
+    const updatedClearance = await Clearance.findByIdAndUpdate(
+      req.params.id, 
+      updateData, 
+      { new: true, runValidators: true }
+    );
+    
     if (!updatedClearance) {
-      return res.status(404).json({ success: false, message: "Clearance not found" });
+      return res.status(404).json({ 
+        success: false, 
+        message: "Clearance not found" 
+      });
     }
-    res.status(200).json({ success: true, message: "Clearance updated successfully", updatedClearance });
+    
+    res.status(200).json({ 
+      success: true, 
+      message: "Clearance updated successfully", 
+      updatedClearance 
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to update clearance" });
+    if (error.code === 11000) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Clearance ID already exists. Please use a different ID." 
+      });
+    }
+    console.error("Error updating clearance:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to update clearance",
+      error: error.message
+    });
   }
 };
 
@@ -163,10 +288,90 @@ export const deleteClearance = async (req, res) => {
   try {
     const deletedClearance = await Clearance.findByIdAndDelete(req.params.id);
     if (!deletedClearance) {
-      return res.status(404).json({ success: false, message: "Clearance not found" });
+      return res.status(404).json({ 
+        success: false, 
+        message: "Clearance not found" 
+      });
     }
-    res.status(200).json({ success: true, message: "Clearance deleted successfully" });
+    res.status(200).json({ 
+      success: true, 
+      message: "Clearance deleted successfully" 
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: "Failed to delete clearance" });
+    console.error("Error deleting clearance:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to delete clearance",
+      error: error.message
+    });
+  }
+};
+
+// Get clearances for a specific inmate
+export const getInmateClearances = async (req, res) => {
+  try {
+    const { inmateId } = req.params;
+    const clearances = await Clearance.find({ inmate: inmateId });
+    
+    res.status(200).json({ 
+      success: true, 
+      count: clearances.length,
+      clearances 
+    });
+  } catch (error) {
+    console.error("Error fetching inmate clearances:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to fetch inmate clearances",
+      error: error.message
+    });
+  }
+};
+
+// Get clearance statistics
+export const getClearanceStats = async (req, res) => {
+  try {
+    const totalClearances = await Clearance.countDocuments();
+    
+    // Get clearance counts by property status
+    const propertyStatusStats = await Clearance.aggregate([
+      { $group: { _id: "$propertyStatus", count: { $sum: 1 } } }
+    ]);
+    
+    // Get clearance counts by fine status
+    const fineStatusStats = await Clearance.aggregate([
+      { $group: { _id: "$fineStatus", count: { $sum: 1 } } }
+    ]);
+    
+    // Get clearance counts by medical status
+    const medicalStatusStats = await Clearance.aggregate([
+      { $group: { _id: "$medicalStatus", count: { $sum: 1 } } }
+    ]);
+    
+    // Get recent clearances (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const recentClearances = await Clearance.countDocuments({
+      createdAt: { $gte: thirtyDaysAgo }
+    });
+    
+    res.status(200).json({
+      success: true,
+      stats: {
+        total: totalClearances,
+        recent: recentClearances,
+        propertyStatus: propertyStatusStats,
+        fineStatus: fineStatusStats,
+        medicalStatus: medicalStatusStats
+      }
+    });
+  } catch (error) {
+    console.error("Error fetching clearance statistics:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch clearance statistics",
+      error: error.message
+    });
   }
 };

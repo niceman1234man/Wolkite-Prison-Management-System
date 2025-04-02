@@ -13,10 +13,12 @@ export const createAccount = async (req, res) => {
       lastName,
       email,
       gender,
+      prison,
       role, 
       password,
     } = req.body;
-    const photo=req.file.filename;
+    
+    const photo = req.file ? req.file.filename : 'default-avatar.png';
 
     if (!firstName || !email || !password) {
       return res.status(400).json({ error: true, message: "All fields required" });
@@ -33,6 +35,7 @@ export const createAccount = async (req, res) => {
       lastName,
       email,
       gender,
+      prison,
       role,
       photo,
       password: hashedPassword, 
@@ -126,35 +129,44 @@ export const getAllUsers = async (req, res) => {
   export const updateUser = async (req, res) => {
     try {
       const { id } = req.params;
-      const {  firstName,
+      const {
+        firstName,
         middleName,
         lastName,
         email,
+        prison,
         gender,
         role,
-        } = req.body;
-        const photo=req.file.filename;
-  
-      if (!firstName || !middleName || !email || !role || !gender) {
-        return res.status(400).json({ message: "All fields are required" });
+      } = req.body;
+      
+      // Get existing user to access current photo
+      const existingUser = await User.findById(id);
+      if (!existingUser) {
+        return res.status(404).json({ message: "User not found" });
       }
-  
+      
+      // Use existing photo if no new one is uploaded
+      const photo = req.file ? req.file.filename : existingUser.photo;
+
+      if (!firstName || !email) {
+        return res.status(400).json({ message: "First name and email are required" });
+      }
+
       const updateduser = await User.findByIdAndUpdate(
         id,
-        {  firstName,
+        {
+          firstName,
           middleName,
           lastName,
           email,
           gender,
           role,
-          photo,},
-        { new: true} 
+          prison,
+          photo,
+        },
+        { new: true }
       );
-  
-      if (!updateduser) {
-        return res.status(404).json({ message: "User not found" });
-      }
-  
+
       res.status(200).json({ data: updateduser, message: "User information updated successfully" });
     } catch (error) {
       console.error(error);
@@ -227,24 +239,55 @@ export const getAllUsers = async (req, res) => {
   export const updateProfile = async (req, res) => {
     try {
       const { id } = req.params;
-      const photo=req.file.filename;
-      if (!photo) {
-        return res.status(400).json({ message: "Photo  required" });
-      }
-  
-      const updateduser = await User.findByIdAndUpdate(
-        id,
-        { photo },
-        { new: true }
-      );
-  
-      if (!updateduser) {
+      
+      // Get existing user to access current photo
+      const existingUser = await User.findById(id);
+      if (!existingUser) {
         return res.status(404).json({ message: "User not found" });
       }
-  
-      res.status(200).json({ data: updateduser, message: "profile updated" });
+      
+      // Extract data from request
+      const {
+        firstName,
+        middleName,
+        lastName,
+        email,
+        gender,
+        // Include any other fields you need
+      } = req.body;
+      
+      // Use existing photo if no new one is uploaded
+      const photo = req.file ? req.file.filename : existingUser.photo;
+      
+      // Prepare update data
+      const updateData = {
+        firstName,
+        middleName,
+        lastName,
+        email,
+        gender,
+        photo,
+        // Include any other fields you need
+      };
+      
+      // Update the user
+      const updatedUser = await User.findByIdAndUpdate(
+        id,
+        updateData,
+        { new: true }
+      );
+      
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      res.status(200).json({
+        success: true,
+        data: updatedUser,
+        message: "Profile updated successfully"
+      });
     } catch (error) {
-      console.error(error);
+      console.error("Error updating profile:", error);
       res.status(500).json({ message: "Internal Server Error" });
     }
   };

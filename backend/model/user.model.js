@@ -29,6 +29,11 @@ const userSchema=new mongoose.Schema({
     type:Boolean,
     default:false,
     },
+    prison:{
+        type:String ,
+        required:true,
+        ref:"Prison",
+    },
     photo:{
         type:String ,
         default:"",

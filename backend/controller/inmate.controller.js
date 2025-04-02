@@ -113,19 +113,15 @@ export const addnewInmate = async (req, res) => {
 
 export const getAllInmates = async (req, res) => {
   try {
-    const inmates = await Inmate.find().select('_id firstName middleName lastName prisonerId');
+    const inmates = await Inmate.find()
 
-    // Format inmates data to include fullName for easier display
-    const formattedInmates = inmates.map(inmate => ({
-      _id: inmate._id,
-      fullName: `${inmate.firstName} ${inmate.middleName || ''} ${inmate.lastName || ''}`.trim(),
-      prisonerId: inmate.prisonerId || 'No ID'
-    }));
-
+    if(!inmates){
+      return res.json("inmate not found");
+    }
     return res.status(200).json({ 
       success: true,
       message: "Inmates retrieved successfully", 
-      data: formattedInmates 
+      inmates: inmates 
     });
   } catch (error) {
     console.error("Error fetching inmates:", error);

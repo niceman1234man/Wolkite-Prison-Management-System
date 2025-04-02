@@ -9,119 +9,103 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { toast } from "react-toastify";
+import axiosInstance from '../utils/axiosInstance'
+import { toast } from "react-toastify"; // Import toast
+import "react-toastify/dist/ReactToastify.css"; // Import toast CSS
 
-const ParoleRequestForm = ({ isOpen, onClose, onSubmit, parole }) => {
+const ParoleRequestForm = ({ isOpen, onClose, parole }) => {
+  const [data,setData]=useState({
+    number:"",
+    date:"",
+    referenceNumber: "",
+    receiverName:""
+
+  })
   const [formData, setFormData] = useState({
+    number: "",
+    date: new Date().toISOString().split('T')[0],
     receiverName: "",
-    senderName: "",
-    date: "",
     referenceNumber: "",
     prisonerName: "",
-    prisonerType: "",
     crimeType: "",
-    courtDecision: "",
-    additionalNotes: "",
-    witnesses: ["", "", "", "", ""],
-    documentVerification: "",
-    officerName: "",
-    officerSignature: "",
-    legalArticles: "",
-    startDate: "", // For the start date
-    endDate: "",   // For the end date
-    paroleDate: "", // For the parole date
+    year: "",
+    sentenceReduction: "",
+    additionalReduction: "",
+    remainingSentence: "",
+    startDate: "",
+    endDate: "",
+    paroleDate: "",
+    point: ""
   });
 
-  // Function to convert date to YYYY-MM-DD format
-  const formatDate = (date) => {
-    if (!date) return '';
-    
-    try {
-      // If date is already in YYYY-MM-DD format, return as is
-      if (date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        return date;
-      }
-      
-      // If date is in MM/DD/YYYY format
-      if (date.includes('/')) {
-        const [month, day, year] = date.split('/');
-        return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-      }
-      
-      // If date is a Date object or ISO string
-      const dateObj = new Date(date);
-      if (!isNaN(dateObj.getTime())) {
-        return dateObj.toISOString().split('T')[0];
-      }
-      
-      return '';
-    } catch (error) {
-      console.error('Error formatting date:', error);
-      return '';
-    }
-  };
-
-  // Handle form input changes
-  const handleChange = (e, index = null) => {
-    if (index !== null) {
-      const updatedWitnesses = [...formData.witnesses];
-      updatedWitnesses[index] = e.target.value;
-      setFormData({ ...formData, witnesses: updatedWitnesses });
-    } else {
-      setFormData({ ...formData, [e.target.name]: e.target.value });
-    }
-  };
-
-  // Handle form submission
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    // Validate required fields
-    if (
-      !formData.receiverName ||
-      !formData.senderName ||
-      !formData.prisonerName ||
-      !formData.crimeType
-    ) {
-      toast.error("Please fill all required fields.");
-      return;
-    }
-
-    // Call the parent submit function
-    try {
-      onSubmit(formData);
-      toast.success("Parole request submitted successfully!");
-      onClose(); // Close the modal
-    } catch (error) {
-      console.error("Submission error:", error);
-      toast.error("Failed to submit parole request.");
-    }
-  };
-
   useEffect(() => {
-    // Set the dates if available and convert to YYYY-MM-DD format
     if (parole) {
-      console.log("parole object:", parole); // Add a console log to debug
-      setFormData((prevData) => ({
-        ...prevData,
-        startDate: parole.start ? formatDate(parole.start) : "",
-        endDate: parole.end ? formatDate(parole.end) : "",
-        paroleDate: parole.paroleDate ? formatDate(parole.paroleDate) : "",
+      const totalSentence = parole.year || 0;
+      const twoThirds = (totalSentence * 2) / 3;
+      const oneThird = totalSentence / 3;
+
+      setFormData(prev => ({
+        ...prev,
+        prisonerName: parole.name || "",
+        crimeType: parole.case || "",
+        year: parole.year || "",
+        point: parole.point || "",
+        startDate: formatDate(parole.start),
+        endDate: formatDate(parole.end),
+        paroleDate: formatDate(parole.paroleDate),
+        sentenceReduction: `${twoThirds.toFixed(1)} ዓመት`,
+        additionalReduction: `${oneThird.toFixed(1)} ዓመት`,
+        remainingSentence: parole.durationFromParoleToEnd || ""
       }));
     }
   }, [parole]);
 
+  const handleChange = (e) => {
+    setData({ ...data, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+   
+    
+      console.log(data)
+      const token = localStorage.getItem('token');
+      const response = await axiosInstance.put(`/parole-tracking/request/${parole.inmateId}`, data, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      toast.success('የአመክሮ ጥያቄው በተሳካ ሁኔታ ተልኳል');
+      onClose();
+    } catch (error) {
+      console.error('Error submitting parole request:', error);
+      toast.error(error.response?.data?.message || 'የአመክሮ ጥያቄውን መላክ አልተሳካም');
+    }
+  };
+
+  const formatDate = (date) => {
+    if (!date) return '';
+    try {
+      return new Date(date).toISOString().split('T')[0];
+    } catch (error) {
+      console.error('Date formatting error:', error);
+      return '';
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto ">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-center"> Parole Request</DialogTitle>
+          <DialogTitle className="text-center">የአመክሮ ጥያቄ ቅጽ</DialogTitle>
         </DialogHeader>
 
-        <Card className="p-6  mx-auto mt-5 shadow-lg rounded-lg">
+        <Card className="p-6 mx-auto mt-5 shadow-lg rounded-lg">
           <CardContent>
             <div className="float-end">
-              <div className="flex">ቁጥር
+              <div className="flex">
+                ቁጥር
                 <Input
                   type="number"
                   name="number"
@@ -139,145 +123,119 @@ const ParoleRequestForm = ({ isOpen, onClose, onSubmit, parole }) => {
                 />
               </div>
             </div>
-            <br />
-            <br />
-            <br />
-            <br /><br />
-            <div className="flex">
-              ለ{" "}
-              <Input
-                name="receiverName"
-                placeholder="ለ"
-                onChange={handleChange}
-                className="mb-2 ml-3 w-auto"
-                required
-              />
-              ፍ/ቤት
-            </div>
-            <div className="flex">
-              የወ/መ/ቁ{" "}
-              <Input
-                name="referenceNumber"
-                placeholder="የማጣቀሻ ቁጥር"
-                onChange={handleChange}
-                className="mb-2 ml-3 w-auto"
-              />
-            </div>
-            <div className="space-y-4">
-              <p>
-                የህግ ታራሚ ስም:
-                <Input
-                  name="prisonerName"
-                  placeholder="የእስረኛው ስም"
-                  value={parole.name}
-                  onChange={handleChange}
-                  className="mb-2 inline-block w-auto"
-                  required
-                />
-                የተባለው የህግ ታራሚ በአመክሮ መፈቻ ጥያቄ በተከሰሰበት
-                <Input
-                  name="crimeType"
-                  placeholder="የወንጀሉ አይነት"
-                  value={parole.case}
-                  onChange={handleChange}
-                  className="mb-2 inline-block w-auto"
-                  required
-                />
-                ወንጀል 
-                <Input
-                  name="year"
-                  placeholder="የወንጀሉ አይነት"
-                  value={parole.year}
-                  onChange={handleChange}
-                  className="mb-2 inline-block w-auto"
-                  required
-                />
-                እስራት እንዲቀጣ በወሰነው መሠረት ከዚህ ውስጥ 2/3ኛው
-                <Input
-                  name="sentenceReduction"
-                  placeholder="ቅናሽ"
-                  onChange={handleChange}
-                  className="mb-2 inline-block w-auto"
-                  required
-                />
-                በእስራት የፈጸመ ሲሆን 1/3ኛውን
-                <Input
-                  name="additionalReduction"
-                  placeholder="ቅናሽ"
-                  onChange={handleChange}
-                  className="mb-2 inline-block w-auto"
-                  required
-                />
-                ቅናሽ አግጋቶዋል፡፡ አሁንም በጠቅላላው ከተፈረደበት የእስራት ጊዜ ውስጥ ወደፊት የሚቀረው
-                <Input
-                  name="remainingSentence"
-                  placeholder="ቀሪ"
-                  onChange={handleChange}
-                  className="mb-2 inline-block w-auto"
-                  required
-                />
-              </p>
-            </div>
 
-            <div className="flex mt-4">
-              1/ታራሚው ማ/ቤት የገባበት
-              <Input
-                type="date"
-                name="startDate"
-                value={formData.startDate} // Set date from form state
-                placeholder="የገባበት ቀን"
-                onChange={handleChange}
-                className="mb-2 w-auto ml-3"
-              />
-            </div>
-            <div className="flex">
-              2/ ታራሚው አስራቱ ጨርሶ የሚፈታው
-              <Input
-                type="date"
-                name="endDate"
-                value={formData.endDate} // Set date from form state
-                placeholder="የሚፈታበት ቀን"
-                onChange={handleChange}
-                className="mb-2 w-auto ml-3"
-              />
-            </div>
-            <div className="flex">
-              3/ በአመክሮ የሚፈታው
-              <Input
-                type="date"
-                name="paroleDate"
-                value={formData.paroleDate} // Set date from form state
-                placeholder="በ አመክሮ የሚፈታበት ቀን "
-                onChange={handleChange}
-                className="mb-2 w-auto ml-3"
-              />
-            </div>
-
-            <div className="flex">
-              
-
-              4/ በፀባይ ነጥብ መስጨ የተገኘ
-              <Input
-                type="number"
-                name="point"
-                value={parole.point}
-                placeholder="ጠቅላላ ነጥብ "
-                onChange={handleChange}
-                className="mb-2 w-auto ml-3"
-              />
+            <div className="mt-20">
+              <div className="flex">
+                ለ{" "}
+                <Input
+                  name="receiverName"
+                  placeholder="ለ"
+                  onChange={handleChange}
+                  className="mb-2 ml-3 w-auto"
+                  required
+                />
+                ፍ/ቤት
               </div>
-              5/ ስለጉዳት ካሣና እርቅ ማዉረድ የተሠጠ መግለጫ 6 ስለ ሙያና ሥራ ችሎታ ስለ መተዳደሪያ ከተቀመጠው
-              ኮሚቴ የተሠጠው የምስክርነት በአጠቃላይ ያቀረብን በ997 በወጣው የኢፊድሪ የወ/መ/ህ/ቁጥር 12 በአንቀጽ
-              13 በወ/መ/ቁ 206 በአንቀጽ 201207 በአንቀጽ 202 209 እና 204 በወንጀል ህጉ መሠረት
-              በአመክሮ እንዲፈታ እንጠይቃለን፡፡ 
-              <p className="float-end mt-4 mr-3">ከሠላምታ ጋር</p>
-            
+
+              <div className="flex">
+                የወ/መ/ቁ{" "}
+                <Input
+                  name="referenceNumber"
+                  placeholder="የማጣቀሻ ቁጥር"
+                  onChange={handleChange}
+                  className="mb-2 ml-3 w-auto"
+                />
+              </div>
+
+              <div className="space-y-4">
+                <p className="flex flex-wrap items-center gap-2">
+                  የህግ ታራሚ ስም:
+                  <Input
+                    name="prisonerName"
+                    value={formData.prisonerName}
+                    readOnly
+                    className="w-auto"
+                  />
+                  የተባለው የህግ ታራሚ በአመክሮ መፈቻ ጥያቄ በተከሰሰበት
+                  <Input
+                    name="crimeType"
+                    value={formData.crimeType}
+                    readOnly
+                    className="w-auto"
+                  />
+                  ወንጀል 
+                  <Input
+                    name="year"
+                    value={formData.year}
+                    readOnly
+                    className="w-auto"
+                  />
+                  እስራት እንዲቀጣ በወሰነው መሠረት
+                </p>
+              </div>
+
+              <div className="space-y-4 mt-4">
+                <div className="flex items-center">
+                  <span>1/ ታራሚው ማ/ቤት የገባበት:</span>
+                  <Input
+                    type="date"
+                    name="startDate"
+                    value={formData.startDate}
+                    readOnly
+                    className="ml-3 w-auto"
+                  />
+                </div>
+
+                <div className="flex items-center">
+                  <span>2/ ታራሚው አስራቱ ጨርሶ የሚፈታው:</span>
+                  <Input
+                    type="date"
+                    name="endDate"
+                    value={formData.endDate}
+                    readOnly
+                    className="ml-3 w-auto"
+                  />
+                </div>
+
+                <div className="flex items-center">
+                  <span>3/ በአመክሮ የሚፈታው:</span>
+                  <Input
+                    type="date"
+                    name="paroleDate"
+                    value={formData.paroleDate}
+                    readOnly
+                    className="ml-3 w-auto"
+                  />
+                </div>
+
+                <div className="flex items-center">
+                  <span>4/ በፀባይ ነጥብ መስጨ የተገኘ:</span>
+                  <Input
+                    type="number"
+                    name="point"
+                    value={formData.point}
+                    readOnly
+                    className="ml-3 w-auto"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <p>
+                  5/ ስለጉዳት ካሣና እርቅ ማዉረድ የተሠጠ መግለጫ 6 ስለ ሙያና ሥራ ችሎታ ስለ መተዳደሪያ ከተቀመጠው
+                  ኮሚቴ የተሠጠው የምስክርነት በአጠቃላይ ያቀረብን በ997 በወጣው የኢፊድሪ የወ/መ/ህ/ቁጥር 12 በአንቀጽ
+                  13 በወ/መ/ቁ 206 በአንቀጽ 201207 በአንቀጽ 202 209 እና 204 በወንጀል ህጉ መሠረት
+                  በአመክሮ እንዲፈታ እንጠይቃለን፡፡
+                </p>
+                <p className="text-right mt-4">ከሠላምታ ጋር</p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        <DialogFooter >
+        <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Cancel
+            ሰርዝ
           </Button>
           <Button variant="destructive" onClick={handleSubmit}>
             ማስገባት

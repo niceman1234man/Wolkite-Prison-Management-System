@@ -4,7 +4,7 @@ const ParoleTrackingSchema = new mongoose.Schema(
   {
     inmateId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Inmate", // Reference to the inmate model
+      ref: "Inmate", 
       required: true,
     },
     fullName: {
@@ -27,6 +27,23 @@ const ParoleTrackingSchema = new mongoose.Schema(
       type: Date,
       required: true,
     },
+    request:{
+      isRequested:Boolean,
+      number:String,
+      date: Date,
+      receiverName:{ type:String,
+        default:"wolkite"
+
+        
+      },
+      referenceNumber: String,
+    }
+    ,
+    response:
+      { data:Date,
+        reason:String,  
+      }
+    ,
     releasedDate: {
       type: Date,
       required: true,
@@ -40,6 +57,11 @@ const ParoleTrackingSchema = new mongoose.Schema(
     },
     durationFromParoleToEnd: {
       type: String,
+    },
+    status: {
+      type: String,
+      enum: ['pending', 'accepted', 'rejected'] ,
+      default: 'pending'
     },
     gender: {
       type: String,

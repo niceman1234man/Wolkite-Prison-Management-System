@@ -7,7 +7,7 @@ import { Textarea } from "../../ui/textarea";
 import { toast } from "react-toastify";  // Import toast
 
 const ParoleRejectModal = ({ isOpen, onClose, onSubmit }) => {
-  const [reason, setReason] = useState("");
+  const [reason, setRejectReason] = useState("");
   const [date, setDate] = useState("");
 
   const handleSubmit = () => {
@@ -17,7 +17,7 @@ const ParoleRejectModal = ({ isOpen, onClose, onSubmit }) => {
     }
 
     onSubmit({ reason, date });
-    setReason("");
+    setRejectReason("");
     setDate("");
     onClose();
   };
@@ -33,7 +33,7 @@ const ParoleRejectModal = ({ isOpen, onClose, onSubmit }) => {
           <Textarea 
             placeholder="Enter reason for rejection..." 
             value={reason} 
-            onChange={(e) => setReason(e.target.value)} 
+            onChange={(e) => setRejectReason(e.target.value)} 
           />
           <Input 
             type="date" 

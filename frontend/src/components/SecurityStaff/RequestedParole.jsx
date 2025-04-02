@@ -5,8 +5,8 @@ import axiosInstance from "../utils/axiosInstance";
 import { columns, ParoleButtons } from "../utils/ParoleHelper";
 import { useDispatch, useSelector } from "react-redux";
 
-const Prole = () => {
-  const [inmates, setInmates] = useState([]); // State for inmates data
+const RequestedParole = () => {
+  const [inmates, setInmates] = useState([]); 
   const [filteredInmates, setFilteredInmates] = useState([]); // Filtered inmates data
   const [loadingInmates, setLoadingInmates] = useState(false);
 
@@ -18,7 +18,8 @@ const Prole = () => {
     setLoadingInmates(true);
     try {
       const response = await axiosInstance.get("/inmates/allInmates");
-      console.log("inmate data", response.data.inmates)
+      console.log("inmate data", response.data);
+
       if (response.data && response.data?.inmates) {
         let sno = 1;
         const formattedData = response.data.inmates.map((inmate) => ({
@@ -129,4 +130,4 @@ const Prole = () => {
   );
 };
 
-export default Prole;
+export default RequestedParole;

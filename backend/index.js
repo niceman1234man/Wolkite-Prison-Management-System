@@ -37,6 +37,7 @@ EventEmitter.defaultMaxListeners = 15; // Increase from default 10
 // Load environment variables
 dotenv.config();
 
+
 // Define __dirname for ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -57,7 +58,7 @@ app.use(
 // Serve static files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// Routes
+// Routesre
 app.use("/api/user", userRouter);
 app.use("/api/visitor", visitorRouter);
 app.use("/api/incidents", incidentRouter);

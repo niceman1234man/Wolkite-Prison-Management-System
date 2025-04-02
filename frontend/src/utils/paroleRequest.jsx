@@ -39,42 +39,15 @@ export const columns = [
   },
 ];
 
-export const ParoleRequestButtons = ({ _id }) => {
+export const ParoleRequestButtons = ({ _id,status }) => {
   const navigate = useNavigate();
   const [view,setView]=useState(false);
 
-//   const handleDelete = async (id) => {
-//     const confirmDelete = window.confirm(
-//       "Are you sure you want to delete this inmate record?"
-//     );
-//     if (!confirmDelete) return;
-
-//     try {
-//       const response = await axios.delete(
-//         `https://localhost:5000/api/inmate/${id}`, // Updated API endpoint for inmate
-//         {
-//           headers: {
-//             Authorization: `Bearer ${localStorage.getItem("token")}`,
-//           },
-//         }
-//       );
-
-//       if (response.data.success) {
-//         alert("Inmate record deleted successfully.");
-//         onDelete();
-//       } else {
-//         alert("Failed to delete the inmate record.");
-//       }
-//     } catch (error) {
-//       console.error("Error:", error);
-//       alert(error.response?.data?.error || "Error deleting the inmate record.");
-//     }
-//   };
 
   return (
     <div className="flex space-x-3 text-white">
       <button
-        className="px-3 py-1 bg-green-600 rounded hover:bg-green-700"
+        className="px-3 py-1 bg-blue-600 rounded hover:bg-blue-700"
         onClick={() => setView(true)}
       >
         View
@@ -82,12 +55,20 @@ export const ParoleRequestButtons = ({ _id }) => {
       <AddModal open={view} setOpen={setView}>
         <ViewParole id={_id} />
       </AddModal>
-      {/* <button
-        className="px-3 py-1 bg-green-600 rounded hover:bg-green-700"
-        onClick={() => navigate(`/policeOfficer-dashboard/status/${_id}`)}
-      >
-       Parole Status
-      </button> */}
+     
+      {status && (
+        <button
+          className={`px-3 py-1 rounded ${
+            status === "accepted"
+              ? "bg-green-600 hover:bg-green-700"
+              : status === "rejected"
+              ? "bg-red-600 hover:bg-red-700"
+              : "bg-yellow-600 hover:bg-yellow-700"
+          }`}
+        >
+          {status}
+        </button>
+      )}
    
     </div>
   );
