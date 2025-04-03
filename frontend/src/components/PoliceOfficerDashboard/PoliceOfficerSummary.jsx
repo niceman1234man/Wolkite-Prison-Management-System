@@ -4,6 +4,7 @@ import { FaShieldAlt, FaExclamationTriangle, FaUsers } from "react-icons/fa";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import NoticeWidget from "../Notices/NoticeWidget";
 import SummaryCard from "./Summary.jsx";
+import axiosInstance from "../../utils/axiosInstance";
 
 const COLORS = {
   pending: "#F59E0B", // Orange
@@ -14,24 +15,71 @@ const COLORS = {
 
 const PoliceOfficerSummary = () => {
   const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
-    const dummyData = {
-      totalCases: 120,
-      totalIncidents: 85,
-      totalOfficers: 50,
-      caseSummary: {
-        pending: 30,
-        resolved: 70,
-        escalated: 10,
-        underInvestigation: 10,
-      },
+    const fetchDashboardData = async () => {
+      setLoading(true);
+      try {
+        // Fetch incidents data - use correct route from backend/index.js
+        const incidentsResponse = await axiosInstance.get("/incidents/allIncidents");
+        const incidents = incidentsResponse.data.incidents || [];
+
+        // Fetch officers count (using user API with role filter)
+        const usersResponse = await axiosInstance.get("/user/getAlluser");
+        const users = usersResponse.data.users || [];
+        const officers = users.filter(user => user.role === "police-officer").length;
+
+        // Process incidents data to get status counts
+        const pendingCases = incidents.filter(incident => incident.status === "Pending" || incident.status === "pending").length;
+        const resolvedCases = incidents.filter(incident => incident.status === "Resolved" || incident.status === "resolved").length;
+        const escalatedCases = incidents.filter(incident => incident.status === "Escalated" || incident.status === "escalated").length;
+        const underInvestigationCases = incidents.filter(incident => 
+          incident.status === "Under Investigation" || incident.status === "under investigation").length;
+
+        // Calculate total cases
+        const totalCases = incidents.length;
+
+        // Create summary object
+        const dashboardData = {
+          totalCases,
+          totalIncidents: incidents.length,
+          totalOfficers: officers,
+          caseSummary: {
+            pending: pendingCases,
+            resolved: resolvedCases,
+            escalated: escalatedCases,
+            underInvestigation: underInvestigationCases,
+          },
+        };
+
+        setSummary(dashboardData);
+      } catch (err) {
+        console.error("Error fetching dashboard data:", err);
+        setError("Failed to load dashboard data. Please try again.");
+        
+        // Fallback to dummy data for development/demo purposes
+        const dummyData = {
+          totalCases: 120,
+          totalIncidents: 85,
+          totalOfficers: 50,
+          caseSummary: {
+            pending: 30,
+            resolved: 70,
+            escalated: 10,
+            underInvestigation: 10,
+          },
+        };
+        setSummary(dummyData);
+      } finally {
+        setLoading(false);
+      }
     };
-    setTimeout(() => {
-      setSummary(dummyData);
-    }, 500);
+
+    fetchDashboardData();
 
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
@@ -41,7 +89,7 @@ const PoliceOfficerSummary = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  if (!summary) {
+  if (loading) {
     return (
       <div className="flex justify-center items-center h-64 text-gray-600">
         <span className="animate-pulse">Loading data...</span>
@@ -49,11 +97,35 @@ const PoliceOfficerSummary = () => {
     );
   }
 
+  if (error && !summary) {
+    return (
+      <div className="flex justify-center items-center h-64 text-red-500">
+        <div className="flex flex-col items-center">
+          <span>{error}</span>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!summary) {
+    return (
+      <div className="flex justify-center items-center h-64 text-gray-600">
+        <span>No data available</span>
+      </div>
+    );
+  }
+
   const chartData = [
-    { name: "Pending", value: summary.caseSummary.pending, color: COLORS.pending },
-    { name: "Resolved", value: summary.caseSummary.resolved, color: COLORS.resolved },
-    { name: "Escalated", value: summary.caseSummary.escalated, color: COLORS.escalated },
-    { name: "Under Investigation", value: summary.caseSummary.underInvestigation, color: COLORS.underInvestigation },
+    { name: "Pending", value: summary.caseSummary.pending || 0, color: COLORS.pending },
+    { name: "Resolved", value: summary.caseSummary.resolved || 0, color: COLORS.resolved },
+    { name: "Escalated", value: summary.caseSummary.escalated || 0, color: COLORS.escalated },
+    { name: "Under Investigation", value: summary.caseSummary.underInvestigation || 0, color: COLORS.underInvestigation },
   ];
 
   return (

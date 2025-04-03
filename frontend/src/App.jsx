@@ -26,6 +26,7 @@ import AddUser from "./components/Accounts/Add.jsx";
 import AdminDashboard from "./page/AdminDashboard.jsx";
 import AdminSummary from "./components/Admin/AdminSummary.jsx";
 import CreateUserAccount from "./components/Accounts/CreateUserAccount.jsx";
+import BackeUp from "./components/Accounts/BackeUp.jsx";
 import ListofUsers from "./components/Accounts/List.jsx";
 import AccountReport from "./components/Accounts/AccountReport.jsx";
 import SystemSetting from "./components/SystemSetting/SystemSetting.jsx";
@@ -152,6 +153,7 @@ function App() {
           <Route path="/admin-dashboard" element={<AdminDashboard />}>
             <Route index element={<AdminSummary />} />
             <Route path="CreateAccount" element={<CreateUserAccount />} />
+            <Route path="system-setting" element={<BackeUp />} />
             <Route path="users" element={<ListofUsers />} />
             <Route path="edit/:id" element={<EditUser />} />
             <Route path="users/:id" element={<ViewUser />} />

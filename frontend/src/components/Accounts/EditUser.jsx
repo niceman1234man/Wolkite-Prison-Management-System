@@ -234,7 +234,7 @@ const EditUser = ({setOpen, id}) => {
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* First Name */}
-              <div>
+            <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   First Name <span className="text-red-500">*</span>
                 </label>
@@ -242,23 +242,23 @@ const EditUser = ({setOpen, id}) => {
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <FaUser className="text-gray-400" />
                   </div>
-                  <input
-                    type="text"
-                    name="firstName"
+              <input
+                type="text"
+                name="firstName"
                     placeholder="Enter First name"
-                    value={user.firstName}
-                    onChange={handleChange}
+                value={user.firstName}
+                onChange={handleChange}
                     className={`pl-10 p-2.5 block w-full border ${errors.firstName ? "border-red-500" : "border-gray-300"} rounded-md focus:ring-teal-500 focus:border-teal-500`}
-                    required
-                  />
+                required
+              />
                 </div>
                 {errors.firstName && (
                   <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>
                 )}
-              </div>
+            </div>
 
               {/* Middle Name */}
-              <div>
+            <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Middle Name <span className="text-gray-400">(Optional)</span>
                 </label>
@@ -266,19 +266,19 @@ const EditUser = ({setOpen, id}) => {
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <FaUser className="text-gray-400" />
                   </div>
-                  <input
-                    type="text"
-                    name="middleName"
+              <input
+                type="text"
+                name="middleName"
                     placeholder="Enter Middle name"
                     value={user.middleName || ""}
-                    onChange={handleChange}
+                onChange={handleChange}
                     className="pl-10 p-2.5 block w-full border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
-                  />
+              />
                 </div>
-              </div>
+            </div>
 
               {/* Last Name */}
-              <div>
+            <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Last Name <span className="text-red-500">*</span>
                 </label>
@@ -286,23 +286,23 @@ const EditUser = ({setOpen, id}) => {
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <FaUser className="text-gray-400" />
                   </div>
-                  <input
-                    type="text"
-                    name="lastName"
+              <input
+                type="text"
+                name="lastName"
                     placeholder="Enter Last name"
-                    value={user.lastName}
-                    onChange={handleChange}
+                value={user.lastName}
+                onChange={handleChange}
                     className={`pl-10 p-2.5 block w-full border ${errors.lastName ? "border-red-500" : "border-gray-300"} rounded-md focus:ring-teal-500 focus:border-teal-500`}
-                    required
-                  />
+                required
+              />
                 </div>
                 {errors.lastName && (
                   <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>
                 )}
-              </div>
+            </div>
 
               {/* Email */}
-              <div>
+            <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Email Address <span className="text-red-500">*</span>
                 </label>
@@ -310,15 +310,15 @@ const EditUser = ({setOpen, id}) => {
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <FaEnvelope className="text-gray-400" />
                   </div>
-                  <input
-                    type="email"
-                    name="email"
+              <input
+                type="email"
+                name="email"
                     placeholder="Enter email"
-                    value={user.email}
-                    onChange={handleChange}
+                value={user.email}
+                onChange={handleChange}
                     className={`pl-10 p-2.5 block w-full border ${errors.email ? "border-red-500" : "border-gray-300"} rounded-md focus:ring-teal-500 focus:border-teal-500`}
-                    required
-                  />
+                required
+              />
                 </div>
                 {errors.email && (
                   <p className="text-red-500 text-xs mt-1">{errors.email}</p>
@@ -373,7 +373,7 @@ const EditUser = ({setOpen, id}) => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Role Selection */}
-              <div>
+            <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   User Role <span className="text-red-500">*</span>
                 </label>
@@ -381,28 +381,28 @@ const EditUser = ({setOpen, id}) => {
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <FaUserTag className="text-gray-400" />
                   </div>
-                  <select
+              <select
                     name="role"
                     value={user.role}
-                    onChange={handleChange}
+                onChange={handleChange}
                     className={`pl-10 p-2.5 block w-full border ${errors.role ? "border-red-500" : "border-gray-300"} rounded-md focus:ring-teal-500 focus:border-teal-500`}
-                    required
-                  >
+                required
+              >
                     <option value="">Select Role</option>
                     <option value="security">Security Staff</option>
                     <option value="police-officer">Police Officer</option>
                     <option value="inspector">Inspector</option>
                     <option value="court">Court</option>
                     <option value="woreda">Woreda</option>
-                  </select>
+              </select>
                 </div>
                 {errors.role && (
                   <p className="text-red-500 text-xs mt-1">{errors.role}</p>
                 )}
-              </div>
+            </div>
 
               {/* Prison Selection */}
-              <div>
+            <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Assigned Prison <span className="text-red-500">*</span>
                 </label>
@@ -476,9 +476,9 @@ const EditUser = ({setOpen, id}) => {
           )}
           
           {activeTab === "access" && (
-            <button
-              type="submit"
-              disabled={submitting}
+          <button
+  type="submit"
+  disabled={submitting}
               className={`sm:w-auto w-full py-2.5 px-6 rounded-md text-white font-medium flex items-center justify-center transition duration-200 ${
                 submitting ? "bg-gray-400 cursor-not-allowed" : "bg-teal-600 hover:bg-teal-700"
               }`}
@@ -494,7 +494,7 @@ const EditUser = ({setOpen, id}) => {
                   Update User
                 </>
               )}
-            </button>
+</button>
           )}
           
           <button
@@ -505,7 +505,7 @@ const EditUser = ({setOpen, id}) => {
             Cancel
           </button>
         </div>
-      </form>
+        </form>
     </div>
   );
 };

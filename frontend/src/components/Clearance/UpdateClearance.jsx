@@ -33,7 +33,7 @@ const UpdateClearance = ({setOpen, id}) => {
   const [errorMessage, setErrorMessage] = useState("");
   const [sign, setSign] = useState("");
   const [signPreview, setSignPreview] = useState(null);
-  
+
   // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -114,13 +114,13 @@ const UpdateClearance = ({setOpen, id}) => {
 
     try {
       // Create FormData object for submission
-      const formdata = new FormData();
+    const formdata = new FormData();
       
       // Add all fields to the FormData explicitly
-      formdata.append("date", formData.date);
+    formdata.append("date", formData.date);
       formdata.append("inmate", formData.inmate);
-      formdata.append("reason", formData.reason);
-      formdata.append("remark", formData.remark);
+    formdata.append("reason", formData.reason);
+    formdata.append("remark", formData.remark);
       formdata.append("registrar", formData.registrar);
       formdata.append("clearanceId", formData.clearanceId);
       formdata.append("propertyStatus", formData.propertyStatus);
@@ -131,7 +131,7 @@ const UpdateClearance = ({setOpen, id}) => {
       // Handle signature - either use existing or upload new
       if (sign && typeof sign !== 'string') {
         // If we have a new file, append it
-        formdata.append("sign", sign);
+      formdata.append("sign", sign);
         console.log("Adding new signature file");
       } else if (formData.sign) {
         // Otherwise maintain existing signature value
@@ -218,7 +218,7 @@ const UpdateClearance = ({setOpen, id}) => {
               />
             </div>
 
-            <div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Clearance Date <span className="text-red-500">*</span>
               </label>
@@ -226,11 +226,11 @@ const UpdateClearance = ({setOpen, id}) => {
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <FaCalendarAlt className="text-gray-400" />
                 </div>
-                <input
-                  type="date"
-                  name="date"
-                  value={formData.date}
-                  onChange={handleChange}
+            <input
+              type="date"
+              name="date"
+              value={formData.date}
+              onChange={handleChange}
                   className="w-full pl-10 p-3 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500"
                   required
                 />
@@ -248,22 +248,22 @@ const UpdateClearance = ({setOpen, id}) => {
                 onChange={handleChange}
                 placeholder="Enter registrar's full name"
                 className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500"
-                required
-              />
-            </div>
+              required
+            />
+          </div>
             
-            <div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Clearance ID
               </label>
-              <input
-                type="text"
+            <input
+              type="text"
                 name="clearanceId"
                 value={formData.clearanceId}
-                onChange={handleChange}
+              onChange={handleChange}
                 className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500"
-                required
-              />
+              required
+            />
               <p className="mt-1 text-xs text-gray-500">Unique identifier for this clearance</p>
             </div>
           </div>
@@ -340,24 +340,24 @@ const UpdateClearance = ({setOpen, id}) => {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Clearance Reason <span className="text-red-500">*</span>
               </label>
-              <textarea
-                name="reason"
-                value={formData.reason}
-                onChange={handleChange}
+            <textarea
+              name="reason"
+              value={formData.reason}
+              onChange={handleChange}
                 placeholder="Enter detailed reason for clearance"
-                rows="3"
+              rows="3"
                 className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500"
-                required
-              ></textarea>
-            </div>
+              required
+            ></textarea>
+          </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Remarks <span className="text-red-500">*</span>
               </label>
-              <textarea
-                name="remark"
-                value={formData.remark}
+            <textarea
+              name="remark"
+              value={formData.remark}
                 onChange={handleChange}
                 placeholder="Additional information or notes"
                 rows="2"
@@ -373,11 +373,11 @@ const UpdateClearance = ({setOpen, id}) => {
               <textarea
                 name="notes"
                 value={formData.notes}
-                onChange={handleChange}
+              onChange={handleChange}
                 placeholder="Any other important information"
-                rows="2"
+              rows="2"
                 className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500"
-              ></textarea>
+            ></textarea>
             </div>
           </div>
         </div>
@@ -393,9 +393,9 @@ const UpdateClearance = ({setOpen, id}) => {
               Digital Signature
             </label>
             <div className="flex items-center space-x-4">
-              <input
-                type="file"
-                name="sign"
+            <input
+              type="file"
+              name="sign"
                 onChange={handleSignChange}
                 className="w-full p-2 border border-gray-300 rounded-md shadow-sm"
                 accept=".jpg,.png,.jpeg"

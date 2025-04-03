@@ -58,7 +58,7 @@ const UpdateIncident = ({setEdit, id}) => {
         if (incident.incidentDate) {
           incident.incidentDate = new Date(incident.incidentDate).toISOString().split("T")[0];
         }
-        
+
         setFormData(incident);
       } catch (error) {
         console.error("Error fetching incident details:", error);
@@ -185,16 +185,16 @@ const UpdateIncident = ({setEdit, id}) => {
           </h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* Incident ID (Read-Only) */}
-            <div>
+          {/* Incident ID (Read-Only) */}
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Incident ID
-              </label>
-              <input
-                type="text"
-                name="incidentId"
-                value={formData.incidentId || ""}
-                disabled
+              Incident ID
+            </label>
+            <input
+              type="text"
+              name="incidentId"
+              value={formData.incidentId || ""}
+              disabled
                 className="p-2 block w-full border border-gray-300 rounded-md bg-gray-100 text-gray-700"
               />
               <p className="mt-1 text-xs text-gray-500">Unique identifier (cannot be changed)</p>
@@ -223,59 +223,59 @@ const UpdateIncident = ({setEdit, id}) => {
                   {errors.incidentDate}
                 </p>
               )}
-            </div>
+          </div>
 
-            {/* Reporter Name */}
-            <div>
+          {/* Reporter Name */}
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 <FaUserShield className="inline-block mr-1 text-teal-600" />
                 Reporter Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="reporter"
-                value={formData.reporter || ""}
+            </label>
+            <input
+              type="text"
+              name="reporter"
+              value={formData.reporter || ""}
                 placeholder="Enter full name of reporter"
-                onChange={handleChange}
+              onChange={handleChange}
                 className={`p-2 block w-full border ${
                   errors.reporter ? "border-red-500" : "border-gray-300"
                 } rounded-md focus:ring-teal-500 focus:border-teal-500`}
-                required
-              />
+              required
+            />
               {errors.reporter && (
                 <p className="mt-1 text-xs text-red-500 flex items-center">
                   <FaExclamationCircle className="mr-1" />
                   {errors.reporter}
                 </p>
               )}
-            </div>
+          </div>
 
             {/* Inmate Selection */}
-            <div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 <FaUser className="inline-block mr-1 text-teal-600" />
                 Inmate Involved <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="inmate"
-                value={formData.inmate || ""}
-                onChange={handleChange}
+            </label>
+            <select
+              name="inmate"
+              value={formData.inmate || ""}
+              onChange={handleChange}
                 className={`p-2 block w-full border ${
                   errors.inmate ? "border-red-500" : "border-gray-300"
                 } rounded-md focus:ring-teal-500 focus:border-teal-500`}
-                required
-              >
-                <option value="">Select Inmate</option>
-                {loading ? (
-                  <option disabled>Loading inmates...</option>
-                ) : (
-                  inmates.map((inmate) => (
-                    <option key={inmate._id} value={inmate.fullName}>
-                      {inmate.fullName}
-                    </option>
-                  ))
-                )}
-              </select>
+              required
+            >
+              <option value="">Select Inmate</option>
+              {loading ? (
+                <option disabled>Loading inmates...</option>
+              ) : (
+                inmates.map((inmate) => (
+                  <option key={inmate._id} value={inmate.fullName}>
+                    {inmate.fullName}
+                  </option>
+                ))
+              )}
+            </select>
               {errors.inmate && (
                 <p className="mt-1 text-xs text-red-500 flex items-center">
                   <FaExclamationCircle className="mr-1" />
@@ -284,7 +284,7 @@ const UpdateIncident = ({setEdit, id}) => {
               )}
             </div>
           </div>
-        </div>
+          </div>
 
         {/* Incident Details Card */}
         <div className="bg-gray-50 p-5 rounded-lg shadow-sm mb-6">
@@ -294,59 +294,59 @@ const UpdateIncident = ({setEdit, id}) => {
           </h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-4">
-            {/* Incident Type */}
-            <div>
+          {/* Incident Type */}
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Incident Type <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="incidentType"
-                value={formData.incidentType || ""}
-                onChange={handleChange}
+            </label>
+            <select
+              name="incidentType"
+              value={formData.incidentType || ""}
+              onChange={handleChange}
                 className={`p-2 block w-full border ${
                   errors.incidentType ? "border-red-500" : "border-gray-300"
                 } rounded-md focus:ring-teal-500 focus:border-teal-500`}
-                required
-              >
-                <option value="">Select Incident Type</option>
-                <option value="Theft">Theft</option>
+              required
+            >
+              <option value="">Select Incident Type</option>
+              <option value="Theft">Theft</option>
                 <option value="Assault">Assault</option>
-                <option value="Harassment">Harassment</option>
+              <option value="Harassment">Harassment</option>
                 <option value="Substance Abuse">Substance Abuse</option>
                 <option value="Contraband">Contraband</option>
-                <option value="Accident">Accident</option>
+              <option value="Accident">Accident</option>
                 <option value="Property Damage">Property Damage</option>
                 <option value="Medical Emergency">Medical Emergency</option>
-                <option value="Other">Other</option>
-              </select>
+              <option value="Other">Other</option>
+            </select>
               {errors.incidentType && (
                 <p className="mt-1 text-xs text-red-500 flex items-center">
                   <FaExclamationCircle className="mr-1" />
                   {errors.incidentType}
                 </p>
               )}
-            </div>
+          </div>
 
-            {/* Status */}
-            <div>
+          {/* Status */}
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Status <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="status"
-                value={formData.status || ""}
-                onChange={handleChange}
+            </label>
+            <select
+              name="status"
+              value={formData.status || ""}
+              onChange={handleChange}
                 className={`p-2 block w-full border ${
                   errors.status ? "border-red-500" : "border-gray-300"
                 } rounded-md focus:ring-teal-500 focus:border-teal-500 ${getStatusClass(formData.status)}`}
-                required
-              >
-                <option value="">Select Status</option>
-                <option value="Pending">Pending</option>
+              required
+            >
+              <option value="">Select Status</option>
+              <option value="Pending">Pending</option>
                 <option value="Under Investigation">Under Investigation</option>
-                <option value="Resolved">Resolved</option>
-                <option value="Escalated">Escalated</option>
-              </select>
+              <option value="Resolved">Resolved</option>
+              <option value="Escalated">Escalated</option>
+            </select>
               {errors.status && (
                 <p className="mt-1 text-xs text-red-500 flex items-center">
                   <FaExclamationCircle className="mr-1" />
@@ -401,7 +401,7 @@ const UpdateIncident = ({setEdit, id}) => {
               Note: This field only updates the reference to an existing file
             </p>
           </div>
-        </div>
+          </div>
 
         {/* Status Bar */}
         <div className="mb-6 bg-gray-50 p-4 rounded-lg">
@@ -450,8 +450,8 @@ const UpdateIncident = ({setEdit, id}) => {
             Cancel
           </button>
           
-          <button
-            type="submit"
+            <button
+              type="submit"
             disabled={submitting || !formData.reporter || !formData.inmate || !formData.incidentDate || 
                      !formData.incidentType || !formData.status || !formData.description}
             className={`py-2 px-6 rounded-md text-white font-medium flex items-center justify-center transition duration-200 ${
@@ -472,10 +472,10 @@ const UpdateIncident = ({setEdit, id}) => {
             ) : (
               <>
                 <FaSave className="mr-1" />
-                Update Incident
+              Update Incident
               </>
             )}
-          </button>
+            </button>
         </div>
       </form>
     </div>

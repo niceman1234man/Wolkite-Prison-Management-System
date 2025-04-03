@@ -30,7 +30,7 @@ const ViewParole = ({ id }) => {
     };
 
     fetchInmateDetails();
-  }, [id]); 
+  }, [id]);
 
   const handleRejectParole = async ({ reason, date }) => {
     try {
@@ -206,15 +206,15 @@ const ViewParole = ({ id }) => {
       toast.error("Failed to accept parole request.");
     }
   };
-  
+
   return (
     <div className="w-full mx-auto bg-white p-4 lg:p-8 rounded-lg shadow-lg">
       {/* Header with title and document controls */}
       <div className="mb-6 bg-gray-50 p-4 rounded-lg shadow-sm">
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">
-            Parole Request Details
-          </h2>
+        Parole Request Details
+      </h2>
           
           <div className="flex items-center space-x-3">
             <div className="flex items-center bg-gray-200 px-3 py-1 rounded-md">
@@ -228,7 +228,7 @@ const ViewParole = ({ id }) => {
               }`}>
                 {inmateData.status ? inmateData.status.charAt(0).toUpperCase() + inmateData.status.slice(1) : "Pending"}
               </span>
-            </div>
+          </div>
             
             <button 
               onClick={handlePrint} 
@@ -269,29 +269,29 @@ const ViewParole = ({ id }) => {
                 <div className="flex mb-4">
                   <span>የወ/መ/ቁ</span>
                   <span className="field-value font-medium px-2 py-1 mx-2 bg-gray-50 rounded shadow-sm">{inmateData.request.referenceNumber}</span>
-                </div>
-              </div>
+        </div>
+        </div>
               
               {/* Case details section */}
               <div className="case-details mt-10">
                 <p className="leading-loose">
-                  የህግ ታራሚ ስም:
+            የህግ ታራሚ ስም:
                   <span className="field-value font-medium px-2 py-1 mx-2 bg-gray-50 rounded inline-block shadow-sm">{inmateData.fullName}</span>
-                  የተባለው የህግ ታራሚ በአመክሮ መፈቻ ጥያቄ በተከሰሰበት
+            የተባለው የህግ ታራሚ በአመክሮ መፈቻ ጥያቄ በተከሰሰበት
                   <span className="field-value font-medium px-2 py-1 mx-2 bg-gray-50 rounded inline-block shadow-sm">{inmateData.caseType}</span>
-                  ወንጀል እስራት እንዲቀጣ በወሰነው መሠረት ከዚህ ውስጥ 2/3ኛው
+            ወንጀል እስራት እንዲቀጣ በወሰነው መሠረት ከዚህ ውስጥ 2/3ኛው
                   <span className="field-value font-medium px-2 py-1 mx-2 bg-gray-50 rounded inline-block shadow-sm">{inmateData.durationToParole}</span>
-                  በእስራት የፈጸመ ሲሆን 1/3ኛውን
+            በእስራት የፈጸመ ሲሆን 1/3ኛውን
                   <span className="field-value font-medium px-2 py-1 mx-2 bg-gray-50 rounded inline-block shadow-sm">{inmateData.durationFromParoleToEnd}</span>
-                  ቅናሽ አግጋቶዋል፡፡ አሁንም በጠቅላላው ከተፈረደበት የእስራት ጊዜ ውስጥ ወደፊት የሚቀረው
+            ቅናሽ አግጋቶዋል፡፡ አሁንም በጠቅላላው ከተፈረደበት የእስራት ጊዜ ውስጥ ወደፊት የሚቀረው
                   <span className="field-value font-medium px-2 py-1 mx-2 bg-gray-50 rounded inline-block shadow-sm">{inmateData.durationFromParoleToEnd}</span>
-                </p>
-              </div>
+          </p>
+        </div>
               
               <p className="my-4">
-                በዚህ መሠረት የህግ ታራሚው ጠቅላይ ፍርድ 2/3ኛውን የታሠረ በመሆኑ በአከሮ ለመፈታት የደረሰ ሆኖ
-                ተገኝቶዋል፡፡የኸውም የህግ ታራሚው በዚህ ማቤት በኖረባቸው ዘመኖች መልካም ፀባይ ይዞ የቆየ መሆኑንና የታዘዘውን
-                ሥራ በቅን የሠራ ነው እንዲሁም ፀባዩን ያረመና ወደ ማህበራዊ ኑሮ ተመልሶ ለመቀላቀል የሚበቃ ሆኖ ተገኝቶዋል፡፡
+        በዚህ መሠረት የህግ ታራሚው ጠቅላይ ፍርድ 2/3ኛውን የታሠረ በመሆኑ በአከሮ ለመፈታት የደረሰ ሆኖ
+        ተገኝቶዋል፡፡የኸውም የህግ ታራሚው በዚህ ማቤት በኖረባቸው ዘመኖች መልካም ፀባይ ይዞ የቆየ መሆኑንና የታዘዘውን
+        ሥራ በቅን የሠራ ነው እንዲሁም ፀባዩን ያረመና ወደ ማህበራዊ ኑሮ ተመልሶ ለመቀላቀል የሚበቃ ሆኖ ተገኝቶዋል፡፡
               </p>
               
               <p className="mt-3 mb-2">በዚሁ ረገድ በቆየበት ጊዜ ያሣየውን መልካም ፀባዩን የሚያረጋግጥ</p>
@@ -299,33 +299,33 @@ const ViewParole = ({ id }) => {
               <div className="flex mb-2 items-center">
                 <span>1/ታራሚው ማ/ቤት የገባበት</span>
                 <span className="field-value font-medium px-2 py-1 mx-2 bg-gray-50 rounded shadow-sm">{formatDate(inmateData.startDate)}</span>
-              </div>
+        </div>
               
               <div className="flex mb-2 items-center">
                 <span>2/ ታራሚው አስራቱ ጨርሶ የሚፈታው</span>
                 <span className="field-value font-medium px-2 py-1 mx-2 bg-gray-50 rounded shadow-sm">{formatDate(inmateData.releasedDate)}</span>
-              </div>
+        </div>
               
               <div className="flex mb-2 items-center">
                 <span>3/ በአመክሮ የሚፈታው</span>
                 <span className="field-value font-medium px-2 py-1 mx-2 bg-gray-50 rounded shadow-sm">{formatDate(inmateData.paroleDate)}</span>
-              </div>
+        </div>
               
               <div className="flex mb-2 items-center">
                 <span>4/ በፀባይ ነጥብ መስጨ የተገኘ</span>
                 <span className="field-value font-medium px-2 py-1 mx-2 bg-gray-50 rounded shadow-sm">{inmateData.totalPoints}</span>
-              </div>
+        </div>
               
               <p className="my-4">
-                5/ ስለጉዳት ካሣና እርቅ ማዉረድ የተሠጠ መግለጫ 6 ስለ ሙያና ሥራ ችሎታ ስለ መተዳደሪያ ከተቀመጠው ኮሚቴ
-                የተሠጠው የምስክርነት በአጠቃላይ ያቀረብን በ997 በወጣው የኢፊድሪ የወ/መ/ህ/ቁጥር 12 በአንቀጽ 13 በወ/መ/ቁ
-                206 በአንቀጽ 201207 በአንቀጽ 202 209 እና 204 በወንጀል ህጉ መሠረት በአመክሮ እንዲፈታ
-                እንጠይቃለን፡፡
+        5/ ስለጉዳት ካሣና እርቅ ማዉረድ የተሠጠ መግለጫ 6 ስለ ሙያና ሥራ ችሎታ ስለ መተዳደሪያ ከተቀመጠው ኮሚቴ
+        የተሠጠው የምስክርነት በአጠቃላይ ያቀረብን በ997 በወጣው የኢፊድሪ የወ/መ/ህ/ቁጥር 12 በአንቀጽ 13 በወ/መ/ቁ
+        206 በአንቀጽ 201207 በአንቀጽ 202 209 እና 204 በወንጀል ህጉ መሠረት በአመክሮ እንዲፈታ
+        እንጠይቃለን፡፡
               </p>
               
               <p className="signature text-right mt-4 mr-3">ከሠላምታ ጋር</p>
             </div>
-          </CardContent>
+      </CardContent>
         </div>
       </div>
 
@@ -406,7 +406,7 @@ const ViewParole = ({ id }) => {
             <FaCheck className="mr-2" /> Accept Parole
           </button>
 
-          <button
+        <button
             onClick={() => {
               if (inmateData.status === "accepted" || inmateData.status === "rejected") {
                 toast.info(`This parole request has already been ${inmateData.status}`, {
@@ -425,16 +425,16 @@ const ViewParole = ({ id }) => {
             disabled={inmateData.status === "accepted" || inmateData.status === "rejected"}
           >
             <FaTimes className="mr-2" /> Reject Parole
-          </button>
+        </button>
         </div>
       </div>
 
       {/* Modals */}
-      <ParoleAccept
-        isOpen={openAccept}
-        onClose={() => setOpenAccept(false)}
-        onSubmit={acceptParole}
-      />
+        <ParoleAccept
+          isOpen={openAccept}
+          onClose={() => setOpenAccept(false)}
+          onSubmit={acceptParole}
+        />
 
       <ParoleRejectModal
         isOpen={isRejectModalOpen}

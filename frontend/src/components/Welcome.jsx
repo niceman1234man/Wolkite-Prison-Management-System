@@ -246,20 +246,20 @@ function Welcome() {
           isVisible={isVisible}
         />;
       case 'register':
-        return (
+  return (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-0 sm:p-4">
             <div className="bg-white rounded-lg w-full h-full sm:h-auto sm:max-w-2xl sm:w-full mx-0 sm:mx-4 max-h-full sm:max-h-[90vh] overflow-y-auto">
               <div className="sticky top-0 z-10 flex justify-between items-center p-4 sm:p-8 bg-white border-b border-gray-200">
                 <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Create Visitor Account</h2>
-                <button
+            <button
                   onClick={() => setActiveButton('home')}
                   className="p-2 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100"
-                >
+            >
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                   </svg>
-                </button>
-              </div>
+            </button>
+          </div>
               <div className="p-4 sm:p-8">
                 <Register 
                   formData={formData}
@@ -301,7 +301,7 @@ function Welcome() {
       
       <main className="pt-16 sm:pt-24">
         {renderContent()}
-      </main>
+        </main>
 
       <Footer handleButtonClick={handleButtonClick} />
 

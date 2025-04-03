@@ -199,13 +199,13 @@ const Add = ({ setOpen }) => {
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Incident ID - Read Only */}
-            <div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Incident ID
-              </label>
-              <input
-                type="text"
-                name="incidentId"
+              Incident ID
+            </label>
+            <input
+              type="text"
+              name="incidentId"
                 value={formData.incidentId}
                 readOnly
                 className="p-2 block w-full border border-gray-300 rounded-md bg-gray-100 text-gray-700"
@@ -223,55 +223,55 @@ const Add = ({ setOpen }) => {
                 type="date"
                 name="incidentDate"
                 value={formData.incidentDate}
-                onChange={handleChange}
+              onChange={handleChange}
                 max={new Date().toISOString().split("T")[0]}
                 className="p-2 block w-full border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
-                required
-              />
-            </div>
+              required
+            />
+          </div>
 
-            {/* Reporter Name */}
-            <div>
+          {/* Reporter Name */}
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 <FaUserShield className="inline-block mr-1 text-teal-600" />
                 Reporter Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="reporter"
+            </label>
+            <input
+              type="text"
+              name="reporter"
                 value={formData.reporter}
                 placeholder="Enter full name of reporter"
-                onChange={handleChange}
+              onChange={handleChange}
                 className="p-2 block w-full border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
-                required
-              />
-            </div>
+              required
+            />
+          </div>
 
             {/* Inmate Selection */}
-            <div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 <FaUser className="inline-block mr-1 text-teal-600" />
                 Inmate Involved <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="inmate"
+            </label>
+            <select
+              name="inmate"
                 value={formData.inmate}
-                onChange={handleChange}
+              onChange={handleChange}
                 className="p-2 block w-full border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
-                required
-              >
-                <option value="">Select Inmate</option>
-                {loading ? (
-                  <option disabled>Loading inmates...</option>
-                ) : (
-                  inmates.map((inmate) => (
-                    <option key={inmate._id} value={inmate.fullName}>
-                      {inmate.fullName}
-                    </option>
-                  ))
-                )}
-              </select>
-            </div>
+              required
+            >
+              <option value="">Select Inmate</option>
+              {loading ? (
+                <option disabled>Loading inmates...</option>
+              ) : (
+                inmates.map((inmate) => (
+                  <option key={inmate._id} value={inmate.fullName}>
+                    {inmate.fullName}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
           </div>
         </div>
 
@@ -283,50 +283,50 @@ const Add = ({ setOpen }) => {
           </h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-4">
-            {/* Incident Type */}
-            <div>
+          {/* Incident Type */}
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Incident Type <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="incidentType"
+            </label>
+            <select
+              name="incidentType"
                 value={formData.incidentType}
-                onChange={handleChange}
+              onChange={handleChange}
                 className="p-2 block w-full border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
-                required
-              >
-                <option value="">Select Incident Type</option>
-                <option value="Theft">Theft</option>
+              required
+            >
+              <option value="">Select Incident Type</option>
+              <option value="Theft">Theft</option>
                 <option value="Assault">Assault</option>
-                <option value="Harassment">Harassment</option>
+              <option value="Harassment">Harassment</option>
                 <option value="Substance Abuse">Substance Abuse</option>
                 <option value="Contraband">Contraband</option>
-                <option value="Accident">Accident</option>
+              <option value="Accident">Accident</option>
                 <option value="Property Damage">Property Damage</option>
                 <option value="Medical Emergency">Medical Emergency</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
+              <option value="Other">Other</option>
+            </select>
+          </div>
 
-            {/* Status */}
-            <div>
+          {/* Status */}
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Status <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="status"
+            </label>
+            <select
+              name="status"
                 value={formData.status}
-                onChange={handleChange}
+              onChange={handleChange}
                 className="p-2 block w-full border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
-                required
-              >
-                <option value="Pending">Pending</option>
+              required
+            >
+              <option value="Pending">Pending</option>
                 <option value="Under Investigation">Under Investigation</option>
-                <option value="Resolved">Resolved</option>
-                <option value="Escalated">Escalated</option>
-              </select>
+              <option value="Resolved">Resolved</option>
+              <option value="Escalated">Escalated</option>
+            </select>
               <p className="mt-1 text-xs text-gray-500">Current status of the incident</p>
-            </div>
+          </div>
           </div>
 
           {/* Description */}
@@ -417,7 +417,7 @@ const Add = ({ setOpen }) => {
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t">
-          <button
+            <button
             type="button"
             onClick={() => {
               if (setOpen) {
@@ -457,7 +457,7 @@ const Add = ({ setOpen }) => {
                 Submit Incident
               </>
             )}
-          </button>
+            </button>
         </div>
       </form>
     </div>

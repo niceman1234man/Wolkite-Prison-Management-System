@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axiosInstance from "../../utils/axiosInstance";
-import { toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { toast } from 'react-toastify'; 
+import 'react-toastify/dist/ReactToastify.css'; 
 import { useNavigate } from "react-router-dom";
 import { TiArrowBack } from "react-icons/ti";
 import { validateUserForm } from "../../utils/formValidation";
@@ -18,7 +18,7 @@ const AddUser = ({setOpen}) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [prisons, setPrisons] = useState([]);
   const [activeTab, setActiveTab] = useState("basic");
-  
+
   // Initial user state
   const initialUser = {
     firstName: "",
@@ -104,7 +104,7 @@ const AddUser = ({setOpen}) => {
     formData.append("prison", user.prison);
     
     if (photo) {
-      formData.append("photo", photo);
+    formData.append("photo", photo);
     }
   
     try {
@@ -214,8 +214,8 @@ const AddUser = ({setOpen}) => {
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* First Name */}
-              <div>
+          {/* First Name */}
+          <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   First Name <span className="text-red-500">*</span>
                 </label>
@@ -223,23 +223,23 @@ const AddUser = ({setOpen}) => {
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <FaUser className="text-gray-400" />
                   </div>
-                  <input
-                    type="text"
-                    name="firstName"
-                    placeholder="Enter First name"
+            <input
+              type="text"
+              name="firstName"
+              placeholder="Enter First name"
                     value={user.firstName}
-                    onChange={handleChange}
+              onChange={handleChange}
                     className={`pl-10 p-2.5 block w-full border ${errors.firstName ? "border-red-500" : "border-gray-300"} rounded-md focus:ring-teal-500 focus:border-teal-500`}
-                    required
-                  />
+              required
+            />
                 </div>
                 {errors.firstName && (
                   <p className="text-red-500 text-xs mt-1">{errors.firstName}</p>
                 )}
-              </div>
+          </div>
 
-              {/* Middle Name */}
-              <div>
+          {/* Middle Name */}
+          <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Middle Name <span className="text-gray-400">(Optional)</span>
                 </label>
@@ -247,19 +247,19 @@ const AddUser = ({setOpen}) => {
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <FaUser className="text-gray-400" />
                   </div>
-                  <input
-                    type="text"
-                    name="middleName"
-                    placeholder="Enter Middle name"
+            <input
+              type="text"
+              name="middleName"
+              placeholder="Enter Middle name"
                     value={user.middleName}
-                    onChange={handleChange}
+              onChange={handleChange}
                     className="pl-10 p-2.5 block w-full border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
-                  />
+            />
                 </div>
-              </div>
+          </div>
 
-              {/* Last Name */}
-              <div>
+          {/* Last Name */}
+          <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Last Name <span className="text-red-500">*</span>
                 </label>
@@ -267,23 +267,23 @@ const AddUser = ({setOpen}) => {
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <FaUser className="text-gray-400" />
                   </div>
-                  <input
-                    type="text"
-                    name="lastName"
-                    placeholder="Enter Last name"
+            <input
+              type="text"
+              name="lastName"
+              placeholder="Enter Last name"
                     value={user.lastName}
-                    onChange={handleChange}
+              onChange={handleChange}
                     className={`pl-10 p-2.5 block w-full border ${errors.lastName ? "border-red-500" : "border-gray-300"} rounded-md focus:ring-teal-500 focus:border-teal-500`}
-                    required
-                  />
+              required
+            />
                 </div>
                 {errors.lastName && (
                   <p className="text-red-500 text-xs mt-1">{errors.lastName}</p>
                 )}
-              </div>
+          </div>
 
-              {/* Email */}
-              <div>
+          {/* Email */}
+          <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Email Address <span className="text-red-500">*</span>
                 </label>
@@ -291,23 +291,23 @@ const AddUser = ({setOpen}) => {
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <FaEnvelope className="text-gray-400" />
                   </div>
-                  <input
-                    type="email"
-                    name="email"
-                    placeholder="Enter email"
+            <input
+              type="email"
+              name="email"
+              placeholder="Enter email"
                     value={user.email}
-                    onChange={handleChange}
+              onChange={handleChange}
                     className={`pl-10 p-2.5 block w-full border ${errors.email ? "border-red-500" : "border-gray-300"} rounded-md focus:ring-teal-500 focus:border-teal-500`}
-                    required
-                  />
+              required
+            />
                 </div>
                 {errors.email && (
                   <p className="text-red-500 text-xs mt-1">{errors.email}</p>
                 )}
-              </div>
+          </div>
 
-              {/* Gender */}
-              <div>
+          {/* Gender */}
+          <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Gender <span className="text-red-500">*</span>
                 </label>
@@ -327,10 +327,10 @@ const AddUser = ({setOpen}) => {
                   <label className={`flex items-center p-2.5 border ${user.gender === 'female' ? 'border-teal-500 bg-teal-50' : 'border-gray-300'} rounded-md cursor-pointer flex-1`}>
                     <input
                       type="radio"
-                      name="gender"
+              name="gender"
                       value="female"
                       checked={user.gender === 'female'}
-                      onChange={handleChange}
+              onChange={handleChange}
                       className="hidden"
                     />
                     <FaVenus className={`mr-2 ${user.gender === 'female' ? 'text-teal-500' : 'text-gray-400'}`} />
@@ -353,8 +353,8 @@ const AddUser = ({setOpen}) => {
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Password */}
-              <div>
+          {/* Password */}
+          <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Password <span className="text-red-500">*</span>
                 </label>
@@ -362,15 +362,15 @@ const AddUser = ({setOpen}) => {
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <FaLock className="text-gray-400" />
                   </div>
-                  <input
-                    type="password"
-                    name="password"
+            <input
+              type="password"
+              name="password"
                     placeholder="••••••••"
                     value={user.password}
-                    onChange={handleChange}
+              onChange={handleChange}
                     className={`pl-10 p-2.5 block w-full border ${errors.password ? "border-red-500" : "border-gray-300"} rounded-md focus:ring-teal-500 focus:border-teal-500`}
-                    required
-                  />
+              required
+            />
                 </div>
                 {errors.password && (
                   <p className="text-red-500 text-xs mt-1">{errors.password}</p>
@@ -378,10 +378,10 @@ const AddUser = ({setOpen}) => {
                 <p className="text-gray-500 text-xs mt-1">
                   Password must be at least 8 characters and include uppercase, lowercase, and number
                 </p>
-              </div>
+          </div>
 
-              {/* Role Selection */}
-              <div>
+          {/* Role Selection */}
+          <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   User Role <span className="text-red-500">*</span>
                 </label>
@@ -389,18 +389,18 @@ const AddUser = ({setOpen}) => {
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <FaUserTag className="text-gray-400" />
                   </div>
-                  <select
-                    name="role"
+            <select
+              name="role"
                     value={user.role}
-                    onChange={handleChange}
+              onChange={handleChange}
                     className={`pl-10 p-2.5 block w-full border ${errors.role ? "border-red-500" : "border-gray-300"} rounded-md focus:ring-teal-500 focus:border-teal-500`}
-                    required
-                  >
-                    <option value="">Select Role</option>
-                    <option value="security">Security Staff</option>
-                    <option value="police-officer">Police Officer</option>
-                    <option value="inspector">Inspector</option>
-                    <option value="court">Court</option>
+              required
+            >
+              <option value="">Select Role</option>
+              <option value="security">Security Staff</option>
+              <option value="police-officer">Police Officer</option>
+              <option value="inspector">Inspector</option>
+              <option value="court">Court</option>
                     <option value="woreda">Woreda</option>
                   </select>
                 </div>
@@ -431,12 +431,12 @@ const AddUser = ({setOpen}) => {
                         {prison.prison_name}
                       </option>
                     ))}
-                  </select>
+            </select>
                 </div>
                 {errors.prison && (
                   <p className="text-red-500 text-xs mt-1">{errors.prison}</p>
                 )}
-              </div>
+          </div>
 
               {/* Brief user role description based on selection */}
               {user.role && (

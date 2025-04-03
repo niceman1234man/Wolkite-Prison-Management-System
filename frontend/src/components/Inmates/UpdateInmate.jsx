@@ -176,65 +176,65 @@ const UpdateInmate = ({setOpen,id}) => {
                 required
               />
             </div>
-            <div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-              <input
-                type="text"
+            <input
+              type="text"
                 name="lastName"
                 value={formData.lastName}
                 placeholder="Enter Last name"
-                onChange={handleChange}
+              onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                required
-              />
-            </div>
-            <div>
+              required
+            />
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Birth Date</label>
-              <input
-                type="date"
-                name="birthDate"
-                value={formData.birthDate}
-                onChange={handleChange}
+            <input
+              type="date"
+              name="birthDate"
+              value={formData.birthDate}
+              onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                required
-              />
-            </div>
-            <div>
+              required
+            />
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
-              <input
-                type="number"
-                name="age"
-                value={formData.age}
-                placeholder="Enter age"
-                onChange={handleChange}
+            <input
+              type="number"
+              name="age"
+              value={formData.age}
+              placeholder="Enter age"
+              onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                 readOnly
-              />
-            </div>
-            <div>
+            />
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Mother's Name</label>
-              <input
-                type="text"
-                name="motherName"
-                value={formData.motherName}
-                placeholder="Enter mother's name"
-                onChange={handleChange}
+            <input
+              type="text"
+              name="motherName"
+              value={formData.motherName}
+              placeholder="Enter mother's name"
+              onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              />
-            </div>
-            <div>
+            />
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
-              <select
-                name="gender"
-                value={formData.gender}
-                onChange={handleChange}
+            <select
+              name="gender"
+              value={formData.gender}
+              onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                required
-              >
-                <option value="">Select Gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-              </select>
+              required
+            >
+              <option value="">Select Gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
             </div>
           </div>
         </div>
@@ -248,99 +248,99 @@ const UpdateInmate = ({setOpen,id}) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Region</label>
-                  <input
-                    type="text"
-                    name="birthRegion"
-                    value={formData.birthRegion}
-                    placeholder="Enter birth region"
-                    onChange={handleChange}
+              <input
+                type="text"
+                name="birthRegion"
+                value={formData.birthRegion}
+                placeholder="Enter birth region"
+                onChange={handleChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
-                  <input
-                    type="text"
-                    name="birthZone"
-                    value={formData.birthZone}
-                    placeholder="Enter birth zone"
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Wereda</label>
-                  <input
-                    type="text"
-                    name="birthWereda"
-                    value={formData.birthWereda}
-                    placeholder="Enter birth wereda"
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Kebele</label>
-                  <input
-                    type="text"
-                    name="birthKebele"
-                    value={formData.birthKebele}
-                    placeholder="Enter birth kebele"
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                  />
-                </div>
-              </div>
+              />
             </div>
+            <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
+              <input
+                type="text"
+                name="birthZone"
+                value={formData.birthZone}
+                placeholder="Enter birth zone"
+                onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+              />
+            </div>
+            <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Wereda</label>
+              <input
+                type="text"
+                name="birthWereda"
+                value={formData.birthWereda}
+                placeholder="Enter birth wereda"
+                onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+              />
+            </div>
+            <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Kebele</label>
+              <input
+                type="text"
+                name="birthKebele"
+                value={formData.birthKebele}
+                placeholder="Enter birth kebele"
+                onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+              />
+            </div>
+          </div>
+        </div>
             <div>
               <h4 className="text-xl font-medium mb-4 text-gray-700">Current Address</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Region</label>
-                  <input
-                    type="text"
-                    name="currentRegion"
-                    value={formData.currentRegion}
-                    placeholder="Enter current region"
-                    onChange={handleChange}
+              <input
+                type="text"
+                name="currentRegion"
+                value={formData.currentRegion}
+                placeholder="Enter current region"
+                onChange={handleChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
-                  <input
-                    type="text"
-                    name="currentZone"
-                    value={formData.currentZone}
-                    placeholder="Enter current zone"
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Wereda</label>
-                  <input
-                    type="text"
-                    name="currentWereda"
-                    value={formData.currentWereda}
-                    placeholder="Enter current wereda"
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Kebele</label>
-                  <input
-                    type="text"
-                    name="currentKebele"
-                    value={formData.currentKebele}
-                    placeholder="Enter current kebele"
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                  />
-                </div>
-              </div>
+              />
             </div>
+            <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
+              <input
+                type="text"
+                name="currentZone"
+                value={formData.currentZone}
+                placeholder="Enter current zone"
+                onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+              />
+            </div>
+            <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Wereda</label>
+              <input
+                type="text"
+                name="currentWereda"
+                value={formData.currentWereda}
+                placeholder="Enter current wereda"
+                onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+              />
+            </div>
+            <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Kebele</label>
+              <input
+                type="text"
+                name="currentKebele"
+                value={formData.currentKebele}
+                placeholder="Enter current kebele"
+                onChange={handleChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+              />
+            </div>
+          </div>
+        </div>
           </div>
         </div>
 
@@ -348,115 +348,115 @@ const UpdateInmate = ({setOpen,id}) => {
         <div className="bg-gray-50 p-6 rounded-lg">
           <h3 className="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">Physical Characteristics</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Height (cm)</label>
-              <input
-                type="number"
-                name="height"
-                value={formData.height}
-                placeholder="Enter height"
-                onChange={handleChange}
+            <input
+              type="number"
+              name="height"
+              value={formData.height}
+              placeholder="Enter height"
+              onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              />
-            </div>
-            <div>
+            />
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Hair Type</label>
-              <input
-                type="text"
-                name="hairType"
-                value={formData.hairType}
-                placeholder="Enter hair type"
-                onChange={handleChange}
+            <input
+              type="text"
+              name="hairType"
+              value={formData.hairType}
+              placeholder="Enter hair type"
+              onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              />
-            </div>
-            <div>
+            />
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Face</label>
-              <input
-                type="text"
-                name="face"
-                value={formData.face}
-                placeholder="Describe face features"
-                onChange={handleChange}
+            <input
+              type="text"
+              name="face"
+              value={formData.face}
+              placeholder="Describe face features"
+              onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              />
-            </div>
-            <div>
+            />
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Forehead</label>
-              <input
-                type="text"
-                name="foreHead"
-                value={formData.foreHead}
-                placeholder="Describe forehead"
-                onChange={handleChange}
+            <input
+              type="text"
+              name="foreHead"
+              value={formData.foreHead}
+              placeholder="Describe forehead"
+              onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              />
-            </div>
-            <div>
+            />
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nose</label>
-              <input
-                type="text"
-                name="nose"
-                value={formData.nose}
-                placeholder="Describe nose"
-                onChange={handleChange}
+            <input
+              type="text"
+              name="nose"
+              value={formData.nose}
+              placeholder="Describe nose"
+              onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              />
-            </div>
-            <div>
+            />
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Eye Color</label>
-              <input
-                type="text"
-                name="eyeColor"
-                value={formData.eyeColor}
-                placeholder="Enter eye color"
-                onChange={handleChange}
+            <input
+              type="text"
+              name="eyeColor"
+              value={formData.eyeColor}
+              placeholder="Enter eye color"
+              onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              />
-            </div>
-            <div>
+            />
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Teeth</label>
-              <input
-                type="text"
-                name="teeth"
-                value={formData.teeth}
-                placeholder="Describe teeth"
-                onChange={handleChange}
+            <input
+              type="text"
+              name="teeth"
+              value={formData.teeth}
+              placeholder="Describe teeth"
+              onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              />
-            </div>
-            <div>
+            />
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Lip</label>
-              <input
-                type="text"
-                name="lip"
-                value={formData.lip}
-                placeholder="Describe lip"
-                onChange={handleChange}
+            <input
+              type="text"
+              name="lip"
+              value={formData.lip}
+              placeholder="Describe lip"
+              onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              />
-            </div>
-            <div>
+            />
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Ear</label>
-              <input
-                type="text"
-                name="ear"
-                value={formData.ear}
-                placeholder="Describe ear"
-                onChange={handleChange}
+            <input
+              type="text"
+              name="ear"
+              value={formData.ear}
+              placeholder="Describe ear"
+              onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              />
-            </div>
-            <div>
+            />
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Special Symbol</label>
-              <input
-                type="text"
-                name="specialSymbol"
-                value={formData.specialSymbol}
-                placeholder="Enter special symbol"
-                onChange={handleChange}
+            <input
+              type="text"
+              name="specialSymbol"
+              value={formData.specialSymbol}
+              placeholder="Enter special symbol"
+              onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              />
+            />
             </div>
           </div>
         </div>
@@ -538,45 +538,45 @@ const UpdateInmate = ({setOpen,id}) => {
         <div className="bg-gray-50 p-6 rounded-lg">
           <h3 className="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">Case Information</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Case Type</label>
-              <input
-                type="text"
-                name="caseType"
-                value={formData.caseType}
-                placeholder="Enter case type"
-                onChange={handleChange}
+            <input
+              type="text"
+              name="caseType"
+              value={formData.caseType}
+              placeholder="Enter case type"
+              onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              />
-            </div>
-            <div>
+            />
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-              <input
-                type="date"
+            <input
+              type="date"
                 name="startDate"
                 value={formData.startDate}
-                onChange={handleChange}
+              onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-              />
-            </div>
-            <div>
+            />
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Sentence Year</label>
               <input
                 type="number"
                 name="sentenceYear"
                 value={formData.sentenceYear}
-                onChange={handleChange}
+              onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                 step="0.5"
               />
-            </div>
-            <div>
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Released Date</label>
-              <input
-                type="date"
-                name="releasedDate"
-                value={formData.releasedDate}
-                onChange={handleChange}
+            <input
+              type="date"
+              name="releasedDate"
+              value={formData.releasedDate}
+              onChange={handleChange}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                 readOnly
               />

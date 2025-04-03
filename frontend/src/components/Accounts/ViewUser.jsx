@@ -5,13 +5,13 @@ import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import ConfirmModal from "../Modals/ConfirmModal";
 import { FaUserEdit, FaTrash, FaSpinner, FaEnvelope, FaTag, FaVenusMars, FaBuilding, FaToggleOn, FaToggleOff } from "react-icons/fa";
-
+  
 const ViewUser = ({ id }) => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [openDelete, setOpenDelete] = useState(false);
-  const [openActivate, setOpenActivate] = useState(false);
+const [openActivate, setOpenActivate] = useState(false);
   const [prison, setPrison] = useState(null);
 
   useEffect(() => {
@@ -44,26 +44,26 @@ const ViewUser = ({ id }) => {
   }, [id]);
 
   const deleteUser = async () => {
-    try {
-      await axiosInstance.delete(`/user/delete-user/${id}`);
-      setOpenDelete(false);
-      toast.success("User deleted successfully!");
-      navigate("/admin-dashboard/users");
-    } catch (error) {
-      toast.error(error.response?.data?.error || "Error deleting user");
-    }
+      try {
+        await axiosInstance.delete(`/user/delete-user/${id}`);
+        setOpenDelete(false);
+        toast.success("User deleted successfully!");
+        navigate("/admin-dashboard/users");
+      } catch (error) {
+        toast.error(error.response?.data?.error || "Error deleting user");
+      }
   };
 
   const toggleActivation = async () => {
-    try {
-      await axiosInstance.put(`/user/activate-user/${id}`, { isactivated: !user.isactivated });
-      setUser((prevUser) => ({ ...prevUser, isactivated: !prevUser.isactivated }));
-      setOpenActivate(false);
-      toast.success(`User account ${user.isactivated ? "deactivated" : "activated"} successfully!`);
-    } catch (error) {
-      console.error("API Error:", error.response?.data);
-      toast.error(error.response?.data?.error || "Error updating user status");
-    }
+      try {
+        await axiosInstance.put(`/user/activate-user/${id}`, { isactivated: !user.isactivated });
+        setUser((prevUser) => ({ ...prevUser, isactivated: !prevUser.isactivated }));
+        setOpenActivate(false);
+        toast.success(`User account ${user.isactivated ? "deactivated" : "activated"} successfully!`);
+      } catch (error) {
+        console.error("API Error:", error.response?.data); 
+        toast.error(error.response?.data?.error || "Error updating user status");
+      }
   };
 
   // Get role display text
@@ -145,7 +145,7 @@ const ViewUser = ({ id }) => {
 
           {/* User information section */}
           <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-gray-50 p-5 rounded-lg shadow-sm">
                 <h3 className="text-lg font-medium text-gray-800 mb-4 border-b pb-2">
                   Personal Information
@@ -166,7 +166,7 @@ const ViewUser = ({ id }) => {
                     <div className="flex-shrink-0 w-8 h-8 bg-teal-100 rounded-full flex items-center justify-center mr-3">
                       <FaVenusMars className="text-teal-600" />
                     </div>
-                    <div>
+            <div>
                       <p className="text-sm text-gray-500">Gender</p>
                       <p className="text-gray-800 font-medium capitalize">{user.gender}</p>
                     </div>
@@ -211,7 +211,7 @@ const ViewUser = ({ id }) => {
                 </div>
               </div>
             </div>
-            
+
             {/* Additional information cards */}
             <div className="mt-6 bg-gray-50 p-5 rounded-lg shadow-sm">
               <h3 className="text-lg font-medium text-gray-800 mb-4 border-b pb-2">
@@ -258,29 +258,29 @@ const ViewUser = ({ id }) => {
               Edit User
             </button>
             
-            <button 
+          <button
               className="flex-1 sm:flex-none px-5 py-2.5 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center justify-center"
               onClick={() => setOpenDelete(true)}
-            >
+>
               <FaTrash className="mr-2" />
               Delete User
-            </button>
+</button>
           </div>
 
           {/* Confirmation Modals */}
-          <ConfirmModal
-            open={openActivate}
-            setOpen={setOpenActivate}
-            onDelete={toggleActivation}
-            message={`Do you want to ${user.isactivated ? "deactivate" : "activate"} this user account?`}
-          />
+<ConfirmModal
+  open={openActivate}
+  setOpen={setOpenActivate}
+  onDelete={toggleActivation}
+  message={`Do you want to ${user.isactivated ? "deactivate" : "activate"} this user account?`}
+/>
 
-          <ConfirmModal
-            open={openDelete}
-            setOpen={setOpenDelete}
-            onDelete={deleteUser}
-            message="Do you really want to delete this user? This action cannot be undone."
-          />
+<ConfirmModal
+  open={openDelete}
+  setOpen={setOpenDelete}
+  onDelete={deleteUser}
+  message="Do you really want to delete this user? This action cannot be undone."
+/>
         </>
       )}
     </div>

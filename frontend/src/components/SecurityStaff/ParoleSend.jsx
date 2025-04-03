@@ -149,9 +149,9 @@ const ParoleSend = () => {
     // Apply search filter
     if (query) {
       result = result.filter((inmate) =>
-        (inmate.inmate_name?.toLowerCase() || "").includes(query) || 
-        (inmate.status?.toLowerCase() || "").includes(query)
-      );
+      (inmate.inmate_name?.toLowerCase() || "").includes(query) || 
+      (inmate.status?.toLowerCase() || "").includes(query)
+    );
     }
     
     // Apply status filter
@@ -168,14 +168,14 @@ const ParoleSend = () => {
     <div className={`p-6 transition-all duration-300 mt-10 ${isCollapsed ? "ml-16" : "ml-64"}`}>
       {/* Header with back button */}
       <div className="mb-6 flex flex-wrap items-center gap-4">
-        <button
+      <button
           className="flex items-center text-gray-600 hover:text-gray-900 pr-4"
-          onClick={() => navigate(-1)}
-        >
+        onClick={() => navigate(-1)}
+      >
           <FaArrowLeft className="mr-2" />
           <span className="text-sm font-medium">Back</span>
-        </button>
-        
+      </button>
+
         <div>
           <h1 className="text-2xl font-bold text-gray-800 flex items-center">
             <FaClipboardCheck className="text-teal-600 mr-3" />
@@ -195,13 +195,13 @@ const ParoleSend = () => {
             <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
               <FaSearch className="text-gray-400" />
             </div>
-            <input
-              type="text"
-              placeholder="Search by inmate name or status..."
+        <input
+          type="text"
+          placeholder="Search by inmate name or status..."
               className="pl-10 pr-4 py-2.5 block w-full border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500"
               value={searchTerm}
-              onChange={handleSearch}
-            />
+          onChange={handleSearch}
+        />
           </div>
           
           {/* Refresh Button */}
@@ -262,7 +262,7 @@ const ParoleSend = () => {
             Rejected
           </button>
         </nav>
-      </div>
+        </div>
 
       {/* Results Summary */}
       <div className="mb-4">

@@ -4,6 +4,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recha
 import { FaUserTie, FaHourglassHalf, FaCheckCircle, FaTimesCircle, FaGavel } from "react-icons/fa";
 import NoticeWidget from "../Notices/NoticeWidget";
 import SummaryCard from "./Summary.jsx";
+import axiosInstance from "../../utils/axiosInstance";
 
 const COLORS = {
   totalParolees: "#1E3A8A",
@@ -14,20 +15,50 @@ const COLORS = {
 
 const CourtSummary = () => {
   const [summary, setSummary] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
-    const dummyData = {
-      totalParolees: 120,
-      pendingParolees: 85,
-      activeParolees: 30,
-      revokedParolees: 5,
+    const fetchParoleData = async () => {
+      setLoading(true);
+      try {
+        // Fetch all parole records
+        const response = await axiosInstance.get("/parole-tracking");
+        const paroleRecords = response.data.parole || [];
+        
+        // Calculate statistics
+        const totalParolees = paroleRecords.length;
+        const pendingParolees = paroleRecords.filter(record => record.status === 'pending').length;
+        const activeParolees = paroleRecords.filter(record => record.status === 'accepted').length;
+        const revokedParolees = paroleRecords.filter(record => record.status === 'rejected').length;
+        
+        // Set summary data
+        setSummary({
+          totalParolees,
+          pendingParolees,
+          activeParolees,
+          revokedParolees
+        });
+      } catch (err) {
+        console.error("Error fetching parole data:", err);
+        setError("Failed to load dashboard data");
+        
+        // Fallback to dummy data for development/demo
+        const dummyData = {
+          totalParolees: 120,
+          pendingParolees: 85,
+          activeParolees: 30,
+          revokedParolees: 5,
+        };
+        setSummary(dummyData);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    setTimeout(() => {
-      setSummary(dummyData);
-    }, 500);
+    fetchParoleData();
 
     const handleResize = () => {
       setIsMobile(window.innerWidth < 768);
@@ -37,10 +68,34 @@ const CourtSummary = () => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  if (!summary) {
+  if (loading) {
     return (
       <div className="flex justify-center items-center h-64 text-gray-600">
         <span className="animate-pulse">Loading data...</span>
+      </div>
+    );
+  }
+
+  if (error && !summary) {
+    return (
+      <div className="flex justify-center items-center h-64 text-red-500">
+        <div className="flex flex-col items-center">
+          <span>{error}</span>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!summary) {
+    return (
+      <div className="flex justify-center items-center h-64 text-gray-600">
+        <span>No data available</span>
       </div>
     );
   }

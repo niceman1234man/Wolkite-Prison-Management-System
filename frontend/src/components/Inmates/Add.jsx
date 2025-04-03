@@ -193,7 +193,7 @@ const AddInmate = ({setOpen}) => {
       const response = await axiosInstance.post("/inmates/new-inmate", data);
       console.log("API Response:", response.data); // Debugging log
       if (response.data) {
-        setFormData(false);
+         setFormData(false);
         toast.success("Inmate Registered Successfully!");
       } else {
         alert("Failed to add inmate.");

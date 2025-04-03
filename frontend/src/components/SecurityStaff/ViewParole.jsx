@@ -127,7 +127,7 @@ const ViewParole = ({ id }) => {
           {/* Header Banner */}
           <div className="bg-gradient-to-r from-teal-600 to-teal-700 p-6 text-white">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div>
+            <div>
                 <h1 className="text-2xl font-bold flex items-center">
                   <FaUser className="mr-3" />
                   {inmates.fullName}
@@ -293,7 +293,7 @@ const ViewParole = ({ id }) => {
                   )}
                 </div>
                 
-                <button
+            <button
                   className={`py-2.5 px-5 rounded-lg font-medium flex items-center ${
                     inmates.status === "accepted" || inmates.status === "rejected"
                       ? "bg-gray-200 text-gray-500 cursor-not-allowed"
@@ -320,7 +320,7 @@ const ViewParole = ({ id }) => {
                     : inmates.status === "accepted" || inmates.status === "rejected"
                       ? `Request ${inmates.status}`
                       : "Request Parole"}
-                </button>
+            </button>
               </div>
             </div>
           </div>

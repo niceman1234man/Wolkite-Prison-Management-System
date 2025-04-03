@@ -9,7 +9,7 @@ import ConfirmModal from "../Modals/ConfirmModal";
 const ViewInmate = ({id}) => {
   const [inmateData, setInmateData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [openDelete, setOpenDelete] = useState(false);
+   const [openDelete, setOpenDelete] = useState(false);
   const navigate = useNavigate();
 
   // Function to calculate parole date
@@ -86,30 +86,30 @@ const ViewInmate = ({id}) => {
     return <div className="flex justify-center items-center h-screen">No data available</div>;
   }
 
-  const handleDelete = async (id) => {
-    try {
-      const response = await axiosInstance.delete(
+   const handleDelete = async (id) => {
+      try {
+        const response = await axiosInstance.delete(
         `/inmate/delete-inmate/${id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-
-      if (response.data) {
-        toast.success("Inmate record deleted successfully.");
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+  
+        if (response.data) {
+          toast.success("Inmate record deleted successfully.");
         setOpenDelete(false);
-        navigate("/securityStaff-dashboard/inmates");
-      } else {
-        toast.error("Failed to delete the inmate record.");
+          navigate("/securityStaff-dashboard/inmates");
+        } else {
+          toast.error("Failed to delete the inmate record.");
+        }
+      } catch (error) {
+        console.error("Error:", error);
+        toast.error(error.response?.data?.error || "Error deleting the inmate record.");
       }
-    } catch (error) {
-      console.error("Error:", error);
-      toast.error(error.response?.data?.error || "Error deleting the inmate record.");
-    }
-  };
-
+    };
+  
   // Calculate dates and durations
   const paroleDate = calculateParoleDate(inmateData.startDate, inmateData.sentenceYear);
   const durationToParole = calculateDuration(inmateData.startDate, paroleDate);
@@ -162,7 +162,7 @@ const ViewInmate = ({id}) => {
       <div className="mb-8">
         <h3 className="text-2xl font-semibold mb-4 border-b pb-2">Location Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
+        <div>
             <h4 className="text-xl font-medium mb-3">Birth Place</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-gray-50 p-4 rounded-lg">
@@ -182,30 +182,30 @@ const ViewInmate = ({id}) => {
                 <p className="text-gray-900">{inmateData.birthKebele}</p>
               </div>
             </div>
-          </div>
-          <div>
+        </div>
+        <div>
             <h4 className="text-xl font-medium mb-3">Current Address</h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h5 className="font-medium text-gray-700">Region</h5>
                 <p className="text-gray-900">{inmateData.currentRegion}</p>
-              </div>
+        </div>
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h5 className="font-medium text-gray-700">Zone</h5>
                 <p className="text-gray-900">{inmateData.currentZone}</p>
-              </div>
+        </div>
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h5 className="font-medium text-gray-700">Wereda</h5>
                 <p className="text-gray-900">{inmateData.currentWereda}</p>
-              </div>
+        </div>
               <div className="bg-gray-50 p-4 rounded-lg">
                 <h5 className="font-medium text-gray-700">Kebele</h5>
                 <p className="text-gray-900">{inmateData.currentKebele}</p>
-              </div>
-            </div>
-          </div>
         </div>
-      </div>
+        </div>
+        </div>
+        </div>
+        </div>
 
       {/* Physical Characteristics Section */}
       <div className="mb-8">
@@ -214,25 +214,25 @@ const ViewInmate = ({id}) => {
           <div className="bg-gray-50 p-4 rounded-lg">
             <h4 className="text-lg font-medium text-gray-700">Height</h4>
             <p className="text-gray-900">{inmateData.height} cm</p>
-          </div>
+        </div>
           <div className="bg-gray-50 p-4 rounded-lg">
             <h4 className="text-lg font-medium text-gray-700">Hair Type</h4>
             <p className="text-gray-900">{inmateData.hairType}</p>
-          </div>
+        </div>
           <div className="bg-gray-50 p-4 rounded-lg">
             <h4 className="text-lg font-medium text-gray-700">Face</h4>
             <p className="text-gray-900">{inmateData.face}</p>
-          </div>
+        </div>
           <div className="bg-gray-50 p-4 rounded-lg">
             <h4 className="text-lg font-medium text-gray-700">Eye Color</h4>
             <p className="text-gray-900">{inmateData.eyeColor}</p>
-          </div>
+        </div>
           <div className="bg-gray-50 p-4 rounded-lg">
             <h4 className="text-lg font-medium text-gray-700">Special Symbol</h4>
             <p className="text-gray-900">{inmateData.specialSymbol}</p>
-          </div>
         </div>
-      </div>
+        </div>
+        </div>
 
       {/* Contact Information Section */}
       <div className="mb-8">
@@ -241,29 +241,29 @@ const ViewInmate = ({id}) => {
           <div className="bg-gray-50 p-4 rounded-lg">
             <h4 className="text-lg font-medium text-gray-700">Contact Name</h4>
             <p className="text-gray-900">{inmateData.contactName}</p>
-          </div>
+        </div>
           <div className="bg-gray-50 p-4 rounded-lg">
             <h4 className="text-lg font-medium text-gray-700">Phone Number</h4>
             <p className="text-gray-900">{inmateData.phoneNumber}</p>
-          </div>
+        </div>
           <div className="bg-gray-50 p-4 rounded-lg">
             <h4 className="text-lg font-medium text-gray-700">Contact Region</h4>
             <p className="text-gray-900">{inmateData.contactRegion}</p>
-          </div>
+        </div>
           <div className="bg-gray-50 p-4 rounded-lg">
             <h4 className="text-lg font-medium text-gray-700">Contact Zone</h4>
             <p className="text-gray-900">{inmateData.contactZone}</p>
-          </div>
+        </div>
           <div className="bg-gray-50 p-4 rounded-lg">
             <h4 className="text-lg font-medium text-gray-700">Contact Wereda</h4>
             <p className="text-gray-900">{inmateData.contactWereda}</p>
-          </div>
+        </div>
           <div className="bg-gray-50 p-4 rounded-lg">
             <h4 className="text-lg font-medium text-gray-700">Contact Kebele</h4>
             <p className="text-gray-900">{inmateData.contactKebele}</p>
-          </div>
         </div>
-      </div>
+        </div>
+        </div>
 
       {/* Case Information Section */}
       <div className="mb-8">
@@ -272,37 +272,37 @@ const ViewInmate = ({id}) => {
           <div className="bg-gray-50 p-4 rounded-lg">
             <h4 className="text-lg font-medium text-gray-700">Case Type</h4>
             <p className="text-gray-900">{inmateData.caseType}</p>
-          </div>
+        </div>
           <div className="bg-gray-50 p-4 rounded-lg">
             <h4 className="text-lg font-medium text-gray-700">Sentence Year</h4>
             <p className="text-gray-900">{inmateData.sentenceYear} years</p>
-          </div>
+        </div>
           <div className="bg-gray-50 p-4 rounded-lg">
             <h4 className="text-lg font-medium text-gray-700">Start Date</h4>
             <p className="text-gray-900">{formatToLocalDate(inmateData.startDate)}</p>
-          </div>
+        </div>
           <div className="bg-gray-50 p-4 rounded-lg">
             <h4 className="text-lg font-medium text-gray-700">Parole Date (2/3 of sentence)</h4>
             <p className="text-gray-900">{formatToLocalDate(paroleDate) || 'Not available'}</p>
-          </div>
+        </div>
           <div className="bg-gray-50 p-4 rounded-lg">
             <h4 className="text-lg font-medium text-gray-700">Duration Until Parole</h4>
             <p className="text-gray-900">{durationToParole || 'Not available'}</p>
-          </div>
+        </div>
           <div className="bg-gray-50 p-4 rounded-lg">
             <h4 className="text-lg font-medium text-gray-700">Duration From Parole to Release</h4>
             <p className="text-gray-900">{durationFromParoleToEnd || 'Not available'}</p>
-          </div>
+        </div>
           <div className="bg-gray-50 p-4 rounded-lg">
             <h4 className="text-lg font-medium text-gray-700">Released Date</h4>
             <p className="text-gray-900">{formatToLocalDate(inmateData.releasedDate) || 'Not released'}</p>
-          </div>
+        </div>
           <div className="bg-gray-50 p-4 rounded-lg md:col-span-2 lg:col-span-3">
             <h4 className="text-lg font-medium text-gray-700">Sentence Reason</h4>
             <p className="text-gray-900">{inmateData.sentenceReason}</p>
-          </div>
         </div>
-      </div>
+        </div>
+        </div>
 
       {/* Registrar Information Section */}
       <div className="mb-8">
@@ -311,22 +311,22 @@ const ViewInmate = ({id}) => {
           <div className="bg-gray-50 p-4 rounded-lg">
             <h4 className="text-lg font-medium text-gray-700">Registrar Worker Name</h4>
             <p className="text-gray-900">{inmateData.registrarWorkerName}</p>
-          </div>
+        </div>
           {inmateData.signature && (
             <div className="bg-gray-50 p-4 rounded-lg">
               <h4 className="text-lg font-medium text-gray-700">Signature</h4>
               <img src={inmateData.signature} alt="Registrar Signature" className="max-h-20" />
-            </div>
+        </div>
           )}
         </div>
       </div>
 
-      <ConfirmModal
-        open={openDelete}
-        setOpen={setOpenDelete}
-        onDelete={() => handleDelete(id)}
-        message="Do you really want to delete this Inmate? This action cannot be undone."
-      />
+        <ConfirmModal
+                    open={openDelete}
+                    setOpen={setOpenDelete}
+                    onDelete={() => handleDelete(id)}
+                    message="Do you really want to delete this Inmate? This action cannot be undone."
+                  />
     </div>
   );
 };

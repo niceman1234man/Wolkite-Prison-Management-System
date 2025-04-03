@@ -220,9 +220,9 @@ function Login({ onClose, isVisitor = false }) {
         console.log("Staff login successful:", response.data);
         
         // If we get here, staff login was successful
-        if (response.data && response.data.accessToken) {
+      if (response.data && response.data.accessToken) {
           // Store token
-          localStorage.setItem("token", response.data.accessToken);
+        localStorage.setItem("token", response.data.accessToken);
           
           // Store user data
           const userData = response.data.userInfo;
@@ -251,33 +251,33 @@ function Login({ onClose, isVisitor = false }) {
             console.log("User role:", role);
             
             switch (role) {
-              case "admin":
-                navigate("/admin-dashboard");
-                break;
-              case "police-officer":
-                navigate("/policeOfficer-dashboard");
-                break;
-              case "inspector":
-                navigate("/inspector-dashboard");
-                break;
-              case "security":
-                navigate("/securityStaff-dashboard");
-                break;
-              case "court":
-                navigate("/court-dashboard");
-                break;
+            case "admin":
+              navigate("/admin-dashboard");
+              break;
+            case "police-officer":
+              navigate("/policeOfficer-dashboard");
+              break;
+            case "inspector":
+              navigate("/inspector-dashboard");
+              break;
+            case "security":
+              navigate("/securityStaff-dashboard");
+              break;
+            case "court":
+              navigate("/court-dashboard");
+              break;
               case "woreda":
                 navigate("/woreda-dashboard");
-                break;
-              default:
+              break;
+            default:
                 console.error("Unknown role:", userData.role);
                 setError("Unknown user role. Please contact an administrator.");
-                navigate("/login");
+              navigate("/login");
                 break;
-            }
-          } else {
-            navigate("/block");
           }
+        } else {
+          navigate("/block");
+        }
           
           successfulLogin = true;
         }
@@ -374,72 +374,72 @@ function Login({ onClose, isVisitor = false }) {
   return (
     <div className="w-full">
       {/* <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">Login</h2> */}
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4 text-center text-sm">
-          {error}
-        </div>
-      )}
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="relative">
-          <FaUser className="absolute left-3 top-3 text-gray-500" />
-          <input
-            type="email"
-            name="email"
-            placeholder="Email Address"
-            value={user.email}
-            onChange={handleChange}
-            className="pl-10 py-2 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-gray-900 bg-white placeholder-gray-500"
-            required
-          />
-        </div>
-
-        <div className="relative">
-          <FaLock className="absolute left-3 top-3 text-gray-500" />
-          <input
-            type={showPassword ? "text" : "password"}
-            name="password"
-            placeholder="Password"
-            value={user.password}
-            onChange={handleChange}
-            className="pl-10 pr-10 py-2 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-gray-900 bg-white placeholder-gray-500"
-            required
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute right-3 top-3 text-gray-500 hover:text-gray-700 focus:outline-none"
-          >
-            {showPassword ? <FaEyeSlash /> : <FaEye />}
-          </button>
-        </div>
-
-        <button
-          type="submit"
-          className={`py-2 bg-teal-600 text-white font-semibold rounded-lg w-full transition duration-300 ${
-            user.email && user.password
-              ? "hover:bg-teal-700 transform hover:scale-105"
-              : "opacity-50 cursor-not-allowed"
-          }`}
-          disabled={!user.email || !user.password || isLoading}
-        >
-          {isLoading ? (
-            <div className="flex items-center justify-center">
-              <FaSpinner className="animate-spin mr-2" />
-              Logging in...
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4 text-center text-sm">
+              {error}
             </div>
-          ) : (
-            "Login"
           )}
-        </button>
+      <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="relative">
+              <FaUser className="absolute left-3 top-3 text-gray-500" />
+              <input
+                type="email"
+                name="email"
+                placeholder="Email Address"
+                value={user.email}
+                onChange={handleChange}
+            className="pl-10 py-2 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-gray-900 bg-white placeholder-gray-500"
+                required
+              />
+            </div>
+
+            <div className="relative">
+              <FaLock className="absolute left-3 top-3 text-gray-500" />
+              <input
+            type={showPassword ? "text" : "password"}
+                name="password"
+                placeholder="Password"
+                value={user.password}
+                onChange={handleChange}
+            className="pl-10 pr-10 py-2 border border-gray-300 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent text-gray-900 bg-white placeholder-gray-500"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-3 text-gray-500 hover:text-gray-700 focus:outline-none"
+              >
+            {showPassword ? <FaEyeSlash /> : <FaEye />}
+              </button>
+            </div>
+
+            <button
+              type="submit"
+              className={`py-2 bg-teal-600 text-white font-semibold rounded-lg w-full transition duration-300 ${
+                user.email && user.password
+                  ? "hover:bg-teal-700 transform hover:scale-105"
+                  : "opacity-50 cursor-not-allowed"
+              }`}
+              disabled={!user.email || !user.password || isLoading}
+            >
+              {isLoading ? (
+                <div className="flex items-center justify-center">
+                  <FaSpinner className="animate-spin mr-2" />
+                  Logging in...
+                </div>
+              ) : (
+                "Login"
+              )}
+            </button>
 
         {!isVisitor && (
-          <div className="text-center mt-3 space-y-2">
-            <button
-              onClick={() => navigate("/forgot-password")}
-              className="text-teal-600 hover:text-teal-700 hover:underline transition duration-300 text-sm"
-            >
-              Forgot Password?
-            </button>
+            <div className="text-center mt-3 space-y-2">
+              <button
+                onClick={() => navigate("/forgot-password")}
+                className="text-teal-600 hover:text-teal-700 hover:underline transition duration-300 text-sm"
+              >
+                Forgot Password?
+              </button>
           </div>
         )}
         
@@ -542,7 +542,7 @@ function Login({ onClose, isVisitor = false }) {
             )}
           </div>
         )}
-      </form>
+          </form>
     </div>
   );
 }

@@ -28,7 +28,7 @@ const InmateClearance = ({setOpen}) => {
   const [errorMessage, setErrorMessage] = useState("");
   const [sign, setSign] = useState(null);
   const [signPreview, setSignPreview] = useState(null);
-  const [inmates, setInmates] = useState([]);
+  const [inmates, setInmates] = useState([]); 
   const [selectedInmate, setSelectedInmate] = useState(null);
   const [departments, setDepartments] = useState([
     { id: 1, name: "Security", status: "Pending" },
@@ -44,7 +44,7 @@ const InmateClearance = ({setOpen}) => {
     const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
     return `CLR-${timestamp}-${random}`;
   }
-
+  
   // Handle input changes
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -105,7 +105,7 @@ const InmateClearance = ({setOpen}) => {
         setLoading(false);
       }
     };
-
+    
     const fetchInmateDetails = async () => {
       try {
         const response = await axiosInstance.get(`/inmates/${inmateId}`);
@@ -166,13 +166,13 @@ const InmateClearance = ({setOpen}) => {
 
     try {
       // Create FormData for submission
-      const formdata = new FormData();
+    const formdata = new FormData();
       
       // Add all required fields explicitly
-      formdata.append("date", formData.date);
+    formdata.append("date", formData.date);
       formdata.append("inmate", formData.inmate);
-      formdata.append("reason", formData.reason);
-      formdata.append("remark", formData.remark);
+    formdata.append("reason", formData.reason);
+    formdata.append("remark", formData.remark);
       formdata.append("registrar", formData.registrar);
       formdata.append("clearanceId", formData.clearanceId);
       
@@ -183,10 +183,10 @@ const InmateClearance = ({setOpen}) => {
       formdata.append("notes", formData.notes || "");
       
       // Add file if available
-      if (sign) {
-        formdata.append("sign", sign);
-      }
-      
+    if (sign) {
+      formdata.append("sign", sign);
+    }
+
       const response = await axiosInstance.post("/clearance/addClearance", formdata);
       
       if (response.data) {
@@ -214,7 +214,7 @@ const InmateClearance = ({setOpen}) => {
         if (setOpen) {
           setTimeout(() => {
             setOpen(false);
-            navigate("/securityStaff-dashboard/clearance");
+        navigate("/securityStaff-dashboard/clearance");
           }, 1500);
         }
       } else {
@@ -265,30 +265,30 @@ const InmateClearance = ({setOpen}) => {
           </h3>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Select Inmate <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="inmate"
+            </label>
+            <select
+              name="inmate"
                 value={formData.inmate}
-                onChange={handleChange}
+              onChange={handleChange}
                 className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500"
-                required
+              required
                 disabled={loading}
-              >
-                <option value="">Select Inmate</option>
-                {loading ? (
-                  <option disabled>Loading inmates...</option>
-                ) : (
-                  inmates.map((inmate) => (
+            >
+              <option value="">Select Inmate</option>
+              {loading ? (
+                <option disabled>Loading inmates...</option>
+              ) : (
+                inmates.map((inmate) => (
                     <option key={inmate._id} value={inmate.fullName || inmate.name}>
                       {inmate.fullName || inmate.name}
-                    </option>
-                  ))
-                )}
-              </select>
-            </div>
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -322,19 +322,19 @@ const InmateClearance = ({setOpen}) => {
               <p className="mt-1 text-xs text-gray-500">Automatically generated unique ID</p>
             </div>
             
-            <div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Registrar Name <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
+            <input
+              type="text"
                 name="registrar"
-                value={formData.registrar}
-                onChange={handleChange}
+              value={formData.registrar}
+              onChange={handleChange}
                 placeholder="Enter registrar's full name"
                 className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500"
-                required
-              />
+              required
+            />
             </div>
           </div>
         </div>
@@ -465,29 +465,29 @@ const InmateClearance = ({setOpen}) => {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Clearance Reason <span className="text-red-500">*</span>
               </label>
-              <textarea
-                name="reason"
-                value={formData.reason}
-                onChange={handleChange}
+            <textarea
+              name="reason"
+              value={formData.reason}
+              onChange={handleChange}
                 placeholder="Enter detailed reason for clearance"
-                rows="3"
+              rows="3"
                 className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500"
-                required
-              ></textarea>
-            </div>
+              required
+            ></textarea>
+          </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Additional Remarks
               </label>
-              <textarea
-                name="remark"
-                value={formData.remark}
-                onChange={handleChange}
+            <textarea
+              name="remark"
+              value={formData.remark}
+              onChange={handleChange}
                 placeholder="Any additional information or notes"
-                rows="2"
+              rows="2"
                 className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500"
-              ></textarea>
+            ></textarea>
             </div>
           </div>
         </div>
@@ -503,9 +503,9 @@ const InmateClearance = ({setOpen}) => {
               Digital Signature
             </label>
             <div className="flex items-center space-x-4">
-              <input
-                type="file"
-                name="sign"
+            <input
+              type="file"
+              name="sign"
                 onChange={handleSignChange}
                 className="w-full p-2 border border-gray-300 rounded-md shadow-sm"
                 accept=".jpg,.png,.jpeg"
