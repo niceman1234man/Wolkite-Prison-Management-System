@@ -96,3 +96,55 @@ export const validateUserForm = (userData) => {
     
     return errors;
   };
+
+  // Incident form validation
+  export const validateIncidentForm = (incidentData) => {
+    const errors = {};
+    
+    // Incident ID validation
+    if (!incidentData.incidentId.trim()) {
+      errors.incidentId = "Incident ID is required";
+    }
+    
+    // Reporter validation
+    if (!incidentData.reporter.trim()) {
+      errors.reporter = "Reporter name is required";
+    } else if (incidentData.reporter.trim().length < 3) {
+      errors.reporter = "Reporter name must be at least 3 characters";
+    }
+    
+    // Inmate validation
+    if (!incidentData.inmate) {
+      errors.inmate = "Please select an inmate";
+    }
+    
+    // Date validation
+    if (!incidentData.incidentDate) {
+      errors.incidentDate = "Incident date is required";
+    } else {
+      const selectedDate = new Date(incidentData.incidentDate);
+      const currentDate = new Date();
+      if (selectedDate > currentDate) {
+        errors.incidentDate = "Incident date cannot be in the future";
+      }
+    }
+    
+    // Incident type validation
+    if (!incidentData.incidentType) {
+      errors.incidentType = "Please select an incident type";
+    }
+    
+    // Status validation
+    if (!incidentData.status) {
+      errors.status = "Please select a status";
+    }
+    
+    // Description validation
+    if (!incidentData.description.trim()) {
+      errors.description = "Description is required";
+    } else if (incidentData.description.trim().length < 10) {
+      errors.description = "Description should be at least 10 characters";
+    }
+    
+    return errors;
+  };
