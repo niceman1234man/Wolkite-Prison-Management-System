@@ -31,6 +31,7 @@ import dashboardRouter from "./router/dashboard.router.js";
 import { checkCustodyAlerts } from "./controller/notification.controller.js";
 import visitorAccountRouter from "./router/visitorAccount.router.js";
 import visitorScheduleRouter from "./router/visitorSchedule.router.js";
+import messageRoutes from "./routes/messageRoutes.js";
 import { EventEmitter } from 'events';
 EventEmitter.defaultMaxListeners = 15; // Increase from default 10
 
@@ -79,6 +80,7 @@ app.use("/api/woreda", woredaRouter);
 app.use("/api/dashboard", dashboardRouter);
 app.use("/api/auth", visitorAccountRouter);
 app.use("/api/visitor/schedule", visitorScheduleRouter);
+app.use("/api/messages", messageRoutes);
 
 // Connect to database 
 mongoose

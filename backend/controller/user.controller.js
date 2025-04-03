@@ -1,4 +1,5 @@
 import { User } from "../model/user.model.js";
+import Message from '../model/Message.js';
 
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
@@ -83,11 +84,18 @@ export const login = async (req, res) => {
 
     console.log(`User ${userInfo.email} logged in with ID: ${userInfo._id}`);
 
+    // After successful authentication, check for unread messages
+    const unreadMessages = await Message.countDocuments({
+      receiverId: userInfo._id,
+      read: false
+    });
+
     res.status(200).json({
       error: false,
       userInfo,
       accessToken,
       message: "Login successful",
+      unreadMessages: unreadMessages
     });
 
   } catch (error) {
