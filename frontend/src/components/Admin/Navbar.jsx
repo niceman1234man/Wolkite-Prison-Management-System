@@ -3,10 +3,11 @@ import { useNavigate } from "react-router";
 import { useSelector } from "react-redux";
 import { getInitials } from "../getNameInitials.js";
 import { FaBars, FaDungeon } from "react-icons/fa"; // Prison Icon
-import { FiSettings, FiHelpCircle, FiLogOut } from "react-icons/fi";
+import { FiSettings, FiHelpCircle, FiLogOut, FiMessageSquare } from "react-icons/fi";
 import { AiOutlineUser } from "react-icons/ai";
 import axiosInstance from "../../utils/axiosInstance.js";
 import NotificationBell from "../Notices/NotificationBell";
+import MessagingSystem from "../Messaging/MessagingSystem";
 import "./Navbar.css"; // Import CSS for styling
 
 const Navbar = ({ toggleSidebar }) => {
@@ -15,7 +16,48 @@ const Navbar = ({ toggleSidebar }) => {
   const fullName = user ? `${user.firstName} ${user.middleName}` : "Loading...";
   const initial = user ? getInitials(fullName) : "";
   const userRole = user ? user.role?.toLowerCase() : "";
+  const [showMessaging, setShowMessaging] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   
+  // Fetch unread message count
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const response = await axiosInstance.get('/messages/unread/count');
+        console.log('Navbar unread count response:', response.data);
+        
+        // Handle different possible response structures
+        if (response.data) {
+          if (typeof response.data.count === 'number') {
+            setUnreadCount(response.data.count);
+          } else if (typeof response.data === 'number') {
+            setUnreadCount(response.data);
+          } else if (response.data.total && typeof response.data.total === 'number') {
+            setUnreadCount(response.data.total);
+          } else {
+            // Count all unread messages if the response is an object with user IDs as keys
+            const countObj = response.data;
+            if (typeof countObj === 'object' && !Array.isArray(countObj)) {
+              const total = Object.values(countObj).reduce((sum, count) => 
+                sum + (typeof count === 'number' ? count : 0), 0);
+              setUnreadCount(total);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch unread count:', error);
+        // Don't show error to user as this is background functionality
+      }
+    };
+
+    if (user) {
+      fetchUnreadCount();
+      // Set up polling every 30 seconds
+      const interval = setInterval(fetchUnreadCount, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
+
   // Map user role to dashboard type for the NotificationBell
   const getDashboardType = () => {
     if (!userRole) return "visitor"; // Default fallback
@@ -75,6 +117,19 @@ const Navbar = ({ toggleSidebar }) => {
 
       {/* Right Section */}
       <div className="navbar-right flex items-center gap-4">
+        {/* Message Icon */}
+        <button
+          onClick={() => setShowMessaging(true)}
+          className="relative p-2 text-gray-700 hover:text-gray-900 transition-colors"
+        >
+          <FiMessageSquare size={24} />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+              {unreadCount}
+            </span>
+          )}
+        </button>
+
         {/* New Notification Bell Component */}
         <NotificationBell dashboardType={getDashboardType()} />
 
@@ -87,7 +142,7 @@ const Navbar = ({ toggleSidebar }) => {
             <div className="relative">
               {user?.photo ? (
                 <img
-                  src={`http://localhost:5000/uploads/${user.photo}`}
+                  src={`http://localhost:5001/uploads/${user.photo}`}
                   className="w-10 h-10 rounded-full border border-gray-300"
                   alt="User"
                 />
@@ -158,6 +213,9 @@ const Navbar = ({ toggleSidebar }) => {
           )}
         </div>
       </div>
+
+      {/* Messaging System Modal */}
+      <MessagingSystem isOpen={showMessaging} onClose={() => setShowMessaging(false)} />
     </div>
   );
 };

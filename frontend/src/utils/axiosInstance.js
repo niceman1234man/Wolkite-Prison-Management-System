@@ -48,6 +48,38 @@ axiosInstance.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
+    // Special handling for message-related endpoints that need userId
+    if (config.url.includes('/messages/unread/count')) {
+      // Get the user from localStorage to ensure it's always available
+      try {
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          const userData = JSON.parse(userStr);
+          // For GET requests, add userId as query param
+          if (config.method === 'get') {
+            config.params = {
+              ...config.params,
+              currentUserId: userData._id,
+              userId: userData._id
+            };
+          } 
+          // For POST requests, include userId in the body
+          else if (config.method === 'post') {
+            if (typeof config.data === 'object' && config.data !== null) {
+              config.data = {
+                ...config.data,
+                userId: userData._id
+              };
+            } else {
+              config.data = { userId: userData._id };
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error adding user ID to message request:', err);
+      }
+    }
+
     // Special handling for FormData
     if (config.data instanceof FormData) {
       // Remove the default Content-Type header for FormData
