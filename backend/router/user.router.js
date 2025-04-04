@@ -2,7 +2,7 @@ import express from 'express'
 import { createAccount,getUser,getAllUsers,login, updateUser, updatePassword, activateUser, deleteUser, ForgotPassword, ResetPassword, updateProfile } from '../controller/user.controller.js';
 import { authenticateToken } from '../utilities.js';
 import { upload } from '../fileMiddleware.js';
-export const userRouter=express.Router();
+export const userRouter = express.Router();
 userRouter.post('/create-account',upload.single("photo"),createAccount);
 userRouter.post('/login',login);
 userRouter.get('/getAlluser',authenticateToken,getAllUsers);

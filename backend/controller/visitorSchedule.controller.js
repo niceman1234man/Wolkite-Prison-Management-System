@@ -219,56 +219,68 @@ export const createSchedule = async (req, res) => {
 // Get visitor's scheduled visits
 export const getVisitorSchedules = async (req, res) => {
   try {
-    console.log("User role:", req.user.role);
-    console.log("User ID:", req.user.id);
+    console.log("Getting visitor schedules with query params:", req.query);
+    
+    // Get userId from either authenticated user or query parameter
+    let userId = null;
+    let userRole = "visitor"; // Default role
+    
+    // Check if user is authenticated via req.user
+    if (req.user) {
+      userId = req.user.id || req.user._id;
+      userRole = req.user.role || req.user.userType;
+      console.log("User authenticated via token:", { userId, userRole });
+    } 
+    // Otherwise try to get from query parameters
+    else if (req.query.userId) {
+      userId = req.query.userId;
+      console.log("Using userId from query parameters:", userId);
+    }
+    
     console.log("Status parameter:", req.query.status);
 
     let query = {};
     
-    // Different queries based on user role
-    switch (req.user.role) {
-      case "police-officer":
-        // If status parameter is "all", don't filter by status for police officers
-        if (req.query.status === "all") {
-          // No status filter, get all schedules
-          console.log("Police officer fetching ALL schedules");
-        } else {
-          // Default to pending if no status specified or if a specific status is requested
-          query.status = req.query.status || "pending";
-          console.log("Police officer fetching schedules with status:", query.status);
-        }
-        break;
-      case "visitor":
-        // Visitors see their own schedules - check both userId and visitorId fields
-        // Use $or to check both fields
+    // Different queries based on user role or authentication status
+    if (userRole === "police-officer") {
+      // If status parameter is "all", don't filter by status for police officers
+      if (req.query.status === "all") {
+        // No status filter, get all schedules
+        console.log("Police officer fetching ALL schedules");
+      } else {
+        // Default to pending if no status specified or if a specific status is requested
+        query.status = req.query.status || "pending";
+        console.log("Police officer fetching schedules with status:", query.status);
+      }
+    } else if (userRole === "admin") {
+      // Admins see all schedules, with optional status filter
+      if (req.query.status && req.query.status !== "all") {
+        query.status = req.query.status;
+      }
+      console.log("Admin fetching schedules");
+    } else {
+      // Default case - visitor or unauthenticated with userId in query
+      if (userId) {
+        // If we have a userId, filter by it
         query.$or = [
-          { userId: req.user.id },
-          { visitorId: req.user.id }
+          { userId: userId },
+          { visitorId: userId }
         ];
-        console.log("Visitor fetching their own schedules with ID:", req.user.id);
+        console.log("Visitor fetching their own schedules with ID:", userId);
         
         // Add status filter if provided and not "all"
         if (req.query.status && req.query.status !== "all") {
           query.status = req.query.status;
         }
-        break;
-      case "admin":
-        // Admins see all schedules, with optional status filter
-        if (req.query.status && req.query.status !== "all") {
-          query.status = req.query.status;
-        }
-        break;
-      default:
-        // Default to user's own schedules - check both fields
-        query.$or = [
-          { userId: req.user.id },
-          { visitorId: req.user.id }
-        ];
-        
-        // Add status filter if provided and not "all"
-        if (req.query.status && req.query.status !== "all") {
-          query.status = req.query.status;
-        }
+      } else {
+        // No user ID available, return empty array
+        console.log("No user ID available, returning empty result");
+        return res.json({
+          success: true,
+          data: [],
+          message: "No userId provided in request"
+        });
+      }
     }
 
     console.log("Final query:", JSON.stringify(query, null, 2));
@@ -333,38 +345,72 @@ export const getSchedule = async (req, res) => {
 // Cancel visit schedule
 export const cancelSchedule = async (req, res) => {
   try {
+    console.log("Cancelling schedule with ID:", req.params.id);
     const schedule = await VisitorSchedule.findById(req.params.id);
 
     if (!schedule) {
+      console.log("Schedule not found");
       return res.status(404).json({
         success: false,
         message: "Schedule not found",
       });
     }
 
-    // Check if the visitor owns this schedule
-    if (schedule.visitorId.toString() !== req.user.id) {
+    // Get the user ID from either req.user or query params
+    let userId = null;
+    if (req.user) {
+      userId = req.user.id || req.user._id;
+    } else if (req.query.userId) {
+      userId = req.query.userId;
+    } else if (req.body.userId) {
+      userId = req.body.userId;
+    }
+
+    console.log("User ID:", userId);
+    console.log("Schedule userId:", schedule.userId);
+    console.log("Schedule visitorId:", schedule.visitorId);
+
+    // Check if the visitor owns this schedule - check both userId and visitorId
+    const scheduleUserId = schedule.userId ? schedule.userId.toString() : null;
+    const scheduleVisitorId = schedule.visitorId ? schedule.visitorId.toString() : null;
+    
+    // Skip permission check for admins and police officers
+    if (req.user && (req.user.role === 'admin' || req.user.role === 'police-officer')) {
+      console.log("Admin or police officer is cancelling the schedule");
+    } 
+    // Check if user ID matches either userId or visitorId in the schedule
+    else if (userId && (userId === scheduleUserId || userId === scheduleVisitorId)) {
+      console.log("User authorized to cancel their own schedule");
+    } 
+    else {
+      console.log("Not authorized - userId doesn't match");
       return res.status(403).json({
         success: false,
         message: "Not authorized to cancel this schedule",
       });
     }
 
-    // Only allow cancellation of pending schedules
-    if (schedule.status !== "pending") {
+    // Allow cancellation of schedules in various states, but mainly check for completed
+    if (schedule.status && schedule.status.toLowerCase() === "completed") {
+      console.log("Cannot cancel a completed schedule");
       return res.status(400).json({
         success: false,
-        message: "Only pending schedules can be cancelled",
+        message: "Completed schedules cannot be cancelled",
       });
     }
 
-    schedule.status = "cancelled";
-    await schedule.save();
+    // Update schedule status using findByIdAndUpdate for better error handling
+    const updatedSchedule = await VisitorSchedule.findByIdAndUpdate(
+      req.params.id,
+      { $set: { status: "cancelled" } },
+      { new: true }
+    );
 
+    console.log("Schedule cancelled successfully");
     res.json({
       success: true,
       message: "Schedule cancelled successfully",
-      data: schedule,
+      data: updatedSchedule,
     });
   } catch (error) {
     console.error("Error in cancelSchedule:", error);

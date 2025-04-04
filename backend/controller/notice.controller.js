@@ -168,26 +168,47 @@ export const addNotice = async (req, res) => {
 // ✅ Get All Notices
 export const getAllNotices = async (req, res) => {
   try {
-    // Get the user ID from the auth token
-    const userId = req.user.id;
-    console.log(`Getting all notices for user: ${userId}`);
+    // Get user ID from either authenticated request or query parameters
+    let userId;
     
-    // Find all notices
-    const notices = await Notice.find()
-      .populate('readBy', 'id firstName lastName') // Populate readBy to get user details if needed
-      .lean(); // Use lean() for better performance
+    if (req.user && req.user.id) {
+      // From authenticated request
+      userId = req.user.id;
+      console.log(`Getting all notices for authenticated user: ${userId}`);
+    } else if (req.query.userId) {
+      // From query parameters (used for unauthenticated requests)
+      userId = req.query.userId;
+      console.log(`Getting all notices with userId from query: ${userId}`);
+    } else {
+      // No user ID available, but still return notices without read status
+      console.log("Getting all notices without user ID (read status cannot be determined)");
+    }
+
+    // Get all notices that are posted
+    const notices = await Notice.find({ isPosted: true }).sort({ date: -1 });
+    
+    if (!notices || notices.length === 0) {
+      return res.status(200).json({
+        success: true,
+        message: "No notices found",
+        data: []
+      });
+    }
     
     console.log(`Found ${notices.length} notices`);
     
-    // For debugging, log the first notice's readBy array if it exists
-    if (notices.length > 0 && notices[0].readBy) {
-      console.log(`First notice readBy array: ${JSON.stringify(notices[0].readBy)}`);
-    }
-    
-    res.status(200).json({ success: true, data: notices });
+    // Return all notices (client will handle filtering based on readBy array)
+    res.status(200).json({
+      success: true,
+      data: notices,
+    });
   } catch (error) {
-    console.error("Error in getAllNotices:", error);
-    res.status(500).json({ success: false, message: "Server error", error: error.message });
+    console.error(`Error getting all notices: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      message: "Error getting notices",
+      error: error.message,
+    });
   }
 };
 
@@ -268,13 +289,31 @@ export const markAsRead = async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Check if req.user exists
-    if (!req.user || !req.user.id) {
-      console.log(`User authentication issue - req.user:`, req.user);
-      return res.status(401).json({ success: false, message: "User not authenticated" });
+    // Get user ID from either req.user, query params, or request body
+    let userId;
+    
+    if (req.user && req.user.id) {
+      // First priority: From authenticated request
+      userId = req.user.id;
+      console.log(`Using authenticated user ID: ${userId}`);
+    } else if (req.query.userId) {
+      // Second priority: From query parameters
+      userId = req.query.userId;
+      console.log(`Using user ID from query params: ${userId}`);
+    } else if (req.body && req.body.userId) {
+      // Third priority: From request body
+      userId = req.body.userId;
+      console.log(`Using user ID from request body: ${userId}`);
+    } else {
+      // No user ID available
+      console.log(`No user ID found in request:`, {
+        userObj: req.user,
+        query: req.query,
+        body: req.body
+      });
+      return res.status(401).json({ success: false, message: "User ID is required" });
     }
     
-    const userId = req.user.id;
     console.log(`Marking notice ${id} as read for user ${userId}`);
 
     const notice = await Notice.findById(id);
@@ -294,22 +333,34 @@ export const markAsRead = async (req, res) => {
     // Normalize user ID (ensure it's a string for comparison)
     const normalizedUserId = userId.toString();
     
-    // Check if user ID is already in the readBy array (with better string comparison)
-    const isAlreadyRead = notice.readBy.some(readerId => {
-      if (!readerId) return false;
-      
+    // Check if user ID is already in the readBy array
+    let userHasReadNotice = false;
+    
+    for (const readerId of notice.readBy) {
       try {
-        // Handle both ObjectId and String cases
-        const readerIdStr = typeof readerId === 'object' && readerId !== null ? 
-          readerId.toString() : String(readerId);
-        return readerIdStr === normalizedUserId;
+        // Handle different possible formats
+        if (typeof readerId === 'string') {
+          if (readerId === normalizedUserId) {
+            userHasReadNotice = true;
+            break;
+          }
+        } else if (readerId) {
+          // It could be an object with _id or id
+          const readerIdStr = readerId._id ? 
+            readerId._id.toString() : 
+            (readerId.id ? readerId.id.toString() : null);
+          
+          if (readerIdStr === normalizedUserId) {
+            userHasReadNotice = true;
+            break;
+          }
+        }
       } catch (error) {
         console.error(`Error comparing reader IDs:`, error);
-        return false;
       }
-    });
+    }
     
-    if (isAlreadyRead) {
+    if (userHasReadNotice) {
       console.log(`Notice ${id} already read by user ${userId}`);
       return res.status(200).json({ 
         success: true, 
@@ -321,8 +372,8 @@ export const markAsRead = async (req, res) => {
       });
     }
 
-    // Add user ID to the readBy array
-    notice.readBy.push(userId);
+    // Add user ID to the readBy array - store as a string for consistency
+    notice.readBy.push(normalizedUserId);
     
     // Save the updated notice
     const updatedNotice = await notice.save();
