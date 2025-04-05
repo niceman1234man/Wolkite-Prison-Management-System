@@ -140,17 +140,17 @@ const Navbar = ({ toggleSidebar }) => {
             onClick={() => setShowProfileDropdown(!showProfileDropdown)}
           >
             <div className="relative">
-              {user?.photo ? (
-                <img
+            {user?.photo ? (
+              <img
                   src={`http://localhost:5001/uploads/${user.photo}`}
-                  className="w-10 h-10 rounded-full border border-gray-300"
-                  alt="User"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-gray-500 flex items-center justify-center text-white font-bold">
-                  {initial}
-                </div>
-              )}
+                className="w-10 h-10 rounded-full border border-gray-300"
+                alt="User"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-gray-500 flex items-center justify-center text-white font-bold">
+                {initial}
+              </div>
+            )}
               <span className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></span>
             </div>
             <span className="text-gray-700 font-medium hidden md:inline">{fullName}</span>

@@ -1,38 +1,210 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import axiosInstance from "../../../utils/axiosInstance";
-import { useParams } from "react-router-dom";
-import { TiArrowBack } from "react-icons/ti";
 import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify"; // Import toastimp
+import { toast } from "react-toastify";
 import ConfirmModal from "@/components/Modals/ConfirmModal";
+import { FiArrowLeft, FiTrash2, FiSend, FiPrinter, FiFilePlus, FiFileText, FiCalendar } from "react-icons/fi";
 
-const ViewInstruction = ({id}) => {
+const ViewInstruction = ({ id }) => {
   const navigate = useNavigate();
   const [instruction, setInstruction] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-   const [openDelete, setOpenDelete] = useState(false);
-   const [openActivate, setOpenActivate] = useState(false);
+  const [openDelete, setOpenDelete] = useState(false);
+  const contentRef = useRef(null);
+
+  // Format date to localized string
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    try {
+      return new Date(dateString).toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (e) {
+      return dateString;
+    }
+  };
 
   const deleteInstruct = async () => {
     try {
-      
-        const deletedInstruct = await axiosInstance.delete(
-          `/instruction/delete/${id}`
-        );
-        if (deletedInstruct) {
-          toast.success("Instruction deleted successfully!");
-          setOpenDelete(false)
-          navigate("/court-dashboard/list"); // Ensure you redirect to the correct page
-        
+      const deletedInstruct = await axiosInstance.delete(
+        `/instruction/delete/${id}`
+      );
+      if (deletedInstruct) {
+        toast.success("Instruction deleted successfully!");
+        setOpenDelete(false);
+        navigate("/court-dashboard/list");
       }
     } catch (error) {
       setError(error.response?.data?.error || "Error deleting Instruction");
     }
   };
-  console.log(instruction);
+
+  const handlePrint = () => {
+    const content = contentRef.current;
+    const printWindow = window.open("", "", "height=600,width=800");
+    
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Court Instruction - ${instruction?.courtCaseNumber || "Details"}</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+              max-width: 800px;
+              margin: 0 auto;
+              padding: 20px;
+            }
+            .header {
+              text-align: center;
+              margin-bottom: 30px;
+              padding-bottom: 10px;
+              border-bottom: 2px solid #333;
+            }
+            .title {
+              font-size: 24px;
+              font-weight: bold;
+              margin-bottom: 5px;
+            }
+            .case-number {
+              font-size: 16px;
+              color: #555;
+            }
+            .section {
+              margin-bottom: 20px;
+            }
+            .section-title {
+              font-weight: bold;
+              margin-bottom: 5px;
+              font-size: 16px;
+            }
+            .grid {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 20px;
+            }
+            .field {
+              margin-bottom: 15px;
+            }
+            .field-label {
+              font-weight: bold;
+              display: block;
+              margin-bottom: 3px;
+            }
+            .field-value {
+              padding: 5px;
+              background-color: #f5f5f5;
+              border-radius: 3px;
+            }
+            .full-width {
+              grid-column: span 2;
+            }
+            .image-container {
+              text-align: center;
+              margin: 20px 0;
+            }
+            .image-container img {
+              max-width: 100%;
+              max-height: 300px;
+              border: 1px solid #ddd;
+              padding: 5px;
+              background: white;
+            }
+            .footer {
+              margin-top: 30px;
+              text-align: center;
+              font-size: 12px;
+              color: #777;
+              border-top: 1px solid #ddd;
+              padding-top: 10px;
+            }
+            @media print {
+              body {
+                padding: 0;
+                margin: 0;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="title">Court Instruction</div>
+            <div class="case-number">Case Number: ${instruction?.courtCaseNumber || "N/A"}</div>
+          </div>
+          
+          <div class="grid">
+            <div class="field">
+              <div class="field-label">Prison Name:</div>
+              <div class="field-value">${instruction?.prisonName || "N/A"}</div>
+            </div>
+            
+            <div class="field">
+              <div class="field-label">Judge Name:</div>
+              <div class="field-value">${instruction?.judgeName || "N/A"}</div>
+            </div>
+            
+            <div class="field">
+              <div class="field-label">Verdict:</div>
+              <div class="field-value">${instruction?.verdict === "guilty" ? "Guilty" : instruction?.verdict === "not_guilty" ? "Not Guilty" : instruction?.verdict || "N/A"}</div>
+            </div>
+            
+            <div class="field">
+              <div class="field-label">Hearing Date:</div>
+              <div class="field-value">${formatDate(instruction?.hearingDate)}</div>
+            </div>
+            
+            <div class="field full-width">
+              <div class="field-label">Instructions:</div>
+              <div class="field-value">${instruction?.instructions || "N/A"}</div>
+            </div>
+            
+            <div class="field">
+              <div class="field-label">Effective Date:</div>
+              <div class="field-value">${formatDate(instruction?.effectiveDate)}</div>
+            </div>
+            
+            <div class="field">
+              <div class="field-label">Send Date:</div>
+              <div class="field-value">${formatDate(instruction?.sendDate)}</div>
+            </div>
+          </div>
+          
+          <div class="image-container">
+            <div class="field-label">Attachment:</div>
+            <img src="https://localhost:4000/uploads/${instruction?.attachment}" alt="Attachment" />
+          </div>
+          
+          <div class="image-container">
+            <div class="field-label">Signature:</div>
+            <img src="https://localhost:4000/uploads/${instruction?.signature}" alt="Signature" />
+          </div>
+          
+          <div class="footer">
+            <p>Printed on ${new Date().toLocaleString()}</p>
+            <p>This is an official court document</p>
+          </div>
+        </body>
+      </html>
+    `);
+    
+    printWindow.document.close();
+    printWindow.focus();
+    
+    // Print after content loads
+    printWindow.onload = function() {
+      printWindow.print();
+      printWindow.onafterprint = function() {
+        printWindow.close();
+      };
+    };
+  };
+
   useEffect(() => {
-    const fetchIncident = async () => {
+    const fetchInstruction = async () => {
       try {
         const response = await axiosInstance.get(
           `/instruction/get-instruct/${id}`
@@ -44,127 +216,177 @@ const ViewInstruction = ({id}) => {
           setError("Instruction details not found.");
         }
       } catch (error) {
-        console.error("Error fetching incident details:", error);
+        console.error("Error fetching instruction details:", error);
         setError(
           error.response?.data?.error ||
-            "An error occurred while fetching incident details."
+            "An error occurred while fetching instruction details."
         );
       } finally {
         setLoading(false);
       }
     };
 
-    fetchIncident();
+    fetchInstruction();
   }, [id]);
 
   if (loading) {
-    return <div className="text-center text-lg font-semibold">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
   }
 
   if (error) {
     return (
-      <div className="text-center text-red-600 font-semibold">{error}</div>
+      <div className="max-w-3xl mx-auto mt-10 bg-red-50 p-6 rounded-lg border border-red-200 text-center">
+        <div className="text-red-600 font-semibold mb-4">{error}</div>
+        <button
+          onClick={() => navigate("/court-dashboard/list")}
+          className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+        >
+          <FiArrowLeft className="inline mr-2" /> Go Back
+        </button>
+      </div>
     );
   }
 
   return (
-    <div className="w-full mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
-      
-      <h2 className="text-2xl font-bold mb-6 text-center">
-        Instruction Details
-      </h2>
+    <div className="max-w-4xl mx-auto mt-6 mb-10" ref={contentRef}>
+      {/* Header with actions */}
+      <div className="bg-gradient-to-r from-blue-700 to-blue-500 rounded-t-lg shadow-md">
+        <div className="px-6 py-4 flex justify-between items-center">
+          <div className="flex items-center">
+            <button
+              onClick={() => navigate("/court-dashboard/list")}
+              className="mr-4 bg-white bg-opacity-20 text-white p-2 rounded-full hover:bg-opacity-30 transition-colors"
+              aria-label="Go back"
+            >
+              <FiArrowLeft />
+            </button>
+            <h2 className="text-xl font-bold text-white">Court Instruction</h2>
+          </div>
+          
+          <div className="flex space-x-2">
+            <button
+              onClick={handlePrint}
+              className="bg-white text-blue-600 font-medium py-1.5 px-3 rounded-md hover:bg-blue-50 transition-colors flex items-center"
+            >
+              <FiPrinter className="mr-1" /> Print
+            </button>
+            <button
+              className="bg-white text-blue-600 font-medium py-1.5 px-3 rounded-md hover:bg-blue-50 transition-colors flex items-center"
+            >
+              <FiSend className="mr-1" /> Send
+            </button>
+            <button
+              onClick={() => setOpenDelete(true)}
+              className="bg-red-600 text-white font-medium py-1.5 px-3 rounded-md hover:bg-red-700 transition-colors flex items-center"
+            >
+              <FiTrash2 className="mr-1" /> Delete
+            </button>
+          </div>
+        </div>
+        
+        {/* Case Number Banner */}
+        <div className="bg-white bg-opacity-10 text-white px-6 py-2 text-sm font-medium">
+          <span className="mr-2">Case Number:</span>
+          <span className="font-bold">{instruction.courtCaseNumber}</span>
+        </div>
+      </div>
 
-      {instruction ? (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <p className="text-lg font-bold">Case Number :</p>
-              <p className="text-lg font-medium">
-                {instruction.courtCaseNumber}
-              </p>
+      {/* Main content */}
+      <div className="bg-white rounded-b-lg shadow-md p-6 border border-gray-200">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Information Cards */}
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Prison Name</h3>
+            <p className="text-lg font-medium text-gray-800">{instruction.prisonName}</p>
+          </div>
+
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Judge Name</h3>
+            <p className="text-lg font-medium text-gray-800">{instruction.judgeName || instruction.inmate}</p>
+          </div>
+
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Verdict</h3>
+            <p className={`text-lg font-medium ${instruction.verdict === "guilty" ? "text-red-600" : "text-green-600"}`}>
+              {instruction.verdict === "guilty" ? "Guilty" : instruction.verdict === "not_guilty" ? "Not Guilty" : instruction.verdict}
+            </p>
+          </div>
+
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Hearing Date</h3>
+            <p className="text-lg font-medium text-gray-800 flex items-center">
+              <FiCalendar className="mr-2 text-gray-500" size={16} />
+              {formatDate(instruction.hearingDate)}
+            </p>
+          </div>
+
+          {/* Full width instruction text */}
+          <div className="md:col-span-2 bg-blue-50 p-5 rounded-lg border border-blue-100">
+            <div className="flex items-center mb-3">
+              <FiFileText className="text-blue-500 mr-2" />
+              <h3 className="text-sm font-semibold text-blue-800 uppercase">Instructions</h3>
             </div>
+            <p className="text-gray-800 whitespace-pre-line">{instruction.instructions}</p>
+          </div>
 
-            <div>
-              <p className="text-lg font-bold">Prison Name:</p>
-              <p className="text-lg font-medium">{instruction.prisonName}</p>
-            </div>
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Effective Date</h3>
+            <p className="text-lg font-medium text-gray-800 flex items-center">
+              <FiCalendar className="mr-2 text-gray-500" size={16} />
+              {formatDate(instruction.effectiveDate)}
+            </p>
+          </div>
 
-            <div>
-              <p className="text-lg font-bold">Judge Name:</p>
-              <p className="text-lg font-medium">{instruction.inmate}</p>
-            </div>
+          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Send Date</h3>
+            <p className="text-lg font-medium text-gray-800 flex items-center">
+              <FiCalendar className="mr-2 text-gray-500" size={16} />
+              {formatDate(instruction.sendDate)}
+            </p>
+          </div>
+        </div>
 
-            <div>
-              <p className="text-lg font-bold">Verdict:</p>
-              <p className="text-lg font-medium">{instruction.verdict}</p>
-            </div>
-
-            <div>
-              <p className="text-lg font-bold">Instructions:</p>
-              <p className="text-lg font-medium">{instruction.instructions}</p>
-            </div>
-
-            <div>
-              <p className="text-lg font-bold">Hearing Date:</p>
-              <p className={`text-lg font-medium `}>
-                {instruction.hearingDate}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-lg font-bold">Attachment:</p>
+        {/* Document section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-3 flex items-center">
+              <FiFilePlus className="mr-2" /> Attachment
+            </h3>
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 flex justify-center">
               <img
                 src={`https://localhost:4000/uploads/${instruction.attachment}`}
                 alt="Attachment"
+                className="max-h-[300px] object-contain"
               />
             </div>
-            <div>
-              <p className="text-lg font-bold">Signature:</p>
+          </div>
+          
+          <div>
+            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-3 flex items-center">
+              <FiFilePlus className="mr-2" /> Signature
+            </h3>
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 flex justify-center">
               <img
                 src={`https://localhost:4000/uploads/${instruction.signature}`}
-                alt="Attachment"
+                alt="Signature"
+                className="max-h-[200px] object-contain"
               />
             </div>
-
-            <div className="col-span-2 mt-6">
-              <p className="text-lg font-bold">Effective Date:</p>
-              <p className="text-lg font-medium">{instruction.effectiveDate}</p>
-            </div>
-            <div className="col-span-2 mt-6">
-              <p className="text-lg font-bold">Send Date:</p>
-              <p className="text-lg font-medium">{instruction.sendDate}</p>
-            </div>
           </div>
-
-          <div className="flex space-x-5 mt-6">
-            <button className="bg-blue-600 text-white py-2 px-3 rounded font-semibold w-[70px]">
-              Send
-            </button>
-            {/* <ConfirmModal
-              open={openActivate}
-              setOpen={setOpenActivate}
-              onDelete={toggleActivation}
-              message={`Do you want to ${user.isactivated ? "deactivate" : "activate"} this user account?`}
-            /> */}
-            <button
-              className="bg-red-600 text-white py-2 px-3 rounded font-semibold w-[70px]"
-              onClick={()=>setOpenDelete(true)}
-            >
-              Delete
-            </button>
-            <ConfirmModal
-              open={openDelete}
-              setOpen={setOpenDelete}
-              onDelete={deleteInstruct}
-              message="Do you really want to delete this Instruction? This action cannot be undone."
-            />
-          </div>
-        </>
-      ) : (
-        <div className="text-center text-red-600 font-semibold">
-          Incident not found.
         </div>
-      )}
+      </div>
+
+      {/* Delete confirmation modal */}
+      <ConfirmModal
+        open={openDelete}
+        setOpen={setOpenDelete}
+        onDelete={deleteInstruct}
+        message="Do you really want to delete this Instruction? This action cannot be undone."
+      />
     </div>
   );
 };

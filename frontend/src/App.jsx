@@ -26,6 +26,7 @@ import AddUser from "./components/Accounts/Add.jsx";
 import AdminDashboard from "./page/AdminDashboard.jsx";
 import AdminSummary from "./components/Admin/AdminSummary.jsx";
 import CreateUserAccount from "./components/Accounts/CreateUserAccount.jsx";
+import BackeUp from "./components/Accounts/BackeUp.jsx";
 import ListofUsers from "./components/Accounts/List.jsx";
 import AccountReport from "./components/Accounts/AccountReport.jsx";
 import SystemSetting from "./components/SystemSetting/SystemSetting.jsx";
@@ -105,6 +106,7 @@ import VisitSchedules from "./components/visitorDashboaard/VisitSchedules";
 import VisitorList from "./components/Visitor/VisitorList";
 import DashboardNoticeList from "./components/Notices/DashboardNoticeList";
 import NoticeView from "./components/Notices/NoticeView";
+import RequestParole from "./parole/RequestParole";
 
 function App() {
   return (
@@ -134,6 +136,7 @@ function App() {
             <Route path="edit/:id" element={<EditVisitor />} />
             <Route path="view/:id" element={<ViewVisitor />} />
             <Route path="parole" element={<Parole />} />
+            <Route path="parole-request" element={<RequestParole />} />
             <Route path="ParoleList/:inmateId" element={<ParoleList />} />
             <Route path="incident" element={<Insident />} />
             <Route path="reports" element={<PoliceOfficerReports />} />
@@ -152,6 +155,7 @@ function App() {
           <Route path="/admin-dashboard" element={<AdminDashboard />}>
             <Route index element={<AdminSummary />} />
             <Route path="CreateAccount" element={<CreateUserAccount />} />
+            <Route path="system-setting" element={<BackeUp />} />
             <Route path="users" element={<ListofUsers />} />
             <Route path="edit/:id" element={<EditUser />} />
             <Route path="users/:id" element={<ViewUser />} />

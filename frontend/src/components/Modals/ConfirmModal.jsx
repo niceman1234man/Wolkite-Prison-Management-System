@@ -1,7 +1,12 @@
 import React from "react";
 
-export default function ConfirmModal({ message, onConfirm, onCancel }) {
-  console.log("ConfirmModal rendered with message:", message);
+export default function ConfirmModal({ open, message, onConfirm, onCancel }) {
+  console.log("ConfirmModal rendered with open:", open, "message:", message);
+  
+  // Don't render anything if not open
+  if (!open) {
+    return null;
+  }
   
   const handleConfirm = () => {
     console.log("Confirm button clicked in ConfirmModal");

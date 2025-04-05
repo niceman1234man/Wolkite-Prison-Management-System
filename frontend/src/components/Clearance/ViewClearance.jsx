@@ -338,8 +338,8 @@ function ViewClearance({id}) {
       }
 
       if (error) {
-        return (
-          <div className="max-w-3xl mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
+  return (
+    <div className="max-w-3xl mx-auto mt-10 bg-white p-8 rounded-md shadow-md">
             <div className="text-center text-red-600 font-semibold">{error}</div>
             <button
               onClick={() => navigate(-1)}
@@ -392,8 +392,8 @@ function ViewClearance({id}) {
           {/* Basic Information */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold mb-3 pb-2 border-b border-gray-200">Basic Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+               <div>
                 <p className="text-sm text-gray-500">Inmate Name</p>
                 <p className="text-lg font-medium text-gray-800">{formData.inmate}</p>
               </div>
@@ -402,8 +402,8 @@ function ViewClearance({id}) {
                 <p className="text-lg font-medium text-gray-800">{formData.registrar || "N/A"}</p>
               </div>
             </div>
-          </div>
-
+               </div>
+   
           {/* Status Information */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold mb-3 pb-2 border-b border-gray-200">Clearance Status</h3>
@@ -416,13 +416,13 @@ function ViewClearance({id}) {
                 <p className="text-sm text-gray-500 mb-2">Fine Status</p>
                 {getStatusBadge(formData.fineStatus, "fine")}
               </div>
-              <div>
+               <div>
                 <p className="text-sm text-gray-500 mb-2">Medical Status</p>
                 {getStatusBadge(formData.medicalStatus, "medical")}
               </div>
             </div>
-          </div>
-
+               </div>
+               
           {/* Clearance Details */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold mb-3 pb-2 border-b border-gray-200">Clearance Details</h3>
@@ -432,15 +432,15 @@ function ViewClearance({id}) {
               <div className="p-3 bg-gray-50 rounded-md text-gray-800">
                 {formData.reason}
               </div>
-            </div>
-
+               </div>
+   
             <div className="mb-4">
               <p className="text-sm text-gray-500 mb-1">Remarks</p>
               <div className="p-3 bg-gray-50 rounded-md text-gray-800">
-                {formData.remark}
+                   {formData.remark}
               </div>
-            </div>
-
+               </div>
+   
             {formData.notes && (
               <div className="mb-4">
                 <p className="text-sm text-gray-500 mb-1">Additional Notes</p>
@@ -449,8 +449,8 @@ function ViewClearance({id}) {
                 </div>
               </div>
             )}
-          </div>
-
+               </div>
+   
           {/* Signature */}
           {formData.sign && (
             <div className="mb-6">
@@ -462,7 +462,7 @@ function ViewClearance({id}) {
                   className="max-h-24 object-contain"
                 />
               </div>
-            </div>
+             </div>
           )}
 
           {/* Action Buttons */}
@@ -473,21 +473,26 @@ function ViewClearance({id}) {
             >
               <FaEdit className="mr-2" /> Edit
             </button>
-            <button
+               <button
               className="bg-red-600 text-white py-2 px-4 rounded font-medium flex items-center hover:bg-red-700 transition duration-200"
               onClick={() => setOpenDelete(true)}
-            >
+               >
               <FaTimesCircle className="mr-2" /> Delete
-            </button>
+               </button>
           </div>
 
-          <ConfirmModal
-            open={openDelete}
-            setOpen={setOpenDelete}
-            onDelete={deleteClearance}
-            message="Do you want to delete this clearance? This action cannot be undone."
-          />
-        </div>
+               {/* Conditional rendering of the ConfirmModal */}
+               {openDelete && (
+                 <ConfirmModal
+                   message="Do you want to delete this clearance? This action cannot be undone."
+                   onConfirm={() => {
+                     deleteClearance();
+                     setOpenDelete(false);
+                   }}
+                   onCancel={() => setOpenDelete(false)}
+                 />
+               )}
+             </div>
       );
 }
 

@@ -33,6 +33,7 @@ import visitorAccountRouter from "./router/visitorAccount.router.js";
 import visitorScheduleRouter from "./router/visitorSchedule.router.js";
 import messageRoutes from "./routes/messageRoutes.js";
 import { EventEmitter } from 'events';
+import router from "./router/backup.js";
 EventEmitter.defaultMaxListeners = 15; // Increase from default 10
 
 // Load environment variables
@@ -60,6 +61,8 @@ app.use(
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Routesre
+
+app.use('/api/backup', router);
 app.use("/api/user", userRouter);
 app.use("/api/visitor", visitorRouter);
 app.use("/api/incidents", incidentRouter);

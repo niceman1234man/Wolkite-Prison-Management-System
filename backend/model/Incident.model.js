@@ -27,7 +27,7 @@ const incidentSchema=new mongoose.Schema({
     },
     attachment:{
         type:String ,
-        required:true
+       
     },
     description:{
         type:String ,

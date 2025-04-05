@@ -35,11 +35,11 @@ const InmateBehaviorGraph = () => {
         if (paroleResponse.data) {
           const behaviorLogs = paroleResponse.data.parole.behaviorLogs || [];
           const formattedData = behaviorLogs.map((log) => ({
-            name: log.rule,
+            name: log.rule, 
             points: log.points,
-            date: log.date,
+            date: log.date, 
           }));
-
+         
           const total = formattedData.reduce((sum, log) => sum + log.points, 0);
           setBehaviorData(formattedData);
           setTotalPoints(total);
@@ -68,7 +68,7 @@ const InmateBehaviorGraph = () => {
       fetchInmateData();
     }
   }, [inmateId]);
-
+  
   const calculateTrackedDays = () => {
     if (behaviorData.length > 0) {
       const firstDate = new Date(behaviorData[0].date);
@@ -77,7 +77,7 @@ const InmateBehaviorGraph = () => {
     }
     return 0;
   };
-
+  
   const trackedDays = calculateTrackedDays();
   const averagePointsPerDay = trackedDays > 0 ? totalPoints / trackedDays : 0;
   const totalSentenceDays = paroleData.sentenceYear * 365;
@@ -122,9 +122,9 @@ const InmateBehaviorGraph = () => {
       <div className="flex-1 lg:w-1/4 mt-6 lg:mt-0 flex justify-center items-center space-x-6">
         {[progressPercentage, progressBarPerDay, progressBarPerMonth, progressBarParole].map((value, index) => (
           <div key={index} className="flex flex-col items-center">
-            <div className="w-16 h-96 bg-gray-300 rounded-full relative mb-2">
+          <div className="w-16 h-96 bg-gray-300 rounded-full relative mb-2">
               <div className={`${getProgressBarColor(value)} rounded-full absolute bottom-0 w-full`} style={{ height: `${value}%` }}></div>
-            </div>
+          </div>
             <p className="text-sm font-semibold text-center">{value.toFixed(2)}%</p>
             <p className="text-xs text-gray-600">{labels[index]}</p>
           </div>

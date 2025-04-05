@@ -4,13 +4,17 @@ import reportsRouter from "./router/reports.router.js";
 import transferRouter from "./router/transferRouter.js";
 import visitorAccountRouter from "./router/visitorAccount.router.js";
 import visitorScheduleRouter from "./router/visitorSchedule.router.js";
-import { visitorRouter } from "./router/visitor.router.js";
-
+import backupRoutes from './router/backup.js';
 const app = express();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+
+// ... other middleware and setup ...
+
+// Use the backup routes
 
 // Routes
 app.use("/api/reports", reportsRouter);

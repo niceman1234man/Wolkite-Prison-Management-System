@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import DataTable from "react-data-table-component";
 import axiosInstance from "../../utils/axiosInstance";
 import { useSelector } from "react-redux";
-import { FaArrowLeft, FaPlus, FaSearch, FaEye, FaPen, FaTrash, FaCheckCircle, FaTimesCircle, FaHourglassHalf } from "react-icons/fa";
+import { FaArrowLeft, FaPlus, FaSearch, FaEye, FaPen, FaTrash, FaCheckCircle, FaTimesCircle, FaHourglassHalf, FaEdit } from "react-icons/fa";
 import InmateClearance from "./InmateClearance";
 import AddModal from "../Modals/AddModal";
 import ViewClearance from "./ViewClearance";
@@ -67,9 +67,12 @@ const ClearanceButtons = ({ _id, onDelete }) => {
       
       <ConfirmModal
         open={openDelete}
-        setOpen={setOpenDelete}
-        onDelete={handleDelete}
         message="Do you want to delete this clearance? This action cannot be undone."
+        onConfirm={() => {
+          handleDelete();
+          setOpenDelete(false);
+        }}
+        onCancel={() => setOpenDelete(false)}
       />
     </div>
   );
@@ -301,12 +304,12 @@ const ClearancesList = () => {
       {/* Header & Navigation */}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center">
-          <button 
-            onClick={() => navigate(-1)} 
+      <button 
+        onClick={() => navigate(-1)} 
             className="mr-4 flex items-center text-gray-600 hover:text-gray-800"
-          >
-            <FaArrowLeft className="mr-2" /> Back
-          </button>
+      >
+        <FaArrowLeft className="mr-2" /> Back
+      </button>
           <h3 className="text-2xl font-bold text-gray-800">Manage Clearances</h3>
         </div>
         
@@ -328,8 +331,8 @@ const ClearancesList = () => {
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <FaSearch className="text-gray-400" />
             </div>
-            <input
-              type="text"
+        <input
+          type="text"
               placeholder="Search by inmate name or clearance ID..."
               className="pl-10 pr-4 py-2 border border-gray-300 rounded-md w-full focus:ring-teal-500 focus:border-teal-500"
               value={searchTerm}
@@ -350,13 +353,13 @@ const ClearancesList = () => {
               </select>
             </div>
             
-            <button
+        <button
               onClick={fetchClearances}
               className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors duration-200"
               title="Refresh Data"
-            >
+        >
               Refresh
-            </button>
+        </button>
           </div>
         </div>
       </div>

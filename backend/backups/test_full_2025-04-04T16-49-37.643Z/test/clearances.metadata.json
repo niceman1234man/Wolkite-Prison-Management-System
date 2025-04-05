@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"clearanceId":{"$numberInt":"1"}},"name":"clearanceId_1","background":true,"unique":true}],"uuid":"06f17ac893fd479aa29f666e47a244fa","collectionName":"clearances","type":"collection"}
