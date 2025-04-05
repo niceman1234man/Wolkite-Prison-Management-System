@@ -1,8 +1,23 @@
 import { Inmate } from "../model/inmate.model.js";
 export const addnewInmate = async (req, res) => {
     try {
+      // Handle FormData
+      let inmateData = req.body;
+      let photoUrl = null;
       
-        const {
+      // Check if the data comes from form-data with JSON string
+      if (req.body.inmateData) {
+        // Parse the JSON string into an object
+        inmateData = JSON.parse(req.body.inmateData);
+      }
+      
+      // Check if a file was uploaded
+      if (req.file) {
+        // The file path where multer stored the file
+        photoUrl = `/uploads/inmates/${req.file.filename}`;
+      }
+      
+      const {
           firstName,
           middleName,
           lastName,
@@ -47,7 +62,7 @@ export const addnewInmate = async (req, res) => {
             paroleDate,
             durationToParole,
             durationFromParoleToEnd
-          } = req.body;
+          } = inmateData;
           if (!firstName || !age || !gender) {
             return res.status(400).json("all fields required");
           }
@@ -96,7 +111,8 @@ export const addnewInmate = async (req, res) => {
             releasedDate,
             paroleDate,
             durationToParole,
-            durationFromParoleToEnd
+            durationFromParoleToEnd,
+            photo: photoUrl
           });
           await newInmate.save();
         
@@ -106,7 +122,11 @@ export const addnewInmate = async (req, res) => {
           });
         
     } catch (error) {
-        console.log(error)
+        console.log(error);
+        return res.status(500).json({
+          error: true,
+          message: "Error adding inmate: " + error.message
+        });
     }
  
 };

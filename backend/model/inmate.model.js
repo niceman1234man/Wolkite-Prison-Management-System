@@ -9,6 +9,7 @@ const InmateSchema = new mongoose.Schema(
     age: { type: Number, required: true },
     motherName: { type: String },
     gender: { type: String, enum: ["male", "female"], required: true },
+    photo: { type: String }, // URL to the stored photo
 
     // Birth Place
     birthRegion: { type: String },
