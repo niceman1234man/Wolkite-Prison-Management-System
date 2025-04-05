@@ -322,19 +322,21 @@ const SimpleFaceCapture = ({ onFaceDetected, onError }) => {
     if (!isCapturing) return null;
     
     return (
-      <div className="absolute top-3 right-3 flex flex-col items-end space-y-2">
+      <div className="absolute top-2 right-2 flex flex-col items-end">
         {/* Liveness score display */}
         {livenessScore && (
-          <div className={`status-badge ${livenessScore.isLive ? 'status-badge-success' : 'status-badge-error'}`}>
-            <span className="indicator animate-pulse-slow"></span>
-            <span>{livenessScore.isLive ? 'Real Person' : 'Possible Fake'}</span>
+          <div className={`text-xs px-2 py-1 rounded-full mb-1 ${
+            livenessScore.isLive ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+          }`}>
+            {livenessScore.isLive ? 'Real Person' : 'Possible Fake'}
           </div>
         )}
         
         {/* Blink detection indicator */}
-        <div className={`status-badge ${blinkDetected ? 'status-badge-success' : 'status-badge-warning'}`}>
-          <span className={`indicator ${!blinkDetected && 'animate-pulse-slow'}`}></span>
-          <span>{blinkDetected ? 'Blink Detected' : 'Waiting for Blink'}</span>
+        <div className={`text-xs px-2 py-1 rounded-full ${
+          blinkDetected ? 'bg-green-500 text-white' : 'bg-yellow-500 text-white'
+        }`}>
+          {blinkDetected ? 'Blink Detected' : 'Waiting for Blink'}
         </div>
       </div>
     );
@@ -365,25 +367,22 @@ const SimpleFaceCapture = ({ onFaceDetected, onError }) => {
     }
     
     return (
-      <div className="mb-4 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-lg shadow-sm">
+      <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
         <div className="flex justify-between">
-          <h3 className="text-sm font-semibold text-yellow-800 mb-1 flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mr-2 text-yellow-600">
-              <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-            </svg>
+          <h3 className="text-sm font-semibold text-yellow-800 mb-1">
             Browser Compatibility Warning
           </h3>
           <button 
             onClick={() => setHasDismissedWarnings(true)}
-            className="text-yellow-600 hover:text-yellow-800 transition-colors"
+            className="text-yellow-600 hover:text-yellow-800"
           >
             <span className="sr-only">Dismiss</span>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
               <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
             </svg>
           </button>
         </div>
-        <ul className="text-xs text-yellow-700 list-disc list-inside mt-2 space-y-1">
+        <ul className="text-xs text-yellow-700 list-disc list-inside">
           {browserSupport.warnings.map((warning, index) => (
             <li key={index}>{warning}</li>
           ))}
@@ -395,25 +394,21 @@ const SimpleFaceCapture = ({ onFaceDetected, onError }) => {
   // Render error state with retry button
   if (modelLoadingError) {
     return (
-      <div className="glass-card p-8 animate-fadeIn">
-        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4 mx-auto">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 text-red-600">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-          </svg>
-        </div>
-        <h3 className="text-xl font-bold mb-3 text-red-700 text-center">Face Recognition Error</h3>
-        <p className="text-sm text-red-600 mb-6 text-center max-w-md">
-          Unable to initialize face recognition. This could be due to browser compatibility issues or network problems.
+      <div className="flex flex-col items-center p-6 bg-red-50 rounded-lg shadow border border-red-200">
+        <h3 className="text-lg font-semibold mb-3 text-red-600">Face Recognition Error</h3>
+        <p className="text-sm text-red-700 mb-4 text-center">
+          Unable to initialize face recognition. This could be due to browser compatibility issues.
         </p>
         <button
           type="button"
           onClick={loadModelsFn}
           disabled={modelLoading}
-          className="btn-gradient-primary w-full py-3 px-8 text-white rounded-lg flex items-center justify-center"
+          className="py-2 px-4 bg-red-600 text-white rounded hover:bg-red-700 
+                    transition flex items-center justify-center min-w-[180px]"
         >
           {modelLoading ? (
             <>
-              <span className="spinner mr-3"></span>
+              <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></span>
               Loading...
             </>
           ) : (
@@ -425,23 +420,23 @@ const SimpleFaceCapture = ({ onFaceDetected, onError }) => {
   }
 
   return (
-    <div className="face-capture-container animate-fadeIn">
+    <div className="flex flex-col items-center p-4 bg-gray-50 rounded-lg shadow">
       {/* Show tutorial if requested */}
       {showTutorial && <FaceTutorial onClose={handleCloseTutorial} />}
       
-      <h3 className="face-recognition-header">Face Authentication</h3>
+      <h3 className="text-lg font-semibold mb-3">Face Authentication</h3>
       
       {/* Display browser compatibility warnings */}
       {renderCompatibilityWarning()}
       
-      <div className="video-container mb-6">
+      <div className="relative mb-4 bg-black rounded-lg overflow-hidden">
         {isCapturing ? (
           <>
             <video
               ref={videoRef}
               autoPlay
               playsInline
-              className="w-[340px] h-[260px] object-cover"
+              className="w-[320px] h-[240px]"
             />
             {/* Hidden canvas for processing */}
             <canvas 
@@ -454,100 +449,86 @@ const SimpleFaceCapture = ({ onFaceDetected, onError }) => {
             
             {/* User prompt */}
             {prompt && (
-              <div className="absolute bottom-3 left-3 right-3 glass-effect text-white p-3 text-sm text-center rounded-lg">
+              <div className="absolute bottom-2 left-2 right-2 bg-black/50 text-white p-2 text-sm text-center rounded">
                 {prompt}
               </div>
             )}
           </>
         ) : (
-          <div className="flex items-center justify-center w-[340px] h-[260px] bg-gradient-to-b from-gray-800 to-gray-900">
-            <div className="text-center">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-16 h-16 text-gray-400 mx-auto mb-4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-                <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
-              </svg>
-              <p className="text-white text-sm px-8">
-                {modelLoading ? "Loading face detection..." : "Click Start to authenticate with your face"}
-              </p>
-            </div>
+          <div className="flex items-center justify-center w-[320px] h-[240px] bg-gray-800">
+            <p className="text-white text-sm text-center">
+              {modelLoading ? "Loading face detection..." : "Click Start to authenticate with your face"}
+            </p>
           </div>
         )}
         
         {/* Guide overlay when capturing */}
         {isCapturing && (
-          <div className="face-guide"></div>
+          <div className="absolute inset-0 border-2 border-dashed border-white opacity-70 pointer-events-none">
+            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-3/5 h-3/5 border-2 border-green-400 rounded-full"></div>
+          </div>
         )}
       </div>
       
       <div className="flex flex-col items-center w-full">
         {isCapturing ? (
-          <div className="space-y-4 w-full">
+          <div className="space-y-3 w-full">
             {/* Add sensitivity selector */}
-            <div className="flex items-center justify-between text-sm text-gray-700 mb-3 px-4 py-3 bg-blue-50 rounded-lg border border-blue-100">
-              <span className="font-medium text-blue-800">Sensitivity:</span>
-              <div className="flex space-x-2">
+            <div className="flex items-center justify-between text-sm text-gray-700 mb-3 px-3 py-2 bg-gray-100 rounded-lg">
+              <span className="mr-2">Sensitivity:</span>
+              <div className="flex space-x-1">
                 {['low', 'medium', 'high'].map((level) => (
                   <button
                     key={level}
                     type="button"
                     onClick={() => handleSensitivityChange(level)}
-                    className={`px-3 py-1.5 text-xs rounded-md font-medium transition-all duration-200 ${
+                    className={`px-2 py-1 text-xs rounded ${
                       sensitivityLevel === level
-                        ? 'bg-blue-600 text-white shadow-sm'
-                        : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                     }`}
                   >
                     {level.charAt(0).toUpperCase() + level.slice(1)}
                   </button>
                 ))}
               </div>
-              <div className="tooltip">
-                <button
-                  type="button"
-                  onClick={() => setShowTutorial(true)}
-                  className="face-help-button"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 mr-1">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clipRule="evenodd" />
-                  </svg>
-                  Help
-                </button>
-                <span className="tooltip-text">Show face recognition tutorial</span>
-              </div>
+              <button
+                type="button"
+                onClick={() => setShowTutorial(true)}
+                className="text-blue-600 text-xs flex items-center"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 mr-1">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clipRule="evenodd" />
+                </svg>
+                Help
+              </button>
             </div>
             
             <button
               type="button"
               onClick={captureFace}
               disabled={isProcessing || !modelsLoaded || !blinkDetected}
-              className={`face-recognition-button ${
-                isProcessing || !modelsLoaded || !blinkDetected ? 'opacity-60 cursor-not-allowed' : ''
+              className={`w-full py-2 px-4 bg-blue-600 text-white rounded hover:bg-blue-700 transition ${
+                isProcessing || !modelsLoaded || !blinkDetected ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
-              {isProcessing ? (
-                <span className="flex items-center justify-center">
-                  <span className="spinner mr-2"></span>
-                  Processing...
-                </span>
-              ) : blinkDetected ? 'Verify Face' : 'Please Blink First'}
+              {isProcessing ? 'Processing...' : blinkDetected ? 'Verify Face' : 'Please Blink First'}
             </button>
             
             <button
               type="button"
               onClick={toggleCapture}
-              className="face-recognition-secondary-button w-full"
+              className="w-full py-2 px-4 bg-gray-500 text-white rounded hover:bg-gray-600 transition"
             >
               Cancel
             </button>
             
-            <div className="text-center mt-2">
-              <p className="text-sm text-gray-700 font-medium">
-                Please blink naturally for liveness detection
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                If detection fails, try better lighting or move closer to the camera
-              </p>
-            </div>
+            <p className="text-sm text-gray-600 text-center mt-2">
+              Please blink naturally for liveness detection, then click to verify
+            </p>
+            <p className="text-xs text-gray-500 text-center mt-1">
+              If detection fails, try better lighting or move closer to the camera
+            </p>
           </div>
         ) : (
           <>
@@ -555,13 +536,13 @@ const SimpleFaceCapture = ({ onFaceDetected, onError }) => {
               type="button"
               onClick={toggleCapture}
               disabled={!modelsLoaded || modelLoading}
-              className={`face-recognition-button ${
-                !modelsLoaded || modelLoading ? 'opacity-60 cursor-not-allowed' : ''
+              className={`w-full py-2 px-4 bg-blue-600 text-white rounded hover:bg-blue-700 transition ${
+                !modelsLoaded || modelLoading ? 'opacity-50 cursor-not-allowed' : ''
               }`}
             >
               {modelLoading ? (
                 <span className="flex items-center justify-center">
-                  <span className="spinner mr-2"></span>
+                  <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"></span>
                   Loading Face Recognition...
                 </span>
               ) : (
@@ -573,9 +554,9 @@ const SimpleFaceCapture = ({ onFaceDetected, onError }) => {
             <button
               type="button"
               onClick={() => setShowTutorial(true)}
-              className="face-help-button mt-4"
+              className="mt-2 text-blue-600 text-sm flex items-center justify-center"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mr-1.5">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 mr-1">
                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clipRule="evenodd" />
               </svg>
               How does face authentication work?

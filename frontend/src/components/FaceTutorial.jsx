@@ -63,26 +63,22 @@ const FaceTutorial = ({ onClose }) => {
   };
   
   return (
-    <div className="fixed inset-0 modal-backdrop flex items-center justify-center z-50">
-      <div className="glass-card modal-content max-w-md w-full mx-4 overflow-hidden animate-fadeIn">
-        {/* Header with gradient */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-500 text-white px-8 py-5">
-          <h2 className="text-2xl font-bold">{currentTutorialStep.title}</h2>
-          <div className="h-1 w-16 bg-white/30 rounded-full mt-2"></div>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 overflow-hidden">
+        {/* Header */}
+        <div className="bg-blue-600 text-white px-6 py-4">
+          <h2 className="text-xl font-semibold">{currentTutorialStep.title}</h2>
         </div>
         
         {/* Content */}
-        <div className="p-8">
+        <div className="p-6">
           {/* Browser compatibility warnings */}
           {browserSupport && browserSupport.warnings.length > 0 && (
-            <div className="mb-6 p-4 bg-yellow-50 border-l-4 border-yellow-400 rounded-r-lg shadow-sm">
-              <h3 className="text-sm font-semibold text-yellow-800 mb-1 flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 mr-2">
-                  <path fillRule="evenodd" d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-                </svg>
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <h3 className="text-sm font-semibold text-yellow-800 mb-1">
                 Browser Compatibility Warning
               </h3>
-              <ul className="text-xs text-yellow-700 list-disc list-inside space-y-1 mt-2">
+              <ul className="text-xs text-yellow-700 list-disc list-inside">
                 {browserSupport.warnings.map((warning, index) => (
                   <li key={index}>{warning}</li>
                 ))}
@@ -91,8 +87,8 @@ const FaceTutorial = ({ onClose }) => {
           )}
           
           {/* Tutorial image */}
-          <div className="flex justify-center mb-8">
-            <div className="w-56 h-56 bg-gradient-to-b from-blue-50 to-gray-50 rounded-2xl flex items-center justify-center shadow-inner border border-gray-100">
+          <div className="flex justify-center mb-6">
+            <div className="w-48 h-48 bg-gray-100 rounded-lg flex items-center justify-center">
               {/* Placeholder for tutorial images */}
               <svg 
                 xmlns="http://www.w3.org/2000/svg" 
@@ -100,7 +96,7 @@ const FaceTutorial = ({ onClose }) => {
                 viewBox="0 0 24 24" 
                 strokeWidth={1} 
                 stroke="currentColor" 
-                className="w-28 h-28 text-blue-400"
+                className="w-24 h-24 text-gray-400"
               >
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
                 <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
@@ -109,21 +105,17 @@ const FaceTutorial = ({ onClose }) => {
           </div>
           
           {/* Step content */}
-          <p className="text-gray-700 mb-8 text-center text-lg leading-relaxed">
+          <p className="text-gray-700 mb-6 text-center">
             {currentTutorialStep.content}
           </p>
           
           {/* Progress dots */}
-          <div className="progress-dots mb-8">
+          <div className="flex justify-center mb-4">
             {tutorialSteps.map((_, index) => (
               <div
                 key={index}
-                className={`progress-dot ${
-                  index === currentStep 
-                    ? 'active' 
-                    : index < currentStep 
-                      ? 'complete' 
-                      : ''
+                className={`w-2 h-2 rounded-full mx-1 ${
+                  index === currentStep ? 'bg-blue-600' : 'bg-gray-300'
                 }`}
               />
             ))}
@@ -134,10 +126,10 @@ const FaceTutorial = ({ onClose }) => {
             <button
               onClick={goToPrevStep}
               disabled={currentStep === 0}
-              className={`px-6 py-3 rounded-lg transition-all duration-200 ${
+              className={`px-4 py-2 rounded ${
                 currentStep === 0
                   ? 'text-gray-400 cursor-not-allowed'
-                  : 'text-gray-700 hover:bg-gray-100 hover:shadow-sm'
+                  : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
               Back
@@ -145,7 +137,7 @@ const FaceTutorial = ({ onClose }) => {
             
             <button
               onClick={goToNextStep}
-              className="btn-gradient-primary px-6 py-3 text-white rounded-lg font-medium"
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
             >
               {currentStep === tutorialSteps.length - 1 ? 'Get Started' : 'Next'}
             </button>
