@@ -13,55 +13,82 @@ export const columns = [
     name: "S.No",
     selector: (row) => row.sno,
     sortable: true,
-    width: "80px",
+    width: "60px",
   },
   {
     name: "Name",
     selector: (row) => row.inmate_name,
     sortable: true,
     grow: 2,
+    cell: (row) => (
+      <div className="font-medium">{row.inmate_name}</div>
+    ),
   },
   {
     name: "Age",
     selector: (row) => row.age,
     sortable: true,
-    width: "100px",
+    width: "70px",
   },
   {
     name: "Gender",
     selector: (row) => row.gender,
     sortable: true,
-    width: "100px",
+    width: "90px",
+    cell: (row) => (
+      <div className="capitalize">{row.gender}</div>
+    ),
   },
   {
     name: "Case Type",
     selector: (row) => row.case_type,
     sortable: true,
-    grow: 1,
+    width: "110px",
+    cell: (row) => (
+      <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+        row.case_type === "Criminal" ? "bg-red-100 text-red-800" : 
+        row.case_type === "Civil" ? "bg-blue-100 text-blue-800" : 
+        row.case_type === "Administrative" ? "bg-green-100 text-green-800" :
+        "bg-gray-100 text-gray-800"
+      }`}>
+        {row.case_type}
+      </div>
+    ),
   },
   {
-    name: "Release Reason",
-    selector: (row) => row.release_reason,
+    name: "Reason",
+    selector: (row) => row.reason,
     sortable: true,
-    grow: 1,
+    width: "180px",
+    cell: (row) => (
+      <div className="truncate max-w-[180px]" title={row.reason}>
+        {row.reason || "Not specified"}
+      </div>
+    ),
+  },
+  {
+    name: "Sentence",
+    selector: (row) => row.sentence,
+    sortable: true,
+    width: "100px",
   },
   {
     name: "Location",
     selector: (row) => row.current_location,
     sortable: true,
-    grow: 1,
-  },
-  {
-    name: "Contact",
-    selector: (row) => row.contact,
-    sortable: true,
-    width: "120px",
+    width: "150px",
+    cell: (row) => (
+      <div className="truncate max-w-[150px]" title={row.current_location}>
+        {row.current_location === ", " ? "Not specified" : row.current_location}
+      </div>
+    ),
   },
   {
     name: "Actions",
     cell: (row) => <InmateButtons _id={row._id} onDelete={row.onDelete} />,
-    width: "150px",
+    width: "120px",
     ignoreRowClick: true,
+    right: true,
   },
 ];
 

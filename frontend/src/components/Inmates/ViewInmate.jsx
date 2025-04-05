@@ -5,12 +5,35 @@ import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css'; 
 
 import ConfirmModal from "../Modals/ConfirmModal";
-import { FiUser, FiInfo, FiMapPin, FiPhoneCall, FiFileText, FiUserCheck, FiPrinter } from "react-icons/fi";
+import { FiUser, FiInfo, FiMapPin, FiPhoneCall, FiFileText, FiUserCheck, FiPrinter, FiArrowLeft, FiArrowRight } from "react-icons/fi";
 
-const ViewInmate = ({ _id, setOpen }) => {
+// CSS for animations
+const styles = {
+  fadeIn: `
+    @keyframes fadeIn {
+      0% { opacity: 0; transform: translateY(10px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fadeIn {
+      animation: fadeIn 0.3s ease-out forwards;
+    }
+  `,
+  hideScrollbar: `
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  `
+};
+
+const ViewInmate = ({ _id, setOpen, onEdit }) => {
   const [inmateData, setInmateData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [openDelete, setOpenDelete] = useState(false);
+  const [activeTab, setActiveTab] = useState('personal');
   const navigate = useNavigate();
   const printRef = useRef();
 
@@ -266,22 +289,55 @@ const ViewInmate = ({ _id, setOpen }) => {
     };
   };
 
+  // States for parole calculation
+  const [paroleDate, setParoleDate] = useState(null);
+  const [durationToParole, setDurationToParole] = useState(null);
+  const [durationFromParoleToEnd, setDurationFromParoleToEnd] = useState(null);
+  const [error, setError] = useState(null);
+
+  // Fetch inmate details
   useEffect(() => {
     const fetchInmateDetails = async () => {
       if (!_id) {
-        console.error("No inmate ID provided");
-        toast.error("Missing inmate ID");
+        setError("No inmate ID provided");
         setLoading(false);
         return;
       }
 
       try {
         const response = await axiosInstance.get(`/inmates/get-inmate/${_id}`);
-        setInmateData(response.data.inmate);
-        setLoading(false);
+        const inmate = response.data.inmate;
+        
+        if (inmate) {
+          setInmateData(inmate);
+          
+          // Calculate parole date
+          if (inmate.startDate && inmate.sentenceYear) {
+            const calculatedParoleDate = calculateParoleDate(inmate.startDate, inmate.sentenceYear);
+            setParoleDate(calculatedParoleDate);
+            
+            // Calculate time until parole
+            const today = new Date();
+            const paroleDate = new Date(calculatedParoleDate);
+            if (paroleDate > today) {
+              setDurationToParole(calculateDuration(today.toISOString(), calculatedParoleDate));
+            } else {
+              setDurationToParole("Eligible for parole");
+            }
+            
+            // Calculate time from parole to end
+            if (inmate.releasedDate) {
+              setDurationFromParoleToEnd(calculateDuration(calculatedParoleDate, inmate.releasedDate));
+            }
+          }
+        } else {
+          setError("Inmate not found");
+        }
       } catch (error) {
         console.error("Error fetching inmate details:", error);
-        toast.error("Failed to load inmate details.");
+        setError("Failed to fetch inmate details");
+        toast.error("Failed to load inmate details");
+      } finally {
         setLoading(false);
       }
     };
@@ -289,233 +345,462 @@ const ViewInmate = ({ _id, setOpen }) => {
     fetchInmateDetails();
   }, [_id]);
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
-      </div>
-    );
-  }
-
-  if (!inmateData) {
-    return (
-      <div className="flex flex-col justify-center items-center h-screen text-gray-500">
-        <svg className="w-16 h-16 mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-        </svg>
-        <h3 className="text-lg font-medium">No data available</h3>
-        <p className="mt-2">Could not find inmate details.</p>
-      </div>
-    );
-  }
+  // Add styles to document head
+  useEffect(() => {
+    // Create style element
+    const styleElement = document.createElement('style');
+    styleElement.innerHTML = styles.fadeIn + styles.hideScrollbar;
+    document.head.appendChild(styleElement);
+    
+    // Clean up
+    return () => {
+      document.head.removeChild(styleElement);
+    };
+  }, []);
 
   const handleDelete = async () => {
     try {
-      const response = await axiosInstance.delete(
-        `/inmate/delete-inmate/${_id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-
-      if (response.data) {
-        toast.success("Inmate record deleted successfully.");
-        setOpenDelete(false);
-        navigate("/securityStaff-dashboard/inmates");
-      } else {
-        toast.error("Failed to delete the inmate record.");
-      }
+      await axiosInstance.delete(`/inmates/delete-inmate/${_id}`);
+      toast.success("Inmate deleted successfully");
+      setOpenDelete(false);
+      navigate(-1);
     } catch (error) {
-      console.error("Error:", error);
-      toast.error(error.response?.data?.error || "Error deleting the inmate record.");
+      console.error("Error deleting inmate:", error);
+      toast.error("Failed to delete inmate");
     }
   };
 
-  // Calculate dates and durations
-  const paroleDate = calculateParoleDate(inmateData.startDate, inmateData.sentenceYear);
-  const durationToParole = calculateDuration(inmateData.startDate, paroleDate);
-  const durationFromParoleToEnd = calculateDuration(paroleDate, inmateData.releasedDate);
+  // Define tabs for navigation
+  const tabs = [
+    { id: "personal", label: "Personal", icon: <FiUser className="mr-2" /> },
+    { id: "location", label: "Location", icon: <FiMapPin className="mr-2" /> },
+    { id: "physical", label: "Physical", icon: <FiInfo className="mr-2" /> },
+    { id: "contact", label: "Contact", icon: <FiPhoneCall className="mr-2" /> },
+    { id: "case", label: "Case", icon: <FiFileText className="mr-2" /> },
+  ];
 
-  // Display an info card with consistent styling
-  const InfoCard = ({ title, value, className = "" }) => (
-    <div className={`bg-white p-4 rounded-lg shadow-sm border border-gray-100 hover:shadow-md transition-shadow ${className}`}>
-      <h4 className="text-sm font-medium text-gray-500 mb-1">{title}</h4>
-      <p className="text-gray-900 font-medium">{value || "Not provided"}</p>
-    </div>
-  );
+  // Handle tab navigation
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+  };
+
+  // Navigate to next/previous tab
+  const navigateTab = (direction) => {
+    const currentIndex = tabs.findIndex(tab => tab.id === activeTab);
+    if (direction === 'next' && currentIndex < tabs.length - 1) {
+      setActiveTab(tabs[currentIndex + 1].id);
+    } else if (direction === 'prev' && currentIndex > 0) {
+      setActiveTab(tabs[currentIndex - 1].id);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="h-64 flex items-center justify-center">
+        <div className="animate-spin h-10 w-10 border-4 border-blue-500 rounded-full border-t-transparent"></div>
+      </div>
+    );
+  }
+
+  if (error || !inmateData) {
+    return (
+      <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
+        <p>{error || "Failed to load inmate data"}</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="max-w-6xl mx-auto mt-8 animate-appear" ref={printRef}>
-      {/* Header with profile summary */}
-      <div className="bg-white rounded-xl shadow-md mb-6 overflow-hidden">
-        <div className="md:flex">
-          <div className="md:flex-shrink-0 bg-gradient-to-r from-teal-500 to-blue-500 text-white p-6 flex items-center justify-center">
-            <div className="text-center">
-              <div className="h-24 w-24 rounded-full bg-white/20 mx-auto mb-4 flex items-center justify-center">
-                <FiUser className="h-12 w-12" />
-              </div>
-              <h1 className="text-xl font-bold tracking-tight">
-                {inmateData.firstName} {inmateData.middleName} {inmateData.lastName}
-              </h1>
-              <p className="mt-1 text-white/80">ID: {inmateData._id?.substring(0, 8)}</p>
-            </div>
-          </div>
-          
-          <div className="p-6 flex-1">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-bold text-gray-800">Inmate Details</h2>
-              <div className="flex gap-2">
-                <button
-                  onClick={handlePrint}
-                  className="flex items-center px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
-                >
-                  <FiPrinter className="mr-2" />
-                  Print
-                </button>
-               
-                <button
-                  className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
-                  onClick={() => setOpenDelete(true)}
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <InfoCard title="Age" value={inmateData.age} />
-              <InfoCard title="Case Type" value={inmateData.caseType} />
-              <InfoCard 
-                title="Sentence" 
-                value={`${inmateData.sentenceYear} years`} 
-                className="bg-blue-50 border-blue-100" 
+    <div className="max-w-4xl mx-auto bg-white rounded-lg" ref={printRef}>
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      ) : (
+        <>
+          {/* Header with Actions */}
+          <div className="flex justify-between items-center mb-6">
+            <div className="flex items-center">
+              <img 
+                src={inmateData.photo || "https://via.placeholder.com/100?text=No+Image"} 
+                alt={`${inmateData.firstName} ${inmateData.lastName}`}
+                className="w-20 h-20 rounded-full object-cover border-2 border-blue-500 mr-4"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = "https://via.placeholder.com/100?text=No+Image";
+                }}
               />
+              <div>
+                <h2 className="text-2xl font-bold text-gray-800">{inmateData.firstName} {inmateData.middleName} {inmateData.lastName}</h2>
+                <p className="text-gray-600">
+                  {inmateData.gender}, {inmateData.age} years old
+                </p>
+              </div>
+            </div>
+            <div className="flex space-x-2">
+              <button 
+                onClick={handlePrint}
+                className="px-3 py-2 bg-blue-100 text-blue-600 rounded-md hover:bg-blue-200 transition-colors flex items-center"
+              >
+                <FiPrinter className="mr-1" /> Print
+              </button>
+             
+              <button
+                className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md transition-colors"
+                onClick={() => setOpenDelete(true)}
+              >
+                Delete
+              </button>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Main content in sections */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          {/* Personal Information Section */}
-          <section className="bg-white rounded-xl shadow-sm mb-6 overflow-hidden border border-gray-100">
-            <div className="border-b border-gray-100 px-6 py-4 flex items-center">
-              <FiUser className="text-teal-500 mr-2" />
-              <h3 className="text-lg font-semibold text-gray-800">Personal Information</h3>
-            </div>
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <InfoCard title="Full Name" value={`${inmateData.firstName} ${inmateData.middleName} ${inmateData.lastName}`} />
-                <InfoCard title="Birth Date" value={formatToLocalDate(inmateData.birthDate)} />
-                <InfoCard title="Mother's Name" value={inmateData.motherName} />
-                <InfoCard title="Gender" value={inmateData.gender} />
-                <InfoCard title="Nationality" value={inmateData.nationality} />
-                <InfoCard title="Marital Status" value={inmateData.maritalStatus} />
+          {/* Tab Navigation */}
+          <div className="bg-white rounded-xl shadow-md mb-6 overflow-hidden border border-gray-200">
+            <div className="flex justify-between items-center border-b border-gray-200">
+              <div className="flex overflow-x-auto hide-scrollbar">
+                {tabs.map(tab => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => handleTabChange(tab.id)}
+                    className={`px-6 py-4 flex items-center whitespace-nowrap ${
+                      activeTab === tab.id
+                        ? 'text-blue-600 border-b-2 border-blue-600 font-medium'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                    }`}
+                  >
+                    {tab.icon}
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+              
+              <div className="flex pr-2">
+                <button
+                  type="button"
+                  onClick={() => navigateTab('prev')}
+                  disabled={activeTab === tabs[0].id}
+                  className={`p-2 rounded-full ${
+                    activeTab === tabs[0].id
+                      ? 'text-gray-300 cursor-not-allowed'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <FiArrowLeft />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigateTab('next')}
+                  disabled={activeTab === tabs[tabs.length - 1].id}
+                  className={`p-2 rounded-full ${
+                    activeTab === tabs[tabs.length - 1].id
+                      ? 'text-gray-300 cursor-not-allowed'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  <FiArrowRight />
+                </button>
               </div>
             </div>
-          </section>
+          </div>
 
-          {/* Physical Characteristics Section */}
-          <section className="bg-white rounded-xl shadow-sm mb-6 overflow-hidden border border-gray-100">
-            <div className="border-b border-gray-100 px-6 py-4 flex items-center">
-              <FiInfo className="text-teal-500 mr-2" />
-              <h3 className="text-lg font-semibold text-gray-800">Physical Characteristics</h3>
-            </div>
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <InfoCard title="Height" value={`${inmateData.height} cm`} />
-                <InfoCard title="Hair Type" value={inmateData.hairType} />
-                <InfoCard title="Face" value={inmateData.face} />
-                <InfoCard title="Eye Color" value={inmateData.eyeColor} />
-                <InfoCard 
-                  title="Special Symbol" 
-                  value={inmateData.specialSymbol || "None"} 
-                  className={inmateData.specialSymbol ? "col-span-full bg-yellow-50 border-yellow-100" : "col-span-full"} 
-                />
-              </div>
-            </div>
-          </section>
-        </div>
-
-        <div className="lg:col-span-1">
-          {/* Case Information Card */}
-          <section className="bg-white rounded-xl shadow-sm mb-6 overflow-hidden border border-gray-100">
-            <div className="border-b border-gray-100 px-6 py-4 flex items-center">
-              <FiFileText className="text-teal-500 mr-2" />
-              <h3 className="text-lg font-semibold text-gray-800">Case Information</h3>
-            </div>
-            <div className="p-6">
-              <div className="space-y-4">
-                <InfoCard title="Start Date" value={formatToLocalDate(inmateData.startDate)} />
-                <InfoCard 
-                  title="Parole Date (2/3 of sentence)" 
-                  value={formatToLocalDate(paroleDate)} 
-                  className="bg-green-50 border-green-100" 
-                />
-                <InfoCard title="Time Until Parole" value={durationToParole || 'Not applicable'} />
-                <InfoCard title="Duration After Parole" value={durationFromParoleToEnd || 'Not applicable'} />
-                <InfoCard title="Release Date" value={formatToLocalDate(inmateData.releasedDate)} />
-                
-                <div className="bg-gray-50 p-4 rounded-lg mt-4">
-                  <h4 className="text-sm font-medium text-gray-500 mb-2">Sentence Reason</h4>
-                  <p className="text-gray-900 text-sm">{inmateData.sentenceReason || "Not provided"}</p>
+          {/* Tab Content */}
+          <div className="p-6">
+            {/* Personal Information Tab */}
+            {activeTab === 'personal' && (
+              <div className="animate-fadeIn bg-white shadow rounded-lg p-6 mb-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4 border-b pb-2">Personal Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Full Name</h4>
+                    <p className="mt-1">{inmateData.firstName} {inmateData.middleName} {inmateData.lastName}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Age</h4>
+                    <p className="mt-1">{inmateData.age}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Birth Date</h4>
+                    <p className="mt-1">{formatToLocalDate(inmateData.birthDate)}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Mother's Name</h4>
+                    <p className="mt-1">{inmateData.motherName || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Gender</h4>
+                    <p className="mt-1 capitalize">{inmateData.gender}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Nationality</h4>
+                    <p className="mt-1">{inmateData.nationality || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Religion</h4>
+                    <p className="mt-1">{inmateData.religion || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Marital Status</h4>
+                    <p className="mt-1">{inmateData.maritalStatus || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Education Level</h4>
+                    <p className="mt-1">{inmateData.degreeLevel || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Work/Occupation</h4>
+                    <p className="mt-1">{inmateData.work || "Not provided"}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          </section>
+            )}
 
-          {/* Contact Information Card */}
-          <section className="bg-white rounded-xl shadow-sm mb-6 overflow-hidden border border-gray-100">
-            <div className="border-b border-gray-100 px-6 py-4 flex items-center">
-              <FiPhoneCall className="text-teal-500 mr-2" />
-              <h3 className="text-lg font-semibold text-gray-800">Emergency Contact</h3>
-            </div>
-            <div className="p-6">
-              <div className="space-y-4">
-                <InfoCard title="Contact Name" value={inmateData.contactName} />
-                <InfoCard title="Phone Number" value={inmateData.phoneNumber} />
-                <InfoCard 
-                  title="Address" 
-                  value={`${inmateData.contactKebele}, ${inmateData.contactWereda}, ${inmateData.contactZone}, ${inmateData.contactRegion}`} 
-                />
-              </div>
-            </div>
-          </section>
-        </div>
-      </div>
-
-      {/* Registrar Information Section */}
-      <section className="bg-white rounded-xl shadow-sm mb-6 overflow-hidden border border-gray-100">
-        <div className="border-b border-gray-100 px-6 py-4 flex items-center">
-          <FiUserCheck className="text-teal-500 mr-2" />
-          <h3 className="text-lg font-semibold text-gray-800">Registrar Information</h3>
-        </div>
-        <div className="p-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between">
-            <InfoCard title="Registrar Worker Name" value={inmateData.registrarWorkerName} className="md:flex-grow md:mr-4" />
-            
-            {inmateData.signature && (
-              <div className="mt-4 md:mt-0 md:ml-4 flex-shrink-0">
-                <h4 className="text-sm font-medium text-gray-500 mb-2">Signature</h4>
-                <img 
-                  src={inmateData.signature} 
-                  alt="Registrar Signature" 
-                  className="max-h-16 border border-gray-200 rounded p-1" 
-                />
+            {/* Physical Characteristics Tab */}
+            {activeTab === 'physical' && (
+              <div className="animate-fadeIn bg-white shadow rounded-lg p-6 mb-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4 border-b pb-2">Physical Characteristics</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Height</h4>
+                    <p className="mt-1">{inmateData.height ? `${inmateData.height} cm` : "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Hair Type</h4>
+                    <p className="mt-1">{inmateData.hairType || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Face</h4>
+                    <p className="mt-1">{inmateData.face || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Forehead</h4>
+                    <p className="mt-1">{inmateData.foreHead || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Nose</h4>
+                    <p className="mt-1">{inmateData.nose || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Eye Color</h4>
+                    <p className="mt-1">{inmateData.eyeColor || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Teeth</h4>
+                    <p className="mt-1">{inmateData.teeth || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Lip</h4>
+                    <p className="mt-1">{inmateData.lip || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Ear</h4>
+                    <p className="mt-1">{inmateData.ear || "Not provided"}</p>
+                  </div>
+                </div>
+                
+                <div className="mt-6">
+                  <h4 className="text-sm font-medium text-gray-500">Special Symbols or Marks</h4>
+                  <p className="mt-1">{inmateData.specialSymbol || "None"}</p>
+                </div>
               </div>
             )}
+
+            {/* Case Information Tab Content */}
+            {activeTab === 'case' && (
+              <div className="animate-fadeIn bg-white shadow rounded-lg p-6 mb-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4 border-b pb-2">Case Information</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Case Type</h4>
+                    <p className="mt-1">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium inline-block 
+                        ${inmateData.caseType?.toLowerCase() === 'criminal' ? 'bg-red-100 text-red-800' : 
+                          inmateData.caseType?.toLowerCase() === 'civil' ? 'bg-blue-100 text-blue-800' : 
+                          inmateData.caseType?.toLowerCase() === 'administrative' ? 'bg-green-100 text-green-800' : 
+                          'bg-gray-100 text-gray-800'}`}>
+                        {inmateData.caseType || "Not provided"}
+                      </span>
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Sentence</h4>
+                    <p className="mt-1 font-medium">{inmateData.sentenceYear ? `${inmateData.sentenceYear} year${inmateData.sentenceYear !== 1 ? 's' : ''}` : "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Start Date</h4>
+                    <p className="mt-1">{formatToLocalDate(inmateData.startDate)}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Projected Release Date</h4>
+                    <p className="mt-1">{formatToLocalDate(inmateData.releasedDate)}</p>
+                  </div>
+                  
+                  {inmateData.startDate && inmateData.sentenceYear && (
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500">Parole Eligibility</h4>
+                      <p className="mt-1">{formatToLocalDate(paroleDate)}</p>
+                    </div>
+                  )}
+                  
+                  {inmateData.startDate && inmateData.releasedDate && (
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500">Duration</h4>
+                      <p className="mt-1">{calculateDuration(inmateData.startDate, inmateData.releasedDate)}</p>
+                    </div>
+                  )}
+                </div>
+                
+                <div className="mt-6">
+                  <h4 className="text-sm font-medium text-gray-500">Sentence Reason</h4>
+                  <p className="mt-1 bg-gray-50 p-3 rounded border border-gray-100">{inmateData.sentenceReason || "Not provided"}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Contact Information Tab Content */}
+            {activeTab === 'contact' && (
+              <div className="animate-fadeIn bg-white shadow rounded-lg p-6 mb-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4 border-b pb-2">Emergency Contact</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Contact Name</h4>
+                    <p className="mt-1">{inmateData.contactName || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Phone Number</h4>
+                    <p className="mt-1">{inmateData.phoneNumber || "Not provided"}</p>
+                  </div>
+                </div>
+                
+                <h3 className="text-lg font-medium text-gray-900 mb-4 border-b pb-2">Contact Address</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Region</h4>
+                    <p className="mt-1">{inmateData.contactRegion || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Zone</h4>
+                    <p className="mt-1">{inmateData.contactZone || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Wereda</h4>
+                    <p className="mt-1">{inmateData.contactWereda || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Kebele</h4>
+                    <p className="mt-1">{inmateData.contactKebele || "Not provided"}</p>
+                  </div>
+                </div>
+                
+                {inmateData.registrarWorkerName && (
+                  <div className="mt-8 border-t pt-6">
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">Registrar Information</h3>
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500">Registrar Name</h4>
+                      <p className="mt-1">{inmateData.registrarWorkerName}</p>
+                    </div>
+                    
+                    {inmateData.signature && (
+                      <div className="mt-4">
+                        <h4 className="text-sm font-medium text-gray-500">Signature</h4>
+                        <img 
+                          src={inmateData.signature} 
+                          alt="Signature" 
+                          className="mt-2 max-h-16 border border-gray-200 p-1 rounded" 
+                        />
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Location Information Tab Content */}
+            {activeTab === 'location' && (
+              <div className="animate-fadeIn bg-white shadow rounded-lg p-6 mb-6">
+                <h3 className="text-lg font-medium text-gray-900 mb-4 border-b pb-2">Birth Address</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Region</h4>
+                    <p className="mt-1">{inmateData.birthRegion || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Zone</h4>
+                    <p className="mt-1">{inmateData.birthZone || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Wereda</h4>
+                    <p className="mt-1">{inmateData.birthWereda || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Kebele</h4>
+                    <p className="mt-1">{inmateData.birthKebele || "Not provided"}</p>
+                  </div>
+                </div>
+                
+                <h3 className="text-lg font-medium text-gray-900 mb-4 border-b pb-2">Current Address</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Region</h4>
+                    <p className="mt-1">{inmateData.currentRegion || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Zone</h4>
+                    <p className="mt-1">{inmateData.currentZone || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Wereda</h4>
+                    <p className="mt-1">{inmateData.currentWereda || "Not provided"}</p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-500">Kebele</h4>
+                    <p className="mt-1">{inmateData.currentKebele || "Not provided"}</p>
+                  </div>
+                </div>
+
+              </div>
+
+            )}
           </div>
-        </div>
-      </section>
+        </>
+      )}
 
       <ConfirmModal
         open={openDelete}
         setOpen={setOpenDelete}
-        onDelete={handleDelete}
-        message="Do you really want to delete this Inmate? This action cannot be undone."
+        title="Delete Inmate"
+        message="Are you sure you want to delete this inmate? This action cannot be undone."
+        onConfirm={handleDelete}
       />
     </div>
   );
