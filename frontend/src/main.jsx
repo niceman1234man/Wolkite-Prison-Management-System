@@ -8,6 +8,20 @@ import store from "./redux/store.js";
 import { Toaster } from "react-hot-toast";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { downloadFaceModels } from './utils/downloadFaceModels';
+
+// Initialize face-api.js models download
+downloadFaceModels()
+  .then(success => {
+    if (success) {
+      console.log('Face recognition models loaded successfully');
+    } else {
+      console.warn('Failed to load face recognition models');
+    }
+  })
+  .catch(error => {
+    console.error('Error initializing face recognition:', error);
+  });
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>

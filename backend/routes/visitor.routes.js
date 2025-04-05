@@ -111,4 +111,10 @@ router.put(
   visitorScheduleController.updateCapacity
 );
 
+// Check for face duplicates
+router.post(
+  "/check-face-duplicate",
+  visitorController.checkFaceDuplicate
+);
+
 module.exports = router; 

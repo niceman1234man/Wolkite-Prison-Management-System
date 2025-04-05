@@ -47,7 +47,21 @@ function VisitHistory() {
     }
 
     try {
-      const response = await axiosInstance.put(`/visitor/schedule/${scheduleId}/cancel`);
+      // Get user ID from localStorage
+      let userId = null;
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const userData = JSON.parse(userStr);
+        userId = userData.id || userData._id;
+      }
+
+      console.log("Cancelling visit with schedule ID:", scheduleId, "and user ID:", userId);
+      
+      // Include userId as query parameter for authorization
+      const response = await axiosInstance.put(
+        `/visitor/schedule/${scheduleId}/cancel${userId ? `?userId=${userId}` : ''}`
+      );
+      
       if (response.data.success) {
         toast.success("Visit cancelled successfully");
         fetchSchedules(); // Refresh the list

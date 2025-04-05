@@ -56,6 +56,7 @@ const NoticesList = () => {
   const fetchNotices = async () => {
     setLoading(true);
     try {
+      // Fetch all notices including both published and draft notices
       const response = await axiosInstance.get("/notice/getAllNotices");
       console.log("Fetched notices:", response.data);
 
@@ -65,7 +66,23 @@ const NoticesList = () => {
           (Array.isArray(response.data.data) && response.data.data.length > 0)
         )) {
         // Use notices array or data array depending on what's available
-        const noticesArray = response.data.notices || response.data.data;
+        let noticesArray = response.data.notices || response.data.data;
+        
+        // Important: The controller by default filters for isPosted: true, 
+        // so we need to make a different API call to get ALL notices for admin
+        if (!noticesArray.some(notice => !notice.isPosted)) {
+          console.log("No draft notices found in initial response, checking database directly");
+          try {
+            // Make a direct query to get all notices without filtering by isPosted
+            const allResponse = await axiosInstance.get("/notice/getAllNotices?includeDrafts=true");
+            if (allResponse.data && (allResponse.data.notices || allResponse.data.data)) {
+              noticesArray = allResponse.data.notices || allResponse.data.data;
+              console.log("All notices including drafts:", noticesArray);
+            }
+          } catch (directError) {
+            console.error("Error fetching all notices:", directError);
+          }
+        }
         
         // Filter out any null or invalid notices and ensure required properties exist
         const validNotices = noticesArray.filter(notice => 
@@ -89,7 +106,7 @@ const NoticesList = () => {
           
           // Add the action buttons
           formattedNotice.action = (
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap justify-center">
               <button
                 onClick={() => setViewNotice(notice)}
                 className="text-white bg-green-600 hover:bg-green-700 px-3 py-1 rounded-lg shadow-md transition duration-300"
@@ -101,30 +118,6 @@ const NoticesList = () => {
                 className="text-white bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-lg shadow-md transition duration-300"
               >
                 Edit
-              </button>
-              <button
-                onClick={() => {
-                  console.log("Delete button clicked for notice:", notice._id);
-                  setNoticeToDelete(notice._id);
-                  setConfirmDelete(true);
-                }}
-                className="text-white bg-red-600 hover:bg-red-700 px-3 py-1 rounded-lg shadow-md transition duration-300"
-              >
-                Delete
-              </button>
-              <button
-                onClick={() => {
-                  console.log("Publish/Unpublish button clicked for notice:", notice._id);
-                  setNoticeToToggle(notice._id);
-                  setConfirmPublish(true);
-                }}
-                className={`text-white px-3 py-1 rounded-lg shadow-md transition duration-300 ${
-                  notice.isPosted 
-                    ? "bg-orange-500 hover:bg-orange-600" 
-                    : "bg-emerald-600 hover:bg-emerald-700"
-                }`}
-              >
-                {notice.isPosted ? "Unpublish" : "Publish"}
               </button>
             </div>
           );
@@ -139,6 +132,7 @@ const NoticesList = () => {
           formattedData.filter(notice => notice.isPosted) : 
           formattedData.filter(notice => !notice.isPosted);
         
+        console.log(`Displaying ${filtered.length} notices (${showPublished ? 'published' : 'draft'})`);
         setFilteredNotices(filtered);
       } else {
         console.error("Unexpected API response format:", response.data);
@@ -265,8 +259,9 @@ const NoticesList = () => {
       <div className={`transition-all duration-300 ${isCollapsed ? "w-16" : "w-64"}`} />
       <div className="flex-1 relative min-h-screen">
         <div
-          className={`bg-white shadow-md p-4 fixed top-14 z-20 flex flex-wrap items-center justify-between transition-all duration-300 ml-2 gap-2 ${isCollapsed ? "left-16 w-[calc(100%-5rem)]" : "left-64 w-[calc(100%-17rem)]"
-            }`}
+          className={`bg-white shadow-md p-4 fixed top-14 z-20 flex flex-wrap items-center justify-between transition-all duration-300 ml-2 gap-2 ${
+            isCollapsed ? "left-16 w-[calc(100%-5rem)]" : "left-64 w-[calc(100%-17rem)]"
+          }`}
         >
           <button
             className="flex items-center text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg shadow-md transition duration-300"

@@ -114,7 +114,8 @@ const ScheduleForm = ({
       try {
         if (userStr) {
           const user = JSON.parse(userStr);
-          userId = user._id || user.id || user.userId || null;
+          // Use id or _id, whichever is available
+          userId = user.id || user._id || user.userId || null;
           userRole = user.role || user.userType || "unknown";
           isVisitor = userRole.toLowerCase().includes('visitor');
           
@@ -134,8 +135,8 @@ const ScheduleForm = ({
           if (key !== "user" && key !== "token") {
             try {
               const value = JSON.parse(localStorage.getItem(key));
-              if (value && (value._id || value.id || value.userId)) {
-                userId = value._id || value.id || value.userId;
+              if (value && (value.id || value._id || value.userId)) {
+                userId = value.id || value._id || value.userId;
                 userRole = value.role || value.userType || "unknown";
                 isVisitor = userRole.toLowerCase().includes('visitor');
                 console.log(`Found user data in localStorage key "${key}":`, { userId, userRole, isVisitor });
@@ -143,6 +144,7 @@ const ScheduleForm = ({
               }
             } catch (e) {
               // Ignore parsing errors for non-JSON values
+              console.log('there is some error', e.error)
             }
           }
         }
@@ -157,7 +159,7 @@ const ScheduleForm = ({
         isVisitor = true;
         
         // Store this temporary user data
-        const tempUser = { _id: userId, role: userRole };
+        const tempUser = { id: userId, role: userRole };
         localStorage.setItem("tempVisitorUser", JSON.stringify(tempUser));
         console.log("Created temporary visitor user:", tempUser);
         
@@ -198,7 +200,7 @@ const ScheduleForm = ({
           idExpiryDate: schedule.idExpiryDate ? new Date(schedule.idExpiryDate).toISOString().split('T')[0] : "",
           purpose: schedule.purpose || "",
           relationship: schedule.relationship || "",
-          inmateId: schedule.inmateId?._id || schedule.inmateId || "",
+          inmateId: schedule.inmateId?.id || schedule.inmateId?._id || schedule.inmateId || "",
           visitDate: schedule.visitDate ? new Date(schedule.visitDate).toISOString().split('T')[0] : "",
           visitTime: schedule.visitTime || "",
           visitDuration: schedule.visitDuration || 30,
@@ -247,7 +249,10 @@ const ScheduleForm = ({
     setInmatesError(false);
     
     try {
+      // Use correct API endpoint
       const response = await axiosInstance.get("/visitor/schedule/inmates");
+      
+      console.log("Fetching inmates response:", response.data);
       
       if (response.data && response.data.success) {
         // Set inmates from the data property based on the controller's response structure
@@ -316,6 +321,7 @@ const ScheduleForm = ({
 
   const fetchCapacityInfo = async () => {
     try {
+      // Use correct API endpoint
       const response = await axiosInstance.get('/visitor/schedule/capacity');
       
       if (response.data && response.data.success) {
@@ -353,7 +359,10 @@ const ScheduleForm = ({
     try {
       console.log("Checking pending schedules for user:", userId);
       
+      // Use correct API endpoint
       const response = await axiosInstance.get(`/visitor/schedule/check-pending?userId=${userId}`);
+      
+      console.log("Pending schedule check response:", response.data);
       
       if (response.data && response.data.hasPendingSchedule) {
         setHasPendingSchedule(true);
@@ -466,105 +475,91 @@ const ScheduleForm = ({
     setStep(step - 1);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    // Prevent double submission
-    if (isSubmitting) return;
-    
+  const handleSubmit = async () => {
     // Validate form
-    const formErrors = validateForm();
-    if (Object.keys(formErrors).length > 0) {
-      setErrors(formErrors);
+    const validationResult = validateFormData(formData);
+    if (!validationResult.isValid) {
+      setValidationErrors(validationResult.errors);
+      toast.error("Please fix the form errors before submitting");
       return;
     }
     
-    setIsSubmitting(true);
-    setSubmitError("");
+    // Clear previous errors
+    setValidationErrors({});
+    setSubmitting(true);
+    
+    // Create a FormData instance for file uploads
+    const submitFormData = new FormData();
+    
+    // Add visitor data fields to form data
+    Object.keys(formData).forEach(key => {
+      if (formData[key] !== null && formData[key] !== undefined) {
+        submitFormData.append(key, formData[key]);
+      }
+    });
+    
+    // Add user ID from localStorage if available
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const userData = JSON.parse(userStr);
+        // Use either id or _id format, whichever is available
+        const userId = userData.id || userData._id;
+        if (userId) {
+          submitFormData.append('userId', userId);
+          console.log('Added userId to form data:', userId);
+        }
+      }
+    } catch (err) {
+      console.error('Error getting userId from localStorage:', err);
+    }
+    
+    // Add token if available
+    const token = localStorage.getItem('token');
+    if (token) {
+      submitFormData.append('token', token);
+      console.log('Added token to form data');
+    }
     
     try {
-      const formDataToSend = new FormData();
+      console.log('Submitting visitor schedule...');
       
-      // Create a cleaned copy of the form data for submission
-      const cleanedFormData = { ...formData };
-      
-      // Handle inmateId properly - must be a valid ObjectId or undefined (not empty string or null)
-      if (!cleanedFormData.inmateId || cleanedFormData.inmateId === '') {
-        // Don't include inmateId at all rather than sending null or empty string
-        delete cleanedFormData.inmateId;
-      } else if (cleanedFormData.inmateId === 'default-inmate') {
-        // If it's the demo inmate, keep as is
-        // formDataToSend.append('inmateId', 'default-inmate');
-      } else if (!cleanedFormData.inmateId.match(/^[0-9a-fA-F]{24}$/)) {
-        // If it's not a valid ObjectId format, remove it
-        delete cleanedFormData.inmateId;
-      }
-      
-      // Add all form fields to FormData
-      Object.keys(cleanedFormData).forEach(key => {
-        // Skip null values
-        if (cleanedFormData[key] !== null && cleanedFormData[key] !== undefined) {
-          // Handle file uploads
-          if ((key === 'visitorPhoto' || key === 'idPhoto') && cleanedFormData[key] instanceof File) {
-            formDataToSend.append(key, cleanedFormData[key]);
-          } else {
-            formDataToSend.append(key, cleanedFormData[key]);
-          }
-        }
-      });
-      
-      console.log("Preparing to submit schedule with data:", cleanedFormData);
-      
-      // Use the correct endpoint based on whether we're creating or updating
-      const isEditing = !!schedule?._id;
-      const url = isEditing
-        ? `/visitor/schedule/schedule/${schedule._id}`
-        : "/visitor/schedule/schedule";
-      
-      console.log(`Submitting to ${url}`);
-      
-      const response = await axiosInstance.put(url, formDataToSend, {
+      // Use the visitor prefix endpoint instead of visitorSchedule
+      const response = await axiosInstance.post(
+        "/visitor/schedule", 
+        submitFormData, 
+        {
         headers: {
-          'Content-Type': 'multipart/form-data'
+            'Content-Type': 'multipart/form-data',
+          },
         }
-      });
+      );
       
-      const data = response.data;
+      console.log('Schedule submission response:', response.data);
       
-      if (data.success) {
-        console.log("Schedule submitted successfully:", data);
-        toast.success(isEditing ? "Schedule updated successfully!" : "Schedule created successfully!", toastConfig);
+      if (response.data.success) {
+        toast.success("Schedule created successfully!");
+        setFormData(initialFormState);
+        setValidationErrors({});
+        setSubmitting(false);
+        setVisitorPhoto(null);
+        setIdPhoto(null);
         
-        // Allow the toast to be displayed before closing the form
-        setTimeout(() => {
-          if (onSuccess) onSuccess();
-          onClose();
-        }, 500);
-      } else {
-        console.error("Failed to submit schedule:", data);
+        // Test viewing all schedules in the api response
+        await checkScheduleVisibility();
         
-        // Handle validation errors returned from server
-        if (data.validationErrors) {
-          setErrors(data.validationErrors);
+        if (onSuccess) {
+          onSuccess(response.data.schedule);
+        }
         } else {
-          setSubmitError(data.message || "Failed to submit schedule. Please try again.");
-          toast.error(data.message || "Failed to submit schedule", toastConfig);
-        }
+        console.error('Schedule submission failed:', response.data);
+        toast.error(response.data.message || "Failed to create schedule");
+        setSubmitting(false);
       }
     } catch (error) {
-      console.error("Error submitting schedule:", error);
-      setSubmitError("An unexpected error occurred. Please try again.");
-      
-      // Safe error handling for toast
-      const errorMessage = error.response?.data?.message || "An unexpected error occurred";
-      toast.error(errorMessage, toastConfig);
-      
-      // Handle validation errors from server
-      if (error.response && error.response.data && error.response.data.errors) {
-        setErrors(error.response.data.errors);
-      }
-    } finally {
-      setIsSubmitting(false);
+      console.error('Error submitting schedule:', error);
+      toast.error(error.message || "An error occurred while creating schedule");
+      setSubmitting(false);
     }
   };
 
@@ -703,10 +698,11 @@ const ScheduleForm = ({
     );
   };
 
-  // Add this function before the return statement
+  // Update the checkScheduleVisibility function
   const checkScheduleVisibility = async () => {
     try {
       console.log("Checking schedule visibility in the list...");
+      // Use correct API endpoint
       const response = await axiosInstance.get("/visitor/schedule/schedules");
       
       if (response.data.success && Array.isArray(response.data.data)) {

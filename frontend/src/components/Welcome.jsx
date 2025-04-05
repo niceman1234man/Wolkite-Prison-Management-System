@@ -85,21 +85,12 @@ function Welcome() {
           setMessages(messagesWithFullUrls);
         } else {
           toast.error("No messages found.", toastConfig);
-        }
-
-        const imagesResponse = await axiosInstance.get("/manageimages/get-side-images");
-        if (imagesResponse.data?.images) {
-          const imagesWithFullUrls = imagesResponse.data.images.map(img => 
-            `${import.meta.env.VITE_API_URL}${img}`
-          );
-          setSideImages(imagesWithFullUrls);
-        } else {
-          toast.error("No images available.", toastConfig);
-        }
+        }       
       } catch (error) {
         console.error("Error fetching content:", error);
         toast.error(`Failed to load content: ${error.response?.data?.message || error.message}`, toastConfig);
-      } finally {
+      } 
+      finally {
         setLoading(false);
       }
     };

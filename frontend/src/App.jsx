@@ -167,6 +167,7 @@ function App() {
           <Route path="/Inspector-dashboard" element={<InspectorDashboard />}>
             <Route index element={<InspectorSummary />} />
             <Route path="prisons" element={<PrisonsList />} />
+            <Route path="prisons/edit/:id" element={<EditPrison />} />
             <Route path="edit/:id" element={<EditPrison />} />
             <Route path="notices" element={<NoticesList />} />
             <Route path="add-notice" element={<Notices />} />

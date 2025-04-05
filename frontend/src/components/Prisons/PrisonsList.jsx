@@ -5,68 +5,9 @@ import { useSelector } from "react-redux";
 import axiosInstance from "../../utils/axiosInstance";
 import { FaArrowLeft, FaSearch } from "react-icons/fa";
 import AddPrison from "./AddPrison";
+import EditPrison from "./EditPrison";
 import AddModal from "../Modals/AddModal";
 import { toast } from "react-toastify";
-
-const columns = [
-  {
-    name: "Prison Name",
-    selector: (row) => row.prison_name,
-    sortable: true,
-  },
-  {
-    name: "Location",
-    selector: (row) => row.location,
-    sortable: true,
-  },
-  {
-    name: "Capacity",
-    selector: (row) => row.capacity,
-    sortable: true,
-  },
-  {
-    name: "Current Population",
-    selector: (row) => row.current_population,
-    sortable: true,
-  },
-  {
-    name: "Status",
-    selector: (row) => row.status,
-    sortable: true,
-    cell: (row) => (
-      <span
-        className={`px-2 py-1 rounded-full text-xs font-semibold ${
-          row.status === "active"
-            ? "bg-green-100 text-green-800"
-            : row.status === "inactive"
-            ? "bg-red-100 text-red-800"
-            : "bg-yellow-100 text-yellow-800"
-        }`}
-      >
-        {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
-      </span>
-    ),
-  },
-  {
-    name: "Actions",
-    cell: (row) => (
-      <div className="flex gap-2">
-        <button
-          onClick={() => handleEdit(row._id)}
-          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded"
-        >
-          Edit
-        </button>
-        <button
-          onClick={() => handleDelete(row._id)}
-          className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
-        >
-          Delete
-        </button>
-      </div>
-    ),
-  },
-];
 
 const customStyles = {
   headCells: {
@@ -94,8 +35,74 @@ const PrisonsList = () => {
   const [filteredPrisons, setFilteredPrisons] = useState([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [selectedPrisonId, setSelectedPrisonId] = useState(null);
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
   const navigate = useNavigate();
+
+  // Define the columns with handle functions inside the component
+  const actionColumn = {
+    name: "Actions",
+    cell: (row) => (
+      <div className="flex gap-2">
+        <button
+          onClick={() => handleEdit(row._id)}
+          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded"
+        >
+          Edit
+        </button>
+        <button
+          onClick={() => handleDelete(row._id)}
+          className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
+        >
+          Delete
+        </button>
+      </div>
+    ),
+  };
+
+  // Create full columns array inside the component to access functions
+  const tableColumns = [
+    {
+      name: "Prison Name",
+      selector: (row) => row.prison_name,
+      sortable: true,
+    },
+    {
+      name: "Location",
+      selector: (row) => row.location,
+      sortable: true,
+    },
+    {
+      name: "Capacity",
+      selector: (row) => row.capacity,
+      sortable: true,
+    },
+    {
+      name: "Current Population",
+      selector: (row) => row.current_population,
+      sortable: true,
+    },
+    {
+      name: "Status",
+      selector: (row) => row.status,
+      sortable: true,
+      cell: (row) => (
+        <span
+          className={`px-2 py-1 rounded-full text-xs font-semibold ${
+            row.status === "active"
+              ? "bg-green-100 text-green-800"
+              : row.status === "inactive"
+              ? "bg-red-100 text-red-800"
+              : "bg-yellow-100 text-yellow-800"
+          }`}
+        >
+          {row.status.charAt(0).toUpperCase() + row.status.slice(1)}
+        </span>
+      ),
+    },
+    actionColumn,
+  ];
 
   const fetchPrisons = async () => {
     setLoading(true);
@@ -115,23 +122,37 @@ const PrisonsList = () => {
 
   useEffect(() => {
     fetchPrisons();
+    
+    // Add event listener for prison updates
+    const handlePrisonsUpdated = () => {
+      console.log("Prisons updated event received, refreshing list");
+      fetchPrisons();
+    };
+    
+    window.addEventListener('prisonsUpdated', handlePrisonsUpdated);
+    
+    // Clean up event listener on component unmount
+    return () => {
+      window.removeEventListener('prisonsUpdated', handlePrisonsUpdated);
+    };
   }, []);
 
   const handleEdit = async (id) => {
     try {
-      navigate(`/inspector-dashboard/prisons/edit/${id}`);
+      // Set the selected prison ID and open the edit modal
+      setSelectedPrisonId(id);
+      setEditOpen(true);
     } catch (error) {
-      console.error("Error navigating to edit:", error);
-      toast.error("Failed to navigate to edit page");
+      console.error("Error preparing to edit:", error);
+      toast.error("Failed to prepare edit form");
     }
   };
 
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this prison?")) {
       try {
-        const response = await axiosInstance.delete(
-          `/prison/delete-prison/${id}`
-        );
+        const response = await axiosInstance.delete(`/prison/${id}`);
+        
         if (response.data?.success) {
           toast.success("Prison deleted successfully");
           fetchPrisons();
@@ -190,9 +211,6 @@ const PrisonsList = () => {
           >
             Add New Prison
           </button>
-          <AddModal open={open} setOpen={setOpen}>
-            <AddPrison setOpen={setOpen} />
-          </AddModal>
         </div>
         <div className="p-6 mt-32">
           <h2 className="text-2xl font-bold text-gray-800 mb-4">Prison List</h2>
@@ -201,16 +219,28 @@ const PrisonsList = () => {
           ) : (
             <div className="overflow-x-auto">
               <DataTable
-                columns={columns}
+                columns={tableColumns}
                 data={filteredPrisons}
                 pagination
                 className="shadow-lg rounded-lg overflow-hidden"
                 customStyles={customStyles}
+                responsive
+                highlightOnHover
               />
             </div>
           )}
         </div>
       </div>
+      
+      {/* Add Prison Modal */}
+      <AddModal open={open} setOpen={setOpen}>
+        <AddPrison setOpen={setOpen} />
+      </AddModal>
+      
+      {/* Edit Prison Modal */}
+      <AddModal open={editOpen} setOpen={setEditOpen}>
+        <EditPrison setOpen={setEditOpen} id={selectedPrisonId} />
+      </AddModal>
     </div>
   );
 };

@@ -35,6 +35,18 @@ const userSchema=new mongoose.Schema({
     }, date:{
         type:Date ,
         required:true
+    },
+    faceDescriptor: {
+        type: String,
+        required: false
+    },
+    faceImage: {
+        type: String,
+        required: false
+    },
+    faceDateRegistered: {
+        type: Date,
+        default: null
     }
 },{timestamps:true});
 export const Visitor=mongoose.model('Visitor',userSchema);

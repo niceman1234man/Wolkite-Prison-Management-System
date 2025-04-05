@@ -184,8 +184,20 @@ export const getAllNotices = async (req, res) => {
       console.log("Getting all notices without user ID (read status cannot be determined)");
     }
 
-    // Get all notices that are posted
-    const notices = await Notice.find({ isPosted: true }).sort({ date: -1 });
+    // Check if we should include draft notices (admin view)
+    const includeDrafts = req.query.includeDrafts === 'true';
+    
+    // Build the query
+    let query = {};
+    if (!includeDrafts) {
+      // Only include published notices unless specifically requested
+      query.isPosted = true;
+    }
+    
+    console.log(`Fetching notices with query:`, query, `(includeDrafts=${includeDrafts})`);
+    
+    // Get all notices based on the query
+    const notices = await Notice.find(query).sort({ date: -1 });
     
     if (!notices || notices.length === 0) {
       return res.status(200).json({

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import MessageNotificationIcon from './Messaging/MessageNotificationIcon';
 import MessagingSystem from './Messaging/MessagingSystem';
+import axiosInstance from '../services/axiosInstance';
 
 const Navbar = () => {
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
@@ -9,6 +10,7 @@ const Navbar = () => {
   const dropdownRef = useRef(null);
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false); // For profile indicator
   const user = useSelector((state) => state.user.user);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -29,6 +31,49 @@ const Navbar = () => {
     setShowMessaging(!showMessaging);
   };
 
+  // Function to fetch the number of unread messages
+  const fetchUnreadCount = async () => {
+    try {
+      // Get the user ID from localStorage
+      let userId = null;
+      try {
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          const userData = JSON.parse(userStr);
+          userId = userData.id || userData._id;
+        }
+      } catch (err) {
+        console.error('Error getting userId from localStorage:', err);
+      }
+      
+      // Only make the API call if we have a user ID
+      if (!userId) {
+        console.log('No user ID available for unread message count');
+        return;
+      }
+      
+      console.log('Fetching unread messages count for user:', userId);
+      
+      // Include userId explicitly in the query parameters
+      const response = await axiosInstance.get(`/messages/unread/count?userId=${userId}`);
+      
+      if (response.data && response.data.success) {
+        setUnreadCount(response.data.unreadCount || 0);
+      } else {
+        console.error('Unexpected response format:', response.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch unread count:", error);
+    }
+  };
+
+  // Check if user is not a visitor (visitor role check)
+  const isStaffUser = () => {
+    if (!user) return false;
+    // Check for visitor role
+    return user.role !== 'visitor';
+  };
+
   return (
     <>
       <nav className="bg-white shadow-lg">
@@ -42,8 +87,8 @@ const Navbar = () => {
             
             {/* Right side icons */}
             <div className="flex items-center space-x-4">
-              {/* Message notification icon */}
-              {user && <MessageNotificationIcon onClick={toggleMessaging} />}
+              {/* Message notification icon - only show for non-visitor users */}
+              {user && isStaffUser() && <MessageNotificationIcon onClick={toggleMessaging} />}
               
               {/* Profile dropdown */}
               <div className="relative" ref={dropdownRef}>
@@ -121,8 +166,8 @@ const Navbar = () => {
         </div>
       </nav>
       
-      {/* Messaging modal */}
-      {showMessaging && <MessagingSystem isOpen={showMessaging} onClose={toggleMessaging} />}
+      {/* Messaging modal - only render for non-visitor users */}
+      {showMessaging && isStaffUser() && <MessagingSystem isOpen={showMessaging} onClose={toggleMessaging} />}
     </>
   );
 };

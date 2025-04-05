@@ -1,139 +1,205 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
-import { FiSend, FiPaperclip, FiX, FiSearch, FiUser, FiMessageSquare, FiMoreVertical, FiCheck, FiBell, FiCheckCircle, FiArrowLeft } from 'react-icons/fi';
-import { IoMdImages } from 'react-icons/io';
-import { BsEmojiSmile } from 'react-icons/bs';
+import { 
+  FiMoreVertical, 
+  FiMenu, 
+  FiUser, 
+  FiX, 
+  FiSearch, 
+  FiArrowLeft, 
+  FiCheckCircle, 
+  FiCheck, 
+  FiMessageSquare,
+  FiBell,
+  FiStar,
+  FiArrowRight,
+  FiPlay,
+  FiFile,
+  FiDownload,
+  FiImage,
+  FiSend,
+  FiPaperclip,
+  FiUsers,
+  FiSettings,
+  FiBellOff,
+  FiRefreshCw,
+  FiPhone,
+  FiVideo
+} from 'react-icons/fi';
 import axiosInstance from '../../utils/axiosInstance';
 import { toast } from 'react-hot-toast';
-import { RiMenu3Line } from 'react-icons/ri';
+import MessageList from './MessageList';
+import MessageChat from './MessageChat';
+import '../../../src/styles/messaging.css';
 
-const MessagingSystem = ({ isOpen, onClose }) => {
-  const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [users, setUsers] = useState([]);
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [unreadCounts, setUnreadCounts] = useState({});
-  const [isTyping, setIsTyping] = useState(false);
-  const [showEmojis, setShowEmojis] = useState(false);
-  const [isMobileView, setIsMobileView] = useState(window.innerWidth < 768);
-  const [showUserList, setShowUserList] = useState(true);
-  const [hasNewMessages, setHasNewMessages] = useState(false);
-  const [lastCheckedTime, setLastCheckedTime] = useState(Date.now());
-  const [messageStatus, setMessageStatus] = useState({});
-  const messagesEndRef = useRef(null);
-  const user = useSelector((state) => state.user.user);
-  const inputRef = useRef(null);
-  const pollIntervalRef = useRef(null);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [userStatus, setUserStatus] = useState('Online');
+// Constants
+const API_ENDPOINTS = {
+  USERS: '/user/getAlluser',
+  MESSAGES: '/messages',
+  UNREAD_COUNT: '/messages/unread/count',
+  MARK_READ: '/messages/read',
+  SEND_MESSAGE: '/messages/send'
+};
 
-  // Add swipe gesture functionality
-  const touchStartX = useRef(null);
-  const touchEndX = useRef(null);
-  
-  const handleTouchStart = (e) => {
-    touchStartX.current = e.touches[0].clientX;
-  };
-  
-  const handleTouchMove = (e) => {
-    touchEndX.current = e.touches[0].clientX;
-  };
-  
-  const handleTouchEnd = () => {
-    if (!touchStartX.current || !touchEndX.current) return;
-    
-    const distance = touchStartX.current - touchEndX.current;
-    const isLeftSwipe = distance > 50;
-    const isRightSwipe = distance < -50;
-    
-    if (isLeftSwipe && showUserList && isMobileView) {
-      // Swipe left to hide user list and show chat
-      if (selectedUser) {
-        setShowUserList(false);
-      }
-    } else if (isRightSwipe && !showUserList && isMobileView) {
-      // Swipe right to show user list
-      setShowUserList(true);
-    }
-    
-    // Reset values
-    touchStartX.current = null;
-    touchEndX.current = null;
-  };
-
-  // Handle responsive design
-  useEffect(() => {
-    const handleResize = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobileView(mobile);
-      if (mobile && selectedUser) {
-        setShowUserList(false);
+// Utility functions
+const messageUtils = {
+  fetchUsers: async (userId) => {
+    try {
+      const response = await axiosInstance.get(API_ENDPOINTS.USERS);
+      
+      let usersList = [];
+      if (Array.isArray(response.data)) {
+        usersList = response.data;
+      } else if (response.data.users && Array.isArray(response.data.users)) {
+        usersList = response.data.users;
+      } else if (response.data.user && Array.isArray(response.data.user)) {
+        usersList = response.data.user;
+      } else if (response.data.data && Array.isArray(response.data.data)) {
+        usersList = response.data.data;
       } else {
-        setShowUserList(true);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [selectedUser]);
-
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  // Start polling for new messages when the component mounts
-  useEffect(() => {
-    if (isOpen && user?._id) {
-      // Log user object to verify it's available
-      console.log('Current user:', user);
-      fetchUsers();
-      fetchUnreadCounts();
-      
-      // If we have a selected user, fetch messages immediately
-      if (selectedUser) {
-        fetchMessages(selectedUser);
+        console.error('Unexpected response format:', response.data);
+        usersList = [];
       }
       
-      // Start polling for new messages every 5 seconds
-      pollIntervalRef.current = setInterval(() => {
-        if (selectedUser) {
-          checkForNewMessages(selectedUser);
-        } else {
-          fetchUnreadCounts();
-        }
-      }, 5000);
+      return usersList.filter(u => u._id !== userId);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast.error('Failed to load users');
+      return [];
     }
-    
-    return () => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
+  },
+  
+  fetchUnreadCounts: async () => {
+    try {
+      const response = await axiosInstance.get(API_ENDPOINTS.UNREAD_COUNT);
+      
+      if (response.data && response.data.bySender && typeof response.data.bySender === 'object') {
+        return response.data.bySender;
       }
-    };
-  }, [isOpen, user, selectedUser]);
-
-  // Check for new messages since last check
-  const checkForNewMessages = async (userId) => {
-    if (!user?._id) {
-      console.error('Cannot check for messages: No current user');
-      return;
+      return {};
+    } catch (error) {
+      console.error('Error fetching unread counts:', error);
+      return {};
     }
+  },
+  
+  fetchMessages: async (userId, currentUserId) => {
+    try {
+      const response = await axiosInstance.get(`${API_ENDPOINTS.MESSAGES}/${userId}?currentUserId=${currentUserId}`);
+      
+      // Check the response structure
+      let messagesData = [];
+      if (Array.isArray(response.data)) {
+        messagesData = response.data;
+      } else if (response.data.messages && Array.isArray(response.data.messages)) {
+        messagesData = response.data.messages;
+      } else if (response.data.data && Array.isArray(response.data.data)) {
+        messagesData = response.data.data;
+      } else {
+        console.error('Unexpected message data format:', response.data);
+        messagesData = [];
+      }
+      
+      // Sort messages by creation time
+      return messagesData.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+      toast.error('Failed to load messages');
+      return [];
+    }
+  },
+  
+  markMessagesAsRead: async (senderId, currentUserId) => {
+    try {
+      await axiosInstance.put(`${API_ENDPOINTS.MARK_READ}/${senderId}?currentUserId=${currentUserId}`);
+      return true;
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+      return false;
+    }
+  },
+  
+  sendMessage: async (content, receiverId, currentUserId, attachment) => {
+    if ((!content || !content.trim()) && !attachment) return null;
     
     try {
-      console.log(`Checking for new messages with ${userId} since ${new Date(lastCheckedTime).toISOString()}`);
+      // Validate inputs to prevent 400 errors
+      if (!receiverId) {
+        throw new Error("Receiver ID is required");
+      }
       
-      // Ensure user ID is a string
-      const currentUserId = String(user._id);
+      // Get user ID directly from Redux store or localStorage as fallback
+      let senderId = currentUserId;
+      if (!senderId) {
+        const userString = localStorage.getItem('user');
+        if (userString) {
+          try {
+            const userData = JSON.parse(userString);
+            senderId = userData._id || userData.id;
+          } catch (e) {
+            console.error('Error parsing user data:', e);
+          }
+        }
+      }
       
-      // Add currentUserId to query params to handle cases where req.user is not available
-      const response = await axiosInstance.get(`/messages/${userId}?since=${lastCheckedTime}&currentUserId=${currentUserId}`);
-      console.log('Checking for new messages response:', response.data);
+      if (!senderId) {
+        throw new Error("Sender ID is required");
+      }
+      
+      console.log("Preparing to send message with:", {
+        content: content ? content.substring(0, 30) + (content.length > 30 ? '...' : '') : '',
+        receiverId,
+        senderId: senderId,
+        hasAttachment: !!attachment
+      });
+      
+      const formData = new FormData();
+      formData.append('content', content || '');
+      formData.append('receiverId', receiverId);
+      formData.append('senderId', senderId);
+      
+      if (attachment) {
+        // Use 'file' field name to match backend expectation (not 'attachment')
+        formData.append('file', attachment);
+        console.log("Attaching file:", attachment.name, attachment.type, attachment.size);
+      }
+      
+      // Get token to ensure authorization
+      const token = localStorage.getItem('token');
+      
+      console.log('Sending message with formData:', Array.from(formData.entries()));
+      
+      const response = await axiosInstance.post(API_ENDPOINTS.SEND_MESSAGE, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      console.log('Message API response:', response.data);
+      
+      if (response.data && response.data._id) {
+        return { ...response.data, status: 'sent' };
+      }
+      
+      if (response.data && response.data.data && response.data.data._id) {
+        return { ...response.data.data, status: 'sent' };
+      }
+      
+      console.error('Message sent but returned unexpected response format:', response.data);
+      return null;
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast.error(error.message || 'Failed to send message');
+      return null;
+    }
+  },
+  
+  checkForNewMessages: async (userId, currentUserId, lastCheckedTime) => {
+    try {
+      const response = await axiosInstance.get(
+        `${API_ENDPOINTS.MESSAGES}/${userId}?since=${lastCheckedTime}&currentUserId=${currentUserId}`
+      );
       
       let messagesList = [];
       if (Array.isArray(response.data)) {
@@ -144,1564 +210,175 @@ const MessagingSystem = ({ isOpen, onClose }) => {
         messagesList = response.data.data;
       } else {
         console.error('Unexpected message data format:', response.data);
-        return;
+        return [];
       }
       
       // Filter to ensure we only process messages from the current conversation
-      messagesList = messagesList.filter(message => {
-        // Extract sender and receiver IDs, handling both string IDs and populated objects
+      return messagesList.filter(message => {
         const messageSenderId = typeof message.senderId === 'object' ? message.senderId?._id : message.senderId;
         const messageReceiverId = typeof message.receiverId === 'object' ? message.receiverId?._id : message.receiverId;
-        const currentUserId = user._id;
         
         return (messageSenderId === currentUserId && messageReceiverId === userId) || 
                (messageSenderId === userId && messageReceiverId === currentUserId);
       });
-      
-      if (messagesList.length > 0) {
-        // Filter messages we don't already have based on ID
-        const newMessages = messagesList.filter(msg => 
-          !messages.some(existingMsg => existingMsg._id === msg._id)
-        );
-        
-        console.log(`Found ${newMessages.length} new messages out of ${messagesList.length} total`);
-        
-        if (newMessages.length > 0) {
-          // Add the new messages to our state
-          setMessages(prev => {
-            // Create a new array with all messages without duplicates
-            const existingIds = new Set(prev.map(m => m._id));
-            const combinedMessages = [...prev];
-            
-            newMessages.forEach(msg => {
-              if (!existingIds.has(msg._id)) {
-                combinedMessages.push(msg);
-              }
-            });
-            
-            // Sort by creation time
-            return combinedMessages.sort((a, b) => 
-              new Date(a.createdAt) - new Date(b.createdAt)
-            );
-          });
-          
-          setHasNewMessages(true);
-          
-          // If messages were received and the user isn't the sender, show notification
-          const receivedMessages = newMessages.filter(msg => msg.senderId !== user._id);
-          if (receivedMessages.length > 0) {
-            const sender = users.find(u => u._id === receivedMessages[0].senderId);
-            if (sender) {
-              toast.custom((t) => (
-                <div className={`${t.visible ? 'animate-enter' : 'animate-leave'} p-4 bg-blue-500 text-white rounded-lg shadow-lg flex items-center gap-3`}>
-                  <FiBell size={20} />
-                  <div>
-                    <p className="font-medium">{sender.firstName} {sender.middleName}</p>
-                    <p className="text-sm">New message received</p>
-                  </div>
-                </div>
-              ));
-            }
-          }
-          
-          // Update message status for our messages that were delivered
-          const ourDeliveredMessages = newMessages.filter(msg => 
-            msg.senderId === user._id && msg.status === 'delivered'
-          );
-          
-          if (ourDeliveredMessages.length > 0) {
-            setMessageStatus(prev => {
-              const updated = {...prev};
-              ourDeliveredMessages.forEach(msg => {
-                updated[msg._id] = 'delivered';
-              });
-              return updated;
-            });
-          }
-        }
-      }
-      
-      setLastCheckedTime(Date.now());
     } catch (error) {
       console.error('Error checking for new messages:', error);
+      return [];
     }
-  };
+  }
+};
 
-  const fetchUsers = async () => {
-    try {
-      const response = await axiosInstance.get('/user/getAlluser');
-      console.log('User response:', response.data); // Debug the response structure
-      
-      // Check the response structure and extract the user array
-      let usersList = [];
-      if (Array.isArray(response.data)) {
-        usersList = response.data;
-      } else if (response.data.users && Array.isArray(response.data.users)) {
-        usersList = response.data.users;
-      } else if (response.data.user && Array.isArray(response.data.user)) {
-        usersList = response.data.user; // Handle the specific case where users are in 'user' property
-      } else if (response.data.data && Array.isArray(response.data.data)) {
-        usersList = response.data.data;
-      } else {
-        console.error('Unexpected response format:', response.data);
-        usersList = []; // Initialize as empty array instead of showing error toast
-      }
-      
-      const filteredUsers = usersList.filter(u => u._id !== user._id);
-      setUsers(filteredUsers);
-    } catch (error) {
-      toast.error('Failed to fetch users');
-      console.error('Error fetching users:', error);
-    }
-  };
+const MessagingSystem = ({ isOpen, onClose }) => {
+  const [messages, setMessages] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [unreadCounts, setUnreadCounts] = useState({});
+  const [isTyping, setIsTyping] = useState(false);
+  const [isMobileView, setIsMobileView] = useState(window.innerWidth < 768);
+  const [showUserList, setShowUserList] = useState(true);
+  const [lastCheckedTime, setLastCheckedTime] = useState(Date.now());
+  const [userStatus, setUserStatus] = useState('Online');
 
-  const fetchUnreadCounts = async () => {
-    if (!user?._id) {
-      console.error('Cannot fetch unread counts: No current user');
-      return;
-    }
-    
-    try {
-      // Ensure user ID is a string
-      const currentUserId = String(user._id);
-      console.log('Fetching unread counts for user', currentUserId);
-      
-      // Add currentUserId to both query params and request body for maximum compatibility
-      const response = await axiosInstance.get(`/messages/unread/count?currentUserId=${currentUserId}`);
-      console.log('Unread counts response:', response.data);
-      
-      // Handle different possible response formats
-      if (response.data) {
-        // If we have the new format with count and bySender
-        if (response.data.bySender) {
-          setUnreadCounts(response.data.bySender);
-          if (response.data.count > 0) {
-            setHasNewMessages(true);
-          }
-        } 
-        // If we have the old format with just count
-        else if (typeof response.data.count === 'number') {
-          // Legacy format - create empty object
-          setUnreadCounts({});
-          if (response.data.count > 0) {
-            setHasNewMessages(true);
-          }
-        }
-        // If response data is directly the counts object
-        else if (typeof response.data === 'object' && !Array.isArray(response.data)) {
-          setUnreadCounts(response.data);
-          
-          const totalUnread = Object.values(response.data)
-            .reduce((sum, count) => sum + (count || 0), 0);
-          
-          if (totalUnread > 0) {
-            setHasNewMessages(true);
-          }
-        }
-      } else {
-        console.error('Unexpected unread counts format:', response.data);
-      }
-    } catch (error) {
-      // Don't show error toast for this one since it's not critical
-      console.error('Error fetching unread counts:', error);
-    }
-  };
-
-  // Load previously selected user from localStorage when component mounts
-  useEffect(() => {
-    if (isOpen && user?._id) {
-      const savedUserId = localStorage.getItem('selectedMessageUser');
-      if (savedUserId) {
-        console.log('Restoring previously selected user:', savedUserId);
-        setSelectedUser(savedUserId);
-        fetchMessages(savedUserId);
-      }
-    }
-  }, [isOpen, user]);
-  
-  // Save selected user to localStorage whenever it changes
-  useEffect(() => {
-    if (selectedUser) {
-      localStorage.setItem('selectedMessageUser', selectedUser);
-    }
-  }, [selectedUser]);
-  
-  // Save messages to localStorage whenever they change
-  useEffect(() => {
-    if (selectedUser && messages.length > 0) {
-      try {
-        // Save messages for this conversation
-        localStorage.setItem(`messages_${selectedUser}`, JSON.stringify(messages));
-      } catch (error) {
-        console.error('Error saving messages to localStorage:', error);
-      }
-    }
-  }, [messages, selectedUser]);
-
-  // Load messages from localStorage when selecting a user
-  const loadSavedMessages = (userId) => {
-    try {
-      const savedMessages = localStorage.getItem(`messages_${userId}`);
-      if (savedMessages) {
-        return JSON.parse(savedMessages);
-      }
-    } catch (error) {
-      console.error('Error loading messages from localStorage:', error);
-    }
-    return [];
-  };
-
-  // Modified fetchMessages to ensure message area is displayed
-  const fetchMessages = async (userId) => {
-    if (!user?._id) {
-      console.error('Cannot fetch messages: No current user');
-      toast.error('User information not available');
-      return;
-    }
-    
-    setIsLoading(true);
-    
-    try {
-      // Set the selected user immediately to improve the user experience
-      setSelectedUser(userId);
-      
-      // First load any cached messages to show immediately
-      const savedMessages = loadSavedMessages(userId);
-      if (savedMessages.length > 0) {
-        console.log(`Loaded ${savedMessages.length} saved messages from localStorage`);
-        setMessages(savedMessages);
-      }
-      
-      console.log(`Fetching messages with user ${userId}`);
-      
-      // Ensure user ID is a string
-      const currentUserId = String(user._id);
-      console.log('Current user ID:', currentUserId);
-      
-      // Add currentUserId to query params to handle cases where req.user is not available
-      const response = await axiosInstance.get(`/messages/${userId}?currentUserId=${currentUserId}`);
-      console.log('Messages response:', response.data);
-      
-      // Handle different possible response structures
-      let messagesList = [];
-      if (Array.isArray(response.data)) {
-        messagesList = response.data;
-      } else if (response.data.messages && Array.isArray(response.data.messages)) {
-        messagesList = response.data.messages;
-      } else if (response.data.data && Array.isArray(response.data.data)) {
-        messagesList = response.data.data;
-      } else {
-        console.error('Unexpected messages format:', response.data);
-        toast.error('Could not load messages');
-        return;
-      }
-      
-      // Filter to ensure we only process messages from the current conversation
-      messagesList = messagesList.filter(message => {
-        // Extract sender and receiver IDs, handling both string IDs and populated objects
-        const messageSenderId = typeof message.senderId === 'object' ? message.senderId?._id : message.senderId;
-        const messageReceiverId = typeof message.receiverId === 'object' ? message.receiverId?._id : message.receiverId;
-        const currentUserId = user._id;
-        
-        return (messageSenderId === currentUserId && messageReceiverId === userId) || 
-               (messageSenderId === userId && messageReceiverId === currentUserId);
-      });
-      
-      if (messagesList.length > 0) {
-        // Reset new message flag when opening a conversation
-        setHasNewMessages(false);
-        
-        // Sort messages by creation time
-        const sortedMessages = messagesList.sort((a, b) => 
-          new Date(a.createdAt) - new Date(b.createdAt)
-        );
-        
-        console.log(`Displaying ${sortedMessages.length} messages`);
-        setMessages(sortedMessages);
-        
-        // Save to localStorage
-        localStorage.setItem(`messages_${userId}`, JSON.stringify(sortedMessages));
-      }
-      
-      try {
-        // Ensure user ID is a string
-        const currentUserId = String(user._id);
-        
-        // Add currentUserId to query params
-        await axiosInstance.put(`/messages/read/${userId}?currentUserId=${currentUserId}`);
-        fetchUnreadCounts();
-      } catch (readError) {
-        console.error('Error marking messages as read:', readError);
-      }
-    } catch (error) {
-      toast.error('Failed to fetch messages');
-      console.error('Error fetching messages:', error);
-    } finally {
-      setIsLoading(false);
-      
-      // In mobile view, hide user list and show chat
-      if (isMobileView) {
-        setShowUserList(false);
-      }
-    }
-  };
-
-  // Add these new state variables for reply functionality
-  const [replyingTo, setReplyingTo] = useState(null);
-  const [forwardModalOpen, setForwardModalOpen] = useState(false);
-  const [messageToForward, setMessageToForward] = useState(null);
-  const [isStarredMessage, setIsStarredMessage] = useState({});
-
-  // Add these new handler functions
-  const handleReplyToMessage = (message) => {
-    setReplyingTo(message);
-    // Focus on input field
-    setTimeout(() => {
-      inputRef.current?.focus();
-    }, 100);
-  };
-
-  const handleForwardMessage = (message) => {
-    setMessageToForward(message);
-    setForwardModalOpen(true);
-  };
-
-  const handleCancelReply = () => {
-    setReplyingTo(null);
-  };
-
-  const handleStarMessage = (messageId) => {
-    setIsStarredMessage(prev => ({
-      ...prev,
-      [messageId]: !prev[messageId]
-    }));
-    
-    // Store in localStorage for persistence
-    const starredMessages = JSON.parse(localStorage.getItem('starredMessages') || '{}');
-    starredMessages[messageId] = !starredMessages[messageId];
-    localStorage.setItem('starredMessages', JSON.stringify(starredMessages));
-    
-    toast.success(isStarredMessage[messageId] ? 'Message unstarred' : 'Message starred');
-  };
-
-  // Load starred messages from localStorage
-  useEffect(() => {
-    try {
-      const starredMessages = JSON.parse(localStorage.getItem('starredMessages') || '{}');
-      setIsStarredMessage(starredMessages);
-    } catch (error) {
-      console.error('Error loading starred messages:', error);
-    }
-  }, []);
-
-  // Update handleSendMessage to ensure changes persist
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!selectedUser) {
-      toast.error('Please select a user to message');
-      return;
-    }
-
-    if (!newMessage.trim() && !selectedFile && !replyingTo) return;
-
-    // Check if we have a valid user ID
-    if (!user || !user._id) {
-      toast.error('User information is not available');
-      console.error('User object is missing or incomplete:', user);
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append('senderId', user._id);
-    formData.append('receiverId', selectedUser);
-    formData.append('content', newMessage.trim() || '');
-    if (selectedFile) {
-      formData.append('file', selectedFile);
-    }
-    
-    // Include reply information if replying to a message
-    if (replyingTo) {
-      formData.append('replyToId', replyingTo._id);
-    }
-
-    // Generate a unique temp ID for this message
-    const tempId = `temp-${Date.now()}`;
-
-    try {
-      // Temporarily add the message to the UI immediately
-      const tempMessage = {
-        _id: tempId,
-        senderId: user._id,
-        receiverId: selectedUser,
-        content: newMessage.trim(),
-        file: selectedFile ? URL.createObjectURL(selectedFile) : null,
-        createdAt: new Date().toISOString(),
-        status: 'sending',
-        replyTo: replyingTo
-      };
-      
-      const updatedMessages = [...messages, tempMessage];
-      setMessages(updatedMessages);
-      
-      // Save to localStorage immediately
-      localStorage.setItem(`messages_${selectedUser}`, JSON.stringify(updatedMessages));
-      
-      setNewMessage('');
-      setSelectedFile(null);
-      setReplyingTo(null);
-      
-      const response = await axiosInstance.post('/messages/send', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      console.log('Send message response:', response.data); // Debug the response
-      
-      // Handle different possible response structures
-      let newMessageData = null;
-      if (response.data && typeof response.data === 'object') {
-        if (response.data._id) {
-          // Direct message object returned
-          newMessageData = response.data;
-        } else if (response.data.data && response.data.data._id) {
-          // Message wrapped in data property
-          newMessageData = response.data.data;
-        } else if (response.data.message && typeof response.data.message === 'object') {
-          // Message wrapped in message property
-          newMessageData = response.data.message;
-        }
-      }
-      
-      if (newMessageData) {
-        // Replace the temp message with the real one
-        const updatedMessagesWithReal = messages.map(msg => 
-          msg._id === tempId ? {...newMessageData, status: 'sent'} : msg
-        );
-        
-        setMessages(updatedMessagesWithReal);
-        
-        // Save to localStorage with the real message
-        localStorage.setItem(`messages_${selectedUser}`, JSON.stringify(updatedMessagesWithReal));
-        
-        // Store the message status
-        setMessageStatus(prev => ({
-          ...prev,
-          [newMessageData._id]: 'sent'
-        }));
-        
-        // After 1 second, update the status to "delivered" to simulate delivery
-        setTimeout(() => {
-          setMessageStatus(prev => ({
-            ...prev,
-            [newMessageData._id]: 'delivered'
-          }));
-          
-          // Update the message in the messages array
-          const updatedMessagesWithDelivered = updatedMessagesWithReal.map(msg => 
-            msg._id === newMessageData._id ? {...msg, status: 'delivered'} : msg
-          );
-          
-          setMessages(updatedMessagesWithDelivered);
-          
-          // Save to localStorage with delivered status
-          localStorage.setItem(`messages_${selectedUser}`, JSON.stringify(updatedMessagesWithDelivered));
-        }, 1000);
-        
-        fetchUnreadCounts();
-      } else {
-        console.error('Unexpected send message response:', response.data);
-        // Update the temp message status
-        const updatedMessagesWithError = messages.map(msg => 
-          msg._id === tempId ? {...msg, status: 'error'} : msg
-        );
-        
-        setMessages(updatedMessagesWithError);
-        
-        // Save error state to localStorage
-        localStorage.setItem(`messages_${selectedUser}`, JSON.stringify(updatedMessagesWithError));
-        
-        // Refresh messages to show the sent message
-        fetchMessages(selectedUser);
-      }
-    } catch (error) {
-      toast.error('Failed to send message');
-      console.error('Error sending message:', error);
-      
-      // Update the temp message to show error
-      const updatedMessagesWithError = messages.map(msg => 
-        msg._id === tempId ? {...msg, status: 'error'} : msg
-      );
-      
-      setMessages(updatedMessagesWithError);
-      
-      // Save error state to localStorage
-      localStorage.setItem(`messages_${selectedUser}`, JSON.stringify(updatedMessagesWithError));
-    }
-  };
-
-  const handleFileSelect = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        toast.error('File size exceeds 5MB limit');
-        return;
-      }
-      setSelectedFile(file);
-      // Focus on the input after selecting a file
-      inputRef.current?.focus();
-    }
-  };
-
-  const removeSelectedFile = () => {
-    setSelectedFile(null);
-  };
-
-  const handleTyping = (e) => {
-    setNewMessage(e.target.value);
-    // Send typing indicator to the server (would require socket.io in a real implementation)
-    setIsTyping(e.target.value.length > 0);
-  };
-
-  const addEmoji = (emoji) => {
-    setNewMessage(prev => prev + emoji);
-    setShowEmojis(false);
-    inputRef.current?.focus();
-  };
-
-  // Simple emoji picker
-  const emojis = ['😊', '😂', '❤️', '👍', '🙏', '🎉', '🔥', '👋', '😎', '🤔'];
-
-  const filteredUsers = users.filter(u => 
-    u.firstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    u.middleName?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-  
-  const goBackToUserList = () => {
-    setShowUserList(true);
-    if (menuOpen) {
-      setMenuOpen(false);
-    }
-  };
-
-  // Update toggleMenu function to display the menu content
-  const toggleMenu = () => {
-    // Toggle the menu state
-    setMenuOpen(!menuOpen);
-  };
-
-  // Add a menu content component that appears when menuOpen is true
-  const renderMenuContent = () => {
-    // We still need to render the component even when not open for the animation to work
-    return (
-      <>
-        {/* Overlay behind the menu */}
-        <div 
-          className={`absolute inset-0 bg-black transition-opacity duration-300 ${menuOpen ? 'bg-opacity-30 z-40' : 'bg-opacity-0 pointer-events-none'}`}
-          onClick={() => setMenuOpen(false)}
-        />
-        
-        {/* Menu content */}
-        <div 
-          className={`absolute left-0 top-[48px] z-50 w-64 bg-white shadow-lg border-r border-gray-200 h-[calc(100%-48px)] overflow-y-auto transition-transform duration-300 transform ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}
-        >
-          <div className="p-3 border-b flex flex-col">
-            <h3 className="font-semibold text-gray-700 text-sm">Menu</h3>
-            <div className="flex flex-col mt-2 gap-1">
-              <button 
-                className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded-md text-gray-700 text-sm"
-                onClick={createGroupChat}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="9" cy="7" r="4"></circle>
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                </svg>
-                New Group Chat
-              </button>
-              <button 
-                className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded-md text-gray-700 text-sm"
-                onClick={viewStarredMessages}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                </svg>
-                Starred Messages
-              </button>
-              <button 
-                className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded-md text-gray-700 text-sm"
-                onClick={openChatSettings}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="3"></circle>
-                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-                </svg>
-                Settings
-              </button>
-              <button 
-                className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded-md text-gray-700 text-sm"
-                onClick={viewArchivedChats}
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="21 8 21 21 3 21 3 8"></polyline>
-                  <rect x="1" y="3" width="22" height="5"></rect>
-                  <line x1="10" y1="12" x2="14" y2="12"></line>
-                </svg>
-                Archived Chats
-              </button>
-            </div>
-          </div>
-          
-          <div className="p-3 border-b">
-            <h3 className="font-semibold text-gray-700 text-sm mb-2">Status</h3>
-            <div className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-green-400 to-green-500 flex items-center justify-center text-white">
-                <FiUser size={16} />
-              </div>
-              <div>
-                <p className="text-sm font-medium">Your Status</p>
-                <p className="text-xs text-green-500">{userStatus}</p>
-              </div>
-            </div>
-            <button 
-              className="mt-2 text-blue-500 text-xs font-medium hover:underline"
-              onClick={updateUserStatus}
-            >
-              Update Status
-            </button>
-          </div>
-          
-          <div className="p-3">
-            <button 
-              className="w-full py-2 rounded-lg bg-red-50 text-red-500 text-sm font-medium hover:bg-red-100 transition-colors"
-              onClick={() => setMenuOpen(false)}
-            >
-              Close Menu
-            </button>
-          </div>
-        </div>
-      </>
-    );
-  };
-
-  // Improve the toggleUserList function to preserve selected user
-  const toggleUserList = () => {
-    // Toggle the visibility of the user list
-    setShowUserList(!showUserList);
-    
-    // Close the menu when toggling user list
-    if (menuOpen) {
-      setMenuOpen(false);
-    }
-    
-    // When hiding user list, ensure messages are visible with current selected user
-    if (showUserList && selectedUser && isMobileView) {
-      console.log("Hiding user list, showing messages for", selectedUser);
-    }
-  };
-
-  // Add a new function to handle the view mode
-  const setMessageView = (userId) => {
-    fetchMessages(userId);
-    if (isMobileView) {
-      setShowUserList(false);
-    }
-    
-    // Add this line to select the user
-    setSelectedUser(userId);
-  };
-
-  // Add search message functionality
-  const [searchMessageQuery, setSearchMessageQuery] = useState('');
-  const [isSearchingMessages, setIsSearchingMessages] = useState(false);
-  const [searchResults, setSearchResults] = useState([]);
-  
-  const searchMessages = () => {
-    if (!searchMessageQuery.trim()) {
-      toast.error('Please enter a search term');
-      return;
-    }
-    
-    const trimmedQuery = searchMessageQuery.trim().toLowerCase();
-    
-    // First filter for current conversation only
-    const conversationMessages = messages.filter(message => {
-      // Extract sender and receiver IDs, handling both string IDs and populated objects
-      const messageSenderId = typeof message.senderId === 'object' ? message.senderId?._id : message.senderId;
-      const messageReceiverId = typeof message.receiverId === 'object' ? message.receiverId?._id : message.receiverId;
-      const currentUserId = user?._id;
-      
-      return (messageSenderId === currentUserId && messageReceiverId === selectedUser) || 
-             (messageSenderId === selectedUser && messageReceiverId === currentUserId);
-    });
-    
-    // Search in message content for the current conversation only
-    const results = conversationMessages.filter(message => 
-      message.content && message.content.toLowerCase().includes(trimmedQuery)
-    );
-    
-    setSearchResults(results);
-    
-    if (results.length === 0) {
-      toast.error('No messages found matching your search');
-    } else {
-      toast.success(`Found ${results.length} message(s)`);
-      
-      // Scroll to the first result
-      if (results.length > 0 && messageRefs.current[results[0]._id]) {
-        messageRefs.current[results[0]._id].scrollIntoView({ 
-          behavior: 'smooth',
-          block: 'center'
-        });
-      }
-    }
-  };
-  
-  const renderDateSeparator = (dateString) => {
-    const messageDate = new Date(dateString);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    if (messageDate.toDateString() === today.toDateString()) {
-      return 'Today';
-    } else if (messageDate.toDateString() === yesterday.toDateString()) {
-      return 'Yesterday';
-    } else {
-      return messageDate.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric',
-        year: messageDate.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
-      });
-    }
-  };
-  
-  // Fix the groupedMessages function to filter messages for the current conversation only
-  const groupedMessages = () => {
-    const groups = {};
-    
-    // First filter messages for current conversation only
-    const conversationMessages = messages.filter(message => {
-      // Extract sender and receiver IDs, handling both string IDs and populated objects
-      const messageSenderId = typeof message.senderId === 'object' ? message.senderId?._id : message.senderId;
-      const messageReceiverId = typeof message.receiverId === 'object' ? message.receiverId?._id : message.receiverId;
-      const currentUserId = user?._id;
-      
-      return (messageSenderId === currentUserId && messageReceiverId === selectedUser) || 
-             (messageSenderId === selectedUser && messageReceiverId === currentUserId);
-    });
-    
-    // Use search results if searching, otherwise use filtered conversation messages
-    const messagesToGroup = isSearchingMessages && searchResults.length > 0 
-      ? searchResults 
-      : conversationMessages;
-    
-    messagesToGroup.forEach(message => {
-      const date = new Date(message.createdAt).toDateString();
-      if (!groups[date]) {
-        groups[date] = [];
-      }
-      groups[date].push(message);
-    });
-    
-    return groups;
-  };
-
-  // Add new state and refs for pull-to-refresh functionality
-  const [isPulling, setIsPulling] = useState(false);
-  const [pullDistance, setPullDistance] = useState(0);
-  const pullStartY = useRef(null);
-  const messageContainerRef = useRef(null);
-
-  const handleTouchStartPull = (e) => {
-    // Only enable pull when already at the top of the container
-    if (messageContainerRef.current && messageContainerRef.current.scrollTop <= 0) {
-      pullStartY.current = e.touches[0].clientY;
-    } else {
-      pullStartY.current = null;
-    }
-  };
-
-  const handleTouchMovePull = (e) => {
-    if (!pullStartY.current) return;
-    
-    const currentY = e.touches[0].clientY;
-    const diff = currentY - pullStartY.current;
-    
-    // Only allow pulling down, not up
-    if (diff > 0) {
-      // Resist pulling with a dampening factor
-      const dampedDiff = Math.min(80, diff * 0.5);
-      setPullDistance(dampedDiff);
-      setIsPulling(true);
-      
-      // Prevent scrolling while pulling
-      e.preventDefault();
-    }
-  };
-
-  const handleTouchEndPull = () => {
-    if (!isPulling) return;
-    
-    // If pulled past threshold, refresh messages
-    if (pullDistance > 40) {
-      refreshMessages();
-    }
-    
-    // Reset pull state
-    setPullDistance(0);
-    setIsPulling(false);
-    pullStartY.current = null;
-  };
-
-  const refreshMessages = async () => {
-    if (!selectedUser || !user?._id) return;
-    
-    toast.success('Refreshing messages...');
-    setIsLoading(true);
-    
-    try {
-      // Clear any search results
-      resetSearch();
-      
-      // Fetch latest messages
-      const response = await axiosInstance.get(`/messages/${selectedUser}?currentUserId=${user._id}`);
-      
-      console.log('Refreshed messages response:', response.data);
-      
-      // Handle response format
-      let messagesList = [];
-      if (Array.isArray(response.data)) {
-        messagesList = response.data;
-      } else if (response.data.messages && Array.isArray(response.data.messages)) {
-        messagesList = response.data.messages;
-      } else if (response.data.data && Array.isArray(response.data.data)) {
-        messagesList = response.data.data;
-      } else {
-        console.error('Unexpected messages format:', response.data);
-        toast.error('Could not refresh messages');
-        return;
-      }
-      
-      // Filter to ensure we only process messages from the current conversation
-      messagesList = messagesList.filter(message => {
-        // Extract sender and receiver IDs, handling both string IDs and populated objects
-        const messageSenderId = typeof message.senderId === 'object' ? message.senderId?._id : message.senderId;
-        const messageReceiverId = typeof message.receiverId === 'object' ? message.receiverId?._id : message.receiverId;
-        const currentUserId = user._id;
-        
-        return (messageSenderId === currentUserId && messageReceiverId === selectedUser) || 
-               (messageSenderId === selectedUser && messageReceiverId === currentUserId);
-      });
-      
-      if (messagesList.length > 0) {
-        // Sort messages by creation time
-        const sortedMessages = messagesList.sort((a, b) => 
-          new Date(a.createdAt) - new Date(b.createdAt)
-        );
-        
-        console.log(`Displaying ${sortedMessages.length} refreshed messages`);
-        setMessages(sortedMessages);
-        
-        // Save to localStorage
-        localStorage.setItem(`messages_${selectedUser}`, JSON.stringify(sortedMessages));
-        
-        toast.success('Messages refreshed');
-      } else {
-        toast.info('No new messages found');
-      }
-      
-      // Mark messages as read
-      await axiosInstance.put(`/messages/read/${selectedUser}?currentUserId=${user._id}`);
-      fetchUnreadCounts();
-      
-    } catch (error) {
-      toast.error('Failed to refresh messages');
-      console.error('Error refreshing messages:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Add voice recording state and functions
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
-  const [audioBlob, setAudioBlob] = useState(null);
-  const mediaRecorderRef = useRef(null);
-  const timerRef = useRef(null);
-  const localVideoRef = useRef(null);
-  const remoteVideoRef = useRef(null);
-  const [callStatus, setCallStatus] = useState({ active: false });
-  const [localStream, setLocalStream] = useState(null);
-  const [remoteStream, setRemoteStream] = useState(null);
-  const [callTimer, setCallTimer] = useState(null);
-  const [isMuted, setIsMuted] = useState(false);
-  const [isVideoOff, setIsVideoOff] = useState(false);
-  const peerConnectionRef = useRef(null);
-
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      
-      const audioChunks = [];
-      mediaRecorder.addEventListener("dataavailable", (event) => {
-        audioChunks.push(event.data);
-      });
-      
-      mediaRecorder.addEventListener("stop", () => {
-        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-        setAudioBlob(audioBlob);
-        
-        // Stop all tracks to release microphone
-        stream.getTracks().forEach(track => track.stop());
-      });
-      
-      // Start recording
-      mediaRecorder.start();
-      setIsRecording(true);
-      
-      // Start timer
-      setRecordingTime(0);
-      timerRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
-      
-      toast.success('Recording started');
-    } catch (error) {
-      console.error('Error starting recording:', error);
-      toast.error('Could not access microphone');
-    }
-  };
-  
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      
-      // Clear timer
-      clearInterval(timerRef.current);
-      
-      toast.success('Recording stopped');
-    }
-  };
-  
-  const cancelRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
-      
-      // Clear timer
-      clearInterval(timerRef.current);
-      
-      // Clear the audio blob
-      setAudioBlob(null);
-      
-      toast.error('Recording cancelled');
-    }
-  };
-
-  const sendAudioMessage = async () => {
-    if (!audioBlob || !selectedUser) return;
-    
-    const formData = new FormData();
-    formData.append('senderId', user._id);
-    formData.append('receiverId', selectedUser);
-    formData.append('content', 'Audio message');
-    
-    // Create a file from the blob
-    const audioFile = new File([audioBlob], 'audio-message.webm', { type: 'audio/webm' });
-    formData.append('file', audioFile);
-    
-    // Generate a unique temp ID
-    const tempId = `temp-${Date.now()}`;
-    
-    try {
-      // Add temporary message to UI
-      const tempMessage = {
-        _id: tempId,
-        senderId: user._id,
-        receiverId: selectedUser,
-        content: 'Audio message',
-        file: URL.createObjectURL(audioBlob),
-        createdAt: new Date().toISOString(),
-        status: 'sending'
-      };
-      
-      setMessages([...messages, tempMessage]);
-      setAudioBlob(null);
-      
-      // Send the audio via API
-      const response = await axiosInstance.post('/messages/send', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      
-      console.log('Send audio response:', response.data);
-      
-      // Handle response similar to text messages
-      let newMessageData = null;
-      if (response.data && typeof response.data === 'object') {
-        if (response.data._id) {
-          newMessageData = response.data;
-        } else if (response.data.data && response.data.data._id) {
-          newMessageData = response.data.data;
-        } else if (response.data.message && typeof response.data.message === 'object') {
-          newMessageData = response.data.message;
-        }
-      }
-      
-      if (newMessageData) {
-        // Replace the temp message with the real one
-        setMessages(messages.map(msg => 
-          msg._id === tempId ? {...newMessageData, status: 'sent'} : msg
-        ));
-        
-        // Update message status
-        setMessageStatus(prev => ({
-          ...prev,
-          [newMessageData._id]: 'sent'
-        }));
-        
-        toast.success('Audio message sent');
-      } else {
-        console.error('Unexpected send audio response:', response.data);
-        toast.error('Failed to send audio message');
-      }
-    } catch (error) {
-      console.error('Error sending audio message:', error);
-      toast.error('Failed to send audio message');
-    }
-  };
-
-  const formatTime = (seconds) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
-  };
-
-  // Clean up call resources when component unmounts
-  useEffect(() => {
-    return () => {
-      endCurrentCall();
-    };
-  }, []);
-
-  // Update formatCallDuration to use the call timer
-  const formatCallDuration = (startTime) => {
-    if (!startTime) return '00:00';
-    
-    // If we have a call timer, use it directly
-    if (callTimer) {
-      const minutes = Math.floor(callTimer / 60);
-      const seconds = callTimer % 60;
-      return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    }
-    
-    // Fallback to calculating based on start time
-    const diff = new Date() - new Date(startTime);
-    const minutes = Math.floor(diff / 60000);
-    const seconds = Math.floor((diff % 60000) / 1000);
-    
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  };
-
-  const initiateVoiceCall = async () => {
-    const receiver = users.find(u => u._id === selectedUser);
-    if (!receiver) return;
-    
-    try {
-      // Set up call state
-      setCallStatus({
-        active: true,
-        type: 'voice',
-        with: receiver,
-        startTime: new Date(),
-        status: 'connecting'
-      });
-      
-      // Get user media for audio only
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: true,
-        video: false
-      });
-      
-      setLocalStream(stream);
-      
-      // Initialize WebRTC connection
-      const configuration = {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' }
-        ]
-      };
-      
-      const peerConnection = new RTCPeerConnection(configuration);
-      peerConnectionRef.current = peerConnection;
-      
-      // Add local stream to connection
-      stream.getTracks().forEach(track => {
-        peerConnection.addTrack(track, stream);
-      });
-      
-      // Listen for remote stream
-      peerConnection.ontrack = (event) => {
-        setRemoteStream(event.streams[0]);
-      };
-      
-      // Create and send offer
-      const offer = await peerConnection.createOffer();
-      await peerConnection.setLocalDescription(offer);
-      
-      // In a real app, you would send this offer to the receiver via your signaling server
-      // For demo purposes, we'll simulate a successful connection after a delay
-      setTimeout(() => {
-        setCallStatus(prev => ({
-          ...prev,
-          status: 'connected'
-        }));
-        
-        // Start call timer
-        let seconds = 0;
-        const timerInterval = setInterval(() => {
-          seconds++;
-          setCallTimer(seconds);
-        }, 1000);
-        
-        setCallStatus(prev => ({
-          ...prev, 
-          timerInterval
-        }));
-        
-        toast.success(`Connected to ${receiver.firstName}`);
-      }, 1500);
-      
-      toast.success(`Calling ${receiver.firstName}...`);
-      
-    } catch (error) {
-      console.error('Error starting voice call:', error);
-      toast.error('Failed to start call. Please check your microphone permissions.');
-      endCurrentCall();
-    }
-  };
-
-  const initiateVideoCall = async () => {
-    const receiver = users.find(u => u._id === selectedUser);
-    if (!receiver) return;
-    
-    try {
-      // Set up call state
-      setCallStatus({
-        active: true,
-        type: 'video',
-        with: receiver,
-        startTime: new Date(),
-        status: 'connecting'
-      });
-      
-      // Get user media with video
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: true,
-        video: true
-      });
-      
-      setLocalStream(stream);
-      
-      // Display local video
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = stream;
-      }
-      
-      // Initialize WebRTC connection
-      const configuration = {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' }
-        ]
-      };
-      
-      const peerConnection = new RTCPeerConnection(configuration);
-      peerConnectionRef.current = peerConnection;
-      
-      // Add local stream to connection
-      stream.getTracks().forEach(track => {
-        peerConnection.addTrack(track, stream);
-      });
-      
-      // Listen for remote stream
-      peerConnection.ontrack = (event) => {
-        setRemoteStream(event.streams[0]);
-        
-        // Display remote video
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = event.streams[0];
-        }
-      };
-      
-      // Create and send offer
-      const offer = await peerConnection.createOffer();
-      await peerConnection.setLocalDescription(offer);
-      
-      // In a real app, you would send this offer to the receiver via your signaling server
-      // For demo purposes, we'll simulate a successful connection after a delay
-      setTimeout(() => {
-        // Create a mock remote stream (in a real app this would come from the other user)
-        navigator.mediaDevices.getUserMedia({ audio: true, video: true })
-          .then(mockRemoteStream => {
-            setRemoteStream(mockRemoteStream);
-            
-            // Display remote video
-            if (remoteVideoRef.current) {
-              remoteVideoRef.current.srcObject = mockRemoteStream;
-            }
-            
-            setCallStatus(prev => ({
-              ...prev,
-              status: 'connected'
-            }));
-            
-            // Start call timer
-            let seconds = 0;
-            const timerInterval = setInterval(() => {
-              seconds++;
-              setCallTimer(seconds);
-            }, 1000);
-            
-            setCallStatus(prev => ({
-              ...prev, 
-              timerInterval
-            }));
-            
-            toast.success(`Connected to ${receiver.firstName}`);
-          });
-      }, 1500);
-      
-      toast.success(`Calling ${receiver.firstName}...`);
-      
-    } catch (error) {
-      console.error('Error starting video call:', error);
-      toast.error('Failed to start call. Please check your camera and microphone permissions.');
-      endCurrentCall();
-    }
-  };
-
-  const toggleMute = () => {
-    if (localStream) {
-      const audioTracks = localStream.getAudioTracks();
-      audioTracks.forEach(track => {
-        track.enabled = !track.enabled;
-      });
-      setIsMuted(!isMuted);
-      toast.success(isMuted ? 'Microphone unmuted' : 'Microphone muted');
-    }
-  };
-
-  const toggleVideo = () => {
-    if (localStream) {
-      const videoTracks = localStream.getVideoTracks();
-      videoTracks.forEach(track => {
-        track.enabled = !track.enabled;
-      });
-      setIsVideoOff(!isVideoOff);
-      toast.success(isVideoOff ? 'Camera turned on' : 'Camera turned off');
-    }
-  };
-
-  const endCurrentCall = () => {
-    try {
-      // Safely check if callStatus exists before accessing its properties
-      if (callStatus && callStatus.timerInterval) {
-        clearInterval(callStatus.timerInterval);
-      }
-      
-      // Close peer connection
-      if (peerConnectionRef.current) {
-        peerConnectionRef.current.close();
-        peerConnectionRef.current = null;
-      }
-      
-      // Stop all tracks in the streams
-      if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-        setLocalStream(null);
-      }
-      
-      if (remoteStream) {
-        remoteStream.getTracks().forEach(track => track.stop());
-        setRemoteStream(null);
-      }
-      
-      // Reset state
-      setCallTimer(null);
-      setIsMuted(false);
-      setIsVideoOff(false);
-      setCallStatus({ active: false });
-      
-      console.log('Call resources cleaned up successfully');
-    } catch (error) {
-      console.error('Error cleaning up call resources:', error);
-    }
-  };
-
-  // Hamburger menu functionality
-  const createGroupChat = () => {
-    // Set up state for group chat modal
-    setGroupChatModalOpen(true);
-    setMenuOpen(false);
-  };
-
-  const viewStarredMessages = () => {
-    // Filter messages to only show starred ones
-    setIsViewingStarred(true);
-    setMenuOpen(false);
-    
-    // Get all starred message IDs
-    const starredMessageIds = Object.entries(isStarredMessage)
-      .filter(([_, isStarred]) => isStarred)
-      .map(([id]) => id);
-    
-    if (starredMessageIds.length === 0) {
-      toast.info('No starred messages found');
-      return;
-    }
-    
-    // Filter current messages to only show starred ones
-    const starredOnly = messages.filter(msg => 
-      starredMessageIds.includes(msg._id)
-    );
-    
-    setStarredMessages(starredOnly);
-    toast.success(`Showing ${starredOnly.length} starred messages`);
-  };
-
-  const openChatSettings = () => {
-    setChatSettingsOpen(true);
-    setMenuOpen(false);
-  };
-
-  const viewArchivedChats = () => {
-    setIsViewingArchived(true);
-    setMenuOpen(false);
-    toast.info('Archived chats feature coming soon');
-  };
-
-  const updateUserStatus = () => {
-    const statuses = ['Online', 'Away', 'Do not disturb', 'Invisible'];
-    const currentIndex = statuses.indexOf(userStatus);
-    const nextStatus = statuses[(currentIndex + 1) % statuses.length];
-    
-    setUserStatus(nextStatus);
-    toast.success(`Status updated to: ${nextStatus}`);
-  };
-
-  // Add new state variables for modals
-  const [groupChatModalOpen, setGroupChatModalOpen] = useState(false);
-  const [chatSettingsOpen, setChatSettingsOpen] = useState(false);
-  const [isViewingStarred, setIsViewingStarred] = useState(false);
-  const [isViewingArchived, setIsViewingArchived] = useState(false);
-  const [starredMessages, setStarredMessages] = useState([]);
-
-  // Add group chat modal
-  const renderGroupChatModal = () => {
-    if (!groupChatModalOpen) return null;
-    
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
-        <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-4 m-4">
-          <div className="flex justify-between items-center border-b pb-3 mb-4">
-            <h3 className="text-lg font-semibold">Create Group Chat</h3>
-            <button 
-              onClick={() => setGroupChatModalOpen(false)}
-              className="p-1 rounded-full hover:bg-gray-100"
-            >
-              <FiX size={20} />
-            </button>
-          </div>
-          
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Group Name</label>
-            <input 
-              type="text" 
-              placeholder="Enter group name"
-              className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Add Participants</label>
-            <div className="border rounded-lg p-2 max-h-40 overflow-y-auto">
-              {users.map(user => (
-                <div key={user._id} className="flex items-center p-2 hover:bg-gray-50 rounded">
-                  <input type="checkbox" className="mr-2" />
-                  <div className="flex items-center">
-                    {user.photo ? (
-                      <img 
-                        src={getImageUrl(user.photo)} 
-                        className="w-8 h-8 rounded-full mr-2 object-cover"
-                        alt={user.firstName}
-                      />
-                    ) : (
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center mr-2">
-                        <span className="text-blue-600 font-semibold">{user.firstName[0]}</span>
-                      </div>
-                    )}
-                    <span>{user.firstName} {user.middleName}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          <div className="flex justify-end">
-            <button 
-              onClick={() => setGroupChatModalOpen(false)}
-              className="mr-2 px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg"
-            >
-              Cancel
-            </button>
-            <button 
-              onClick={() => {
-                toast.success('Group created successfully!');
-                setGroupChatModalOpen(false);
-              }}
-              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              Create Group
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Add chat settings modal
-  const renderChatSettings = () => {
-    if (!chatSettingsOpen) return null;
-    
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
-        <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-4 m-4">
-          <div className="flex justify-between items-center border-b pb-3 mb-4">
-            <h3 className="text-lg font-semibold">Chat Settings</h3>
-            <button 
-              onClick={() => setChatSettingsOpen(false)}
-              className="p-1 rounded-full hover:bg-gray-100"
-            >
-              <FiX size={20} />
-            </button>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                  <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                </svg>
-                <span>Message Notifications</span>
-              </div>
-              <div className="relative inline-block w-10 align-middle select-none">
-                <input type="checkbox" id="notifications" className="absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer checked:right-0 checked:border-blue-600" />
-                <label htmlFor="notifications" className="block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
-                </svg>
-                <span>Sounds</span>
-              </div>
-              <div className="relative inline-block w-10 align-middle select-none">
-                <input type="checkbox" id="sounds" className="absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer checked:right-0 checked:border-blue-600" defaultChecked />
-                <label htmlFor="sounds" className="block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
-              </div>
-            </div>
-            
-            <div className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-                  <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-                </svg>
-                <span>End-to-End Encryption</span>
-              </div>
-              <div className="relative inline-block w-10 align-middle select-none">
-                <input type="checkbox" id="encryption" className="absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer checked:right-0 checked:border-blue-600" defaultChecked />
-                <label htmlFor="encryption" className="block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
-              </div>
-            </div>
-            
-            <div 
-              className="flex items-center gap-3 p-2 text-red-500 hover:bg-red-50 rounded-lg cursor-pointer"
-              onClick={() => {
-                toast.success('Chat cleared successfully');
-                setChatSettingsOpen(false);
-              }}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-              </svg>
-              <span>Clear Chat</span>
-            </div>
-          </div>
-          
-          <div className="mt-4 flex justify-end">
-            <button 
-              onClick={() => setChatSettingsOpen(false)}
-              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              Done
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Other state variables
+  // State variables for UI enhancements
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isResizing, setIsResizing] = useState({ active: false, position: null });
   const [containerSize, setContainerSize] = useState({ width: 400, height: 600 });
   const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0, width: 0, height: 0 });
   const [isDragging, setIsDragging] = useState(false);
-  const [containerPos, setContainerPos] = useState({ x: 0, y: 0 });
+  const [containerPos, setContainerPos] = useState({ x: 20, y: 20 });
+  const [showEmojis, setShowEmojis] = useState(false);
+  const [newMessage, setNewMessage] = useState('');
+  const [selectedFile, setSelectedFile] = useState(null);
+  
+  // Add these state variables after the existing state declarations
+  const [groupChatModalOpen, setGroupChatModalOpen] = useState(false);
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [groupName, setGroupName] = useState('');
+  const [starredMessages, setStarredMessages] = useState([]);
+  const [isViewingStarred, setIsViewingStarred] = useState(false);
+  
+  // Add group chat tracking and storage
+  const [groupChats, setGroupChats] = useState([]);
+  
+  // Add these state variables for settings
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [notificationsMuted, setNotificationsMuted] = useState(false);
+  const [messageSound, setMessageSound] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
+  const [fontSize, setFontSize] = useState('medium');
+  
+  // Add filteredUsers state after the other state variables
+  const [filteredUsers, setFilteredUsers] = useState([]);
+  
+  // Add state for call handling
+  const [currentCall, setCurrentCall] = useState(null);
+  
+  const pollIntervalRef = useRef(null);
+  const user = useSelector((state) => state.user.user);
 
-  // Add handlers for dragging
-  const handleDragStart = (e) => {
-    if (e.target.closest('.resize-handle')) return;
-    
-    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-    
-    setIsDragging(true);
-    setDragStartPos({
-      x: clientX - containerPos.x,
-      y: clientY - containerPos.y,
-      width: containerSize.width, 
-      height: containerSize.height
-    });
-  };
+  // Additional refs
+  const containerRef = useRef(null);
+  const messageContainerRef = useRef(null);
+  const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
 
-  const handleDragMove = (e) => {
-    if (!isDragging) return;
-    
-    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-    
-    setContainerPos({
-      x: clientX - dragStartPos.x,
-      y: clientY - dragStartPos.y
-    });
-  };
+  // Handle responsive design based on container width
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobileView(mobile);
+      
+      // When resizing the container or window, adjust UI based on width
+      if (containerSize.width < 768 && selectedUser) {
+        // On smaller screens, show only the chat when user is selected
+        setShowUserList(false);
+      } else if (containerSize.width >= 768 && !isMobileView) {
+        // On larger screens, show both panels
+        setShowUserList(true);
+      }
+    };
 
-  const handleDragEnd = () => {
-    setIsDragging(false);
-  };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [selectedUser, containerSize.width, isMobileView]);
+
+  // Start polling for new messages when the component mounts
+  useEffect(() => {
+    if (isOpen && user?._id) {
+      loadInitialData();
+      
+      // Start polling for new messages every 5 seconds
+      pollIntervalRef.current = setInterval(() => {
+        checkForNewMessages();
+      }, 5000);
+    }
+    
+    return () => {
+      if (pollIntervalRef.current) {
+        clearInterval(pollIntervalRef.current);
+      }
+    };
+  }, [isOpen, user]);
+
+  // Add mouse/touch event listeners for dragging and resizing
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      handleDragMove(e);
+      handleResizeMove(e);
+    };
+    
+    const handleMouseUp = () => {
+      handleDragEnd();
+      handleResizeEnd();
+    };
+    
+    if (isDragging || isResizing.active) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('touchmove', handleMouseMove);
+      document.addEventListener('touchend', handleMouseUp);
+    }
+    
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('touchmove', handleMouseMove);
+      document.removeEventListener('touchend', handleMouseUp);
+    };
+  }, [isDragging, isResizing, dragStartPos, containerPos, containerSize]);
+
+  // Load position and size from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedPos = localStorage.getItem('messagingSystemPosition');
+      const savedSize = localStorage.getItem('messagingSystemSize');
+      
+      if (savedPos) {
+        setContainerPos(JSON.parse(savedPos));
+      } else {
+        // Default position centered in the viewport
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        setContainerPos({
+          x: Math.max(0, (viewportWidth - 1200) / 2),
+          y: Math.max(0, (viewportHeight - 800) / 2)
+        });
+      }
+      
+      if (savedSize) {
+        setContainerSize(JSON.parse(savedSize));
+      } else {
+        // Default to a larger size for better usability
+        setContainerSize({ width: 1200, height: 800 });
+      }
+    } catch (err) {
+      console.error('Error loading messaging system position/size:', err);
+      // Fallback sizes if error occurs
+      setContainerSize({ width: 1200, height: 800 });
+    }
+  }, []);
 
   // Save position and size to localStorage
   useEffect(() => {
@@ -1713,46 +390,732 @@ const MessagingSystem = ({ isOpen, onClose }) => {
     }
   }, [containerPos, containerSize]);
 
-  // Load position and size from localStorage on mount
+  // Load group chats from localStorage on mount
   useEffect(() => {
     try {
-      const savedPos = localStorage.getItem('messagingSystemPosition');
-      const savedSize = localStorage.getItem('messagingSystemSize');
-      
-      if (savedPos) {
-        setContainerPos(JSON.parse(savedPos));
-      }
-      
-      if (savedSize) {
-        setContainerSize(JSON.parse(savedSize));
+      const savedGroups = localStorage.getItem('messagingGroupChats');
+      if (savedGroups) {
+        setGroupChats(JSON.parse(savedGroups));
       }
     } catch (err) {
-      console.error('Error loading messaging system position/size:', err);
+      console.error('Error loading group chats:', err);
     }
   }, []);
 
-  // Create a ref for the container element
-  const containerRef = useRef(null);
-  
-  // Other refs
-  const messageRefs = useRef({});
-
-  // Fix the getImageUrl function to not use process.env
-  const getImageUrl = (photo) => {
-    // Check if the URL already has a protocol
-    if (photo && (photo.startsWith('http://') || photo.startsWith('https://'))) {
-      return photo;
+  // Load settings from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedSettings = localStorage.getItem('messagingSettings');
+      if (savedSettings) {
+        const settings = JSON.parse(savedSettings);
+        setNotificationsMuted(settings.notificationsMuted || false);
+        setMessageSound(settings.messageSound !== false);
+        setDarkMode(settings.darkMode || false);
+        setFontSize(settings.fontSize || 'medium');
+      }
+    } catch (err) {
+      console.error('Error loading settings:', err);
     }
+  }, []);
+
+  // Save settings to localStorage when they change
+  useEffect(() => {
+    try {
+      localStorage.setItem('messagingSettings', JSON.stringify({
+        notificationsMuted,
+        messageSound,
+        darkMode,
+        fontSize
+      }));
+    } catch (err) {
+      console.error('Error saving settings:', err);
+    }
+  }, [notificationsMuted, messageSound, darkMode, fontSize]);
+
+  // Initial data loading function
+  const loadInitialData = async () => {
+    await fetchUsers();
+    await fetchUnreadCounts();
     
-    // Use a hardcoded URL without environment variables
-    return `http://localhost:5001/uploads/${photo}`;
+    // If we have a selected user, fetch messages immediately
+    if (selectedUser) {
+      await fetchMessages(selectedUser);
+    }
+  };
+  
+  // Update the checkForNewMessages function to handle real admin messages
+  const checkForNewMessages = async () => {
+    if (!user?._id) return;
+    
+    try {
+      // Fetch all unread counts first
+      const counts = await fetchUnreadCounts();
+      
+      // If we're viewing a conversation, get new messages for that specific user
+      if (selectedUser) {
+        // Skip API calls for virtual admin user (not real admin)
+        if (selectedUser === 'system-admin') {
+          return;
+        }
+        
+        const newMessages = await messageUtils.checkForNewMessages(
+          selectedUser, 
+          user._id, 
+          lastCheckedTime
+        );
+        
+        if (newMessages.length > 0) {
+        // Filter messages we don't already have based on ID
+          const uniqueNewMessages = newMessages.filter(msg => 
+          !messages.some(existingMsg => existingMsg._id === msg._id)
+        );
+        
+          if (uniqueNewMessages.length > 0) {
+          // Add the new messages to our state
+          setMessages(prev => {
+            // Create a new array with all messages without duplicates
+            const existingIds = new Set(prev.map(m => m._id));
+            const combinedMessages = [...prev];
+            
+              uniqueNewMessages.forEach(msg => {
+              if (!existingIds.has(msg._id)) {
+                combinedMessages.push(msg);
+              }
+            });
+            
+            // Sort by creation time
+            return combinedMessages.sort((a, b) => 
+              new Date(a.createdAt) - new Date(b.createdAt)
+            );
+          });
+          
+            // Play notification sound if appropriate
+            playNotificationSound(uniqueNewMessages);
+            
+            // Mark as read if we're currently viewing this conversation
+            markMessagesAsRead(selectedUser);
+          }
+        }
+        
+        // Update last checked time regardless of whether we found new messages
+        setLastCheckedTime(Date.now());
+      }
+    } catch (error) {
+      console.error('Error in checkForNewMessages:', error);
+    }
   };
 
-  // Improved resize functionality
+  // Add a function to play notification sounds
+  const playNotificationSound = (messages) => {
+    if (!messageSound) return;
+    
+    // Only play sound for messages from others, not from current user
+    const hasNewMessageFromOthers = messages.some(msg => {
+      const senderId = typeof msg.senderId === 'object' ? msg.senderId?._id : msg.senderId;
+      return senderId !== user._id;
+    });
+    
+    if (hasNewMessageFromOthers) {
+      try {
+        // Create and play a message notification sound
+        const audio = new Audio('/message-notification.mp3');
+        audio.volume = 0.5;
+        audio.play().catch(err => {
+          console.error('Error playing notification sound:', err);
+        });
+      } catch (error) {
+        console.error('Error setting up notification sound:', error);
+      }
+    }
+  };
+
+  // Function to fetch users
+  const fetchUsers = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Get the user ID from localStorage
+      let userId = null;
+      try {
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          const userData = JSON.parse(userStr);
+          userId = userData.id || userData._id;
+        }
+      } catch (err) {
+        console.error('Error getting userId from localStorage:', err);
+      }
+      
+      if (!userId) {
+        console.log('No user ID available for fetching users');
+        // Add a default admin user to ensure the list is never empty
+        setUsers([{
+          _id: 'system-admin',
+          name: 'System Admin',
+          role: 'admin',
+          isAdmin: true
+        }]);
+        setIsLoading(false);
+        return;
+      }
+      
+      try {
+        // Use API_ENDPOINTS.USERS from messageUtils
+      const response = await axiosInstance.get('/user/getAlluser');
+        console.log("User API response:", response.data);
+      
+      let usersList = [];
+        
+        // Handle different response formats
+      if (Array.isArray(response.data)) {
+        usersList = response.data;
+      } else if (response.data.users && Array.isArray(response.data.users)) {
+        usersList = response.data.users;
+      } else if (response.data.user && Array.isArray(response.data.user)) {
+          usersList = response.data.user;
+      } else if (response.data.data && Array.isArray(response.data.data)) {
+        usersList = response.data.data;
+      } else {
+        console.error('Unexpected response format:', response.data);
+          // If we can't parse the response, use a fallback admin
+          usersList = [{
+            _id: 'system-admin',
+            name: 'System Admin',
+            role: 'admin',
+            isAdmin: true
+          }];
+        }
+        
+        // Filter out any users with role 'visitor' and the current user
+        const filteredUsers = usersList.filter(user => 
+          user && user._id && user._id !== userId && user.id !== userId
+        );
+        
+        console.log(`Found ${filteredUsers.length} users after filtering`);
+        
+        // Ensure there's always at least one user (system admin) if the list is empty
+        if (filteredUsers.length === 0) {
+          console.log("No users found, adding fallback admin user");
+          setUsers([{
+            _id: 'system-admin',
+            name: 'System Admin',
+            role: 'admin',
+            isAdmin: true
+          }]);
+        } else {
+          // Process users to add name and role if missing
+          const processedUsers = filteredUsers.map(user => {
+            // Construct a name if we only have firstName/middleName/lastName
+            if (!user.name && (user.firstName || user.middleName || user.lastName)) {
+              user.name = [user.firstName, user.middleName, user.lastName].filter(Boolean).join(' ');
+            }
+            
+            // Process photo URLs to ensure they are absolute
+            if (user.photo || user.profileImg || user.image || user.avatar) {
+              // Use the first available photo field
+              const photoUrl = user.photo || user.profileImg || user.image || user.avatar;
+              
+              // Check if the URL is relative or absolute
+              if (photoUrl && typeof photoUrl === 'string') {
+                if (photoUrl.startsWith('http')) {
+                  // Absolute URL, use as is
+                  user.photo = photoUrl;
+                } else if (photoUrl.startsWith('/')) {
+                  // Relative URL, prepend API base URL
+                  // Get base URL from axios instance or environment
+                  const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
+                  user.photo = `${baseUrl}${photoUrl}`;
+                } else {
+                  // Handle other cases, might be a base64 string
+                  user.photo = photoUrl;
+                }
+              }
+            }
+            
+            // Set random online status for demo purposes
+            user.isOnline = Math.random() > 0.5;
+            
+            // Set a role if missing
+            if (!user.role) {
+              user.role = user.isAdmin ? 'admin' : 'staff';
+            }
+            
+            return user;
+          });
+          
+          // Always add system admin if we have other users
+          const systemAdmin = {
+            _id: 'system-admin',
+            name: 'System Admin',
+            role: 'admin',
+            isAdmin: true,
+            isOnline: true
+          };
+          
+          // Set the users in state
+          setUsers([...processedUsers, systemAdmin]);
+        }
+        
+      } catch (error) {
+        console.error('Error in fetchUsers API call:', error);
+        // If the API call fails, use a fallback admin
+        setUsers([{
+          _id: 'system-admin',
+          name: 'System Admin',
+          role: 'admin',
+          isAdmin: true
+        }]);
+      }
+      
+      // Dispatch event for other components to update
+      window.dispatchEvent(new CustomEvent('messagingUsersLoaded'));
+      
+      } catch (error) {
+      console.error('Failed to fetch users:', error);
+      // Add a fallback admin when API fails
+      setUsers([{
+        _id: 'system-admin',
+        name: 'System Admin',
+        role: 'admin',
+        isAdmin: true
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Function to fetch unread counts
+  const fetchUnreadCounts = async () => {
+    try {
+      const counts = await messageUtils.fetchUnreadCounts();
+      console.log('Unread message counts:', counts);
+      setUnreadCounts(counts);
+      return counts;
+    } catch (error) {
+      console.error('Error in fetchUnreadCounts:', error);
+      return {};
+    }
+  };
+
+  // Function to fetch messages for a selected user
+  const fetchMessages = async (userId) => {
+    if (!user?._id) return;
+    
+    // Check if we're trying to fetch messages for the virtual admin user
+    if (userId === 'system-admin') {
+      // For virtual admin user, create mock messages instead of fetching from server
+    setIsLoading(true);
+      try {
+        // Create a welcome message from admin
+        const mockMessages = [
+          {
+            _id: `admin-msg-${Date.now()}`,
+            content: "Welcome to the messaging system. I'm the System Admin and I can help with any questions you have about the platform.",
+            senderId: 'system-admin',
+            receiverId: user._id,
+            createdAt: new Date().toISOString(),
+            status: 'read'
+          }
+        ];
+        
+        setMessages(mockMessages);
+        
+        // Update unread counts
+        if (unreadCounts[userId]) {
+          // Mark as read directly
+          markMessagesAsRead(userId);
+        }
+        
+        // Update last checked time
+        setLastCheckedTime(Date.now());
+        
+        return;
+    } catch (error) {
+        console.error('Error creating admin messages:', error);
+    } finally {
+      setIsLoading(false);
+      }
+      return;
+    }
+    
+    // For normal users and real admins, proceed with the API call
+    setIsLoading(true);
+    try {
+      const fetchedMessages = await messageUtils.fetchMessages(userId, user._id);
+      console.log(`Fetched ${fetchedMessages.length} messages for conversation with ${userId}`);
+      
+      // Check if this is a conversation with a fallback admin
+      if (userId === 'fallback-admin' && fetchedMessages.length === 0) {
+        // Add welcome message for fallback admin
+        const welcomeMessage = {
+          _id: `fallback-msg-${Date.now()}`,
+          content: "Hello! I'm the support staff member assigned to assist you. How can I help you today?",
+          senderId: 'fallback-admin',
+          receiverId: user._id,
+          createdAt: new Date().toISOString(),
+          status: 'read'
+        };
+        setMessages([welcomeMessage]);
+      } else {
+        setMessages(fetchedMessages);
+      }
+      
+      // Mark messages as read
+      markMessagesAsRead(userId);
+      
+      // Update last checked time
+      setLastCheckedTime(Date.now());
+    } catch (error) {
+      console.error('Error in fetchMessages:', error);
+      toast.error('Failed to load messages');
+      
+      // If there's an error loading messages, provide a fallback empty state
+      setMessages([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Handle sending a message with optional attachment
+  const handleSendMessage = async (content, attachment) => {
+    try {
+      // Get current user ID
+      const currentUserId = user?._id || user?.id;
+      
+      // Fallback to localStorage if Redux store doesn't have user ID
+      if (!currentUserId) {
+        try {
+          const userStr = localStorage.getItem('user');
+          if (userStr) {
+            const userData = JSON.parse(userStr);
+            currentUserId = userData._id || userData.id;
+          }
+        } catch (err) {
+          console.error('Error getting userId from localStorage:', err);
+        }
+      }
+      
+      if (!currentUserId) {
+        console.error("Cannot send message - no current user ID");
+        toast.error("Cannot send message - please log in again");
+        return;
+      }
+      
+      // Validate we have a recipient
+      if (!selectedUser) {
+        console.error("Cannot send message - no recipient selected");
+        toast.error("Please select a recipient");
+        return;
+      }
+
+      // Strict check to ensure attachment is explicitly provided or null
+      const shouldSendAttachment = attachment && (
+        attachment instanceof File || 
+        (attachment.type && attachment.name && attachment.size)
+      );
+
+      // Ensure we have either content or a valid attachment (or both)
+      if ((!content || !content.trim()) && !shouldSendAttachment) {
+        console.log("Nothing to send - empty message and no valid attachment");
+        return;
+      }
+
+      // Only process attachment if it's explicitly provided
+      let attachmentToSend = shouldSendAttachment ? attachment : null;
+      
+      // Generate temporary message ID for optimistic update
+      const tempId = `temp-${Date.now()}`;
+
+      // Create preview URL if it's an image
+      let previewUrl = null;
+      if (attachmentToSend && attachmentToSend.type && attachmentToSend.type.startsWith('image/')) {
+        try {
+          previewUrl = URL.createObjectURL(attachmentToSend);
+          console.log("Created preview URL:", previewUrl);
+        } catch (err) {
+          console.error("Error creating preview URL:", err);
+        }
+      }
+      
+      // Add message to UI immediately (optimistic update)
+      const tempMessage = {
+        _id: tempId,
+        content: content || '',
+        senderId: currentUserId,
+        receiverId: selectedUser,
+        createdAt: new Date().toISOString(),
+        status: 'sending',
+        attachment: attachmentToSend ? {
+          fileName: attachmentToSend.name,
+          type: attachmentToSend.type,
+          size: attachmentToSend.size,
+          preview: previewUrl,
+          file: attachmentToSend // Store the actual file for local operations
+        } : null
+      };
+      
+      // Add message to UI for immediate feedback
+      setMessages(prev => [...prev, tempMessage]);
+      
+      // Log the attachment details for debugging
+      if (attachmentToSend) {
+        console.log("File attachment details:", {
+          name: attachmentToSend.name,
+          type: attachmentToSend.type,
+          size: attachmentToSend.size
+        });
+      } else {
+        console.log("Sending text message without attachment");
+      }
+      
+      // Prepare FormData for the API call
+      const formData = new FormData();
+      formData.append('content', content || '');
+      formData.append('receiverId', selectedUser);
+      formData.append('senderId', currentUserId);
+      
+      if (attachmentToSend) {
+        // Use 'file' field name to match backend expectation (not 'attachment')
+        formData.append('file', attachmentToSend);
+        
+        // Log all form data entries to ensure file is included
+        console.log("FormData entries:");
+        for (let pair of formData.entries()) {
+          console.log(pair[0], pair[1] instanceof File ? `File: ${pair[1].name}` : pair[1]);
+        }
+      } else {
+        console.log("No file attached to FormData");
+      }
+      
+      // Simulate network delay for better UX
+        setTimeout(() => {
+        setMessages(prev => 
+          prev.map(msg => msg._id === tempId ? { ...msg, status: 'sent' } : msg)
+        );
+      }, 500);
+      
+      // Make API call to send the message - use try/catch to handle potential errors separately
+      try {
+        console.log("Sending API request to /messages/send");
+        
+        // Try the correct endpoint for message sending
+        const response = await axiosInstance.post('/messages/send', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        
+        console.log("Message sent response:", response.data);
+        
+        // Update message with server data if successful
+        if (response.data && (response.data._id || (response.data.data && response.data.data._id))) {
+          const serverMessage = response.data._id ? response.data : response.data.data;
+          
+          // Ensure the attachment has proper paths
+          if (serverMessage.attachment) {
+            // If the server message has attachment but no preview and we have one locally, add it
+            if (!serverMessage.attachment.preview && previewUrl) {
+              serverMessage.attachment.preview = previewUrl;
+            }
+            
+            // Make sure file paths are complete
+            if (serverMessage.attachment.path && !serverMessage.attachment.path.startsWith('http')) {
+              // Convert relative path to absolute
+              const baseUrl = process.env.REACT_APP_API_URL || window.location.origin;
+              serverMessage.attachment.url = `${baseUrl}${serverMessage.attachment.path}`;
+            }
+            
+            // Save the actual file reference from the temp message for local operations
+            if (tempMessage.attachment && tempMessage.attachment.file) {
+              serverMessage.attachment.file = tempMessage.attachment.file;
+            }
+          }
+          
+          // Update message in state
+          setMessages(prev => prev.map(msg => 
+            msg._id === tempId ? { ...serverMessage, status: 'sent' } : msg
+          ));
+          
+          toast.success('Message sent');
+        } else {
+          // Handle unexpected response format
+          console.warn("API returned success but with unexpected format:", response.data);
+          // Keep the optimistic update as is, with 'sent' status
+        }
+      } catch (apiError) {
+        console.error("API error sending message:", apiError);
+        
+        // Keep the message in UI but mark as failed
+        setMessages(prev => prev.map(msg => 
+          msg._id === tempId ? { ...msg, status: 'failed' } : msg
+        ));
+        
+        toast.error(`Failed to send message: ${apiError.message || 'Server error'}`);
+      }
+    } catch (error) {
+      console.error("Error in handleSendMessage:", error);
+      toast.error(`Error sending message: ${error.message || 'Unknown error'}`);
+    }
+  };
+
+  /**
+   * Handle selecting a user from the list
+   */
+  const handleSelectUser = (userId) => {
+    // If we're already viewing this user, don't do anything
+    if (selectedUser === userId) return;
+    
+    // Select the user and fetch their messages
+    setSelectedUser(userId);
+    fetchMessages(userId);
+    
+    // Mark messages as read
+    if (unreadCounts[userId]) {
+      markMessagesAsRead(userId);
+    }
+    
+    // On mobile or small screen, show message view
+    if (isMobileView || containerSize.width < 768) {
+      setShowUserList(false);
+    }
+    
+    // Close any open menus or panels
+    setIsMenuOpen(false);
+    setIsSettingsOpen(false);
+    exitStarredMessagesView();
+  };
+
+  // Function to go back to user list (mobile view)
+  const goBackToUserList = () => {
+    // In telegram-style, we just deselect the user to return to the list view
+    setSelectedUser(null);
+    
+    // Clear related state
+    setMessages([]);
+    setIsTyping(false);
+    setSearchQuery('');
+  };
+
+  // Add these functions for call handling
+  const handlePhoneCall = (userId) => {
+    if (!userId) return;
+    
+    // Find the user
+    const targetUser = users.find(u => u._id === userId) || {
+      _id: userId,
+      name: 'User'
+    };
+    
+    // Set the current call
+    setCurrentCall({
+      userId,
+      userName: targetUser.name || targetUser.username || 'User',
+      isVideo: false,
+      status: 'calling'
+    });
+    
+    // Show notification
+    toast.success(`Calling ${targetUser.name || targetUser.username || 'User'}...`);
+    
+    // For demo purposes, we'll simulate the call being accepted after 3 seconds
+    setTimeout(() => {
+      setCurrentCall(prev => prev ? { ...prev, status: 'connected' } : null);
+      toast.success(`Call connected with ${targetUser.name || targetUser.username || 'User'}`);
+    }, 3000);
+  };
+
+  const handleVideoCall = (userId) => {
+    if (!userId) return;
+    
+    // Find the user
+    const targetUser = users.find(u => u._id === userId) || {
+      _id: userId,
+      name: 'User'
+    };
+    
+    // Set the current call
+    setCurrentCall({
+      userId,
+      userName: targetUser.name || targetUser.username || 'User',
+      isVideo: true,
+      status: 'calling'
+    });
+    
+    // Show notification
+    toast.success(`Video calling ${targetUser.name || targetUser.username || 'User'}...`);
+    
+    // For demo purposes, we'll simulate the call being accepted after 3 seconds
+      setTimeout(() => {
+      setCurrentCall(prev => prev ? { ...prev, status: 'connected' } : null);
+      toast.success(`Video call connected with ${targetUser.name || targetUser.username || 'User'}`);
+    }, 3000);
+  };
+
+  const endCurrentCall = () => {
+    if (!currentCall) return;
+    
+    const { userName, isVideo } = currentCall;
+    setCurrentCall(null);
+    toast.success(`${isVideo ? 'Video call' : 'Call'} with ${userName} ended`);
+  };
+
+  // Modify the getSelectedUserData function to include groups
+  const getSelectedUserData = () => {
+    if (!selectedUser) return null;
+    
+    // Check if it's a group
+    if (selectedUser.startsWith('group-')) {
+      return groupChats.find(g => g._id === selectedUser) || null;
+    }
+    
+    // Otherwise it's a regular user
+    return users.find(u => u._id === selectedUser) || null;
+  };
+
+  const selectedUserData = getSelectedUserData();
+
+  // Handle dragging and resizing
+  const handleDragStart = (e) => {
+    // Prevent default to allow dragging over browser UI elements
+    e.preventDefault();
+    
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    
+    setIsDragging(true);
+    setDragStartPos({
+      x: clientX,
+      y: clientY,
+      offsetX: containerPos.x,
+      offsetY: containerPos.y
+    });
+  };
+
+  const handleDragMove = (e) => {
+    if (!isDragging) return;
+    
+    const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+    const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+    
+    // Calculate new position without limiting to viewport
+    const newX = dragStartPos.offsetX + (clientX - dragStartPos.x);
+    const newY = dragStartPos.offsetY + (clientY - dragStartPos.y);
+    
+    // Allow dragging to any position, even negative values to move off-screen
+    setContainerPos({ x: newX, y: newY });
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
+  };
+
+  // Resize handlers
   const resizeHandles = [
     { position: 'right', cursor: 'ew-resize', className: 'absolute right-0 top-0 w-1 h-full' },
     { position: 'bottom', cursor: 'ns-resize', className: 'absolute bottom-0 left-0 w-full h-1' },
-    { position: 'bottom-right', cursor: 'nwse-resize', className: 'absolute bottom-0 right-0 w-6 h-6' }
+    { position: 'bottom-right', cursor: 'nwse-resize', className: 'absolute bottom-0 right-0 w-6 h-6' },
+    { position: 'top', cursor: 'ns-resize', className: 'absolute top-0 left-0 w-full h-1' }
   ];
 
   const handleResizeStart = (e, position) => {
@@ -1781,593 +1144,978 @@ const MessagingSystem = ({ isOpen, onClose }) => {
     const deltaY = clientY - dragStartPos.y;
     
     const newSize = { ...containerSize };
+    const newPos = { ...containerPos };
     
     if (isResizing.position === 'right' || isResizing.position === 'bottom-right') {
-      newSize.width = Math.max(320, dragStartPos.width + deltaX);
+      // Allow resizing to very small width (minimum 200px)
+      newSize.width = Math.max(200, dragStartPos.width + deltaX);
     }
     
     if (isResizing.position === 'bottom' || isResizing.position === 'bottom-right') {
-      newSize.height = Math.max(400, dragStartPos.height + deltaY);
+      // Allow resizing to very small height (minimum 150px)
+      newSize.height = Math.max(150, dragStartPos.height + deltaY);
+    }
+    
+    if (isResizing.position === 'top') {
+      const newHeight = Math.max(150, dragStartPos.height - deltaY);
+      
+      // No minimum top position requirement - allow going above the viewport
+      newPos.y = containerPos.y + deltaY;
+      newSize.height = newHeight;
+    }
+    
+    if (isResizing.position === 'left') {
+      const newWidth = Math.max(200, dragStartPos.width - deltaX);
+      
+      // No minimum left position requirement - allow going left of the viewport
+      newPos.x = containerPos.x + deltaX;
+      newSize.width = newWidth;
     }
     
     setContainerSize(newSize);
+    
+    // Only update position if we're resizing from the top or left
+    if (isResizing.position === 'top' || isResizing.position === 'left') {
+      setContainerPos(newPos);
+    }
+    
+    // Adjust layout based on new width
+    if (newSize.width < 768 && selectedUser) {
+      // On smaller widths, show only chat when a user is selected
+      setShowUserList(false);
+    } else if (newSize.width >= 768 && !isMobileView) {
+      // On larger widths, show both panels
+      setShowUserList(true);
+    }
   };
 
   const handleResizeEnd = () => {
     setIsResizing({ active: false, position: null });
   };
 
-  // Update the useEffect for mouse/touch events to handle improved resizing
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      handleDragMove(e);
-      handleResizeMove(e);
-    };
-    
-    const handleMouseUp = () => {
-      handleDragEnd();
-      handleResizeEnd();
-    };
-    
-    if (isDragging || isResizing.active) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.addEventListener('touchmove', handleMouseMove);
-      document.addEventListener('touchend', handleMouseUp);
-    }
-    
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.removeEventListener('touchmove', handleMouseMove);
-      document.removeEventListener('touchend', handleMouseUp);
-    };
-  }, [isDragging, isResizing, dragStartPos, containerPos, containerSize]);
-
-  // Main container render
-  
-  // Add resetSearch function
-  const resetSearch = () => {
-    setIsSearchingMessages(false);
-    setSearchMessageQuery('');
-    setSearchResults([]);
+  // Menu toggle
+  const toggleMenu = () => {
+    setIsMenuOpen(!isMenuOpen);
+    // If there are any other modals open, close them
+    if (groupChatModalOpen) setGroupChatModalOpen(false);
+    if (isViewingStarred) setIsViewingStarred(false);
   };
 
+  // Update group chat creation functionality
+  const handleCreateGroupChat = () => {
+    if (groupName.trim() === '') {
+      toast.error("Please enter a group name");
+      return;
+    }
+    
+    if (selectedUsers.length === 0) {
+      toast.error("Please select at least one user");
+      return;
+    }
+    
+    // Create a unique ID for the group
+    const groupId = `group-${Date.now()}`;
+    
+    // Create group chat object
+    const newGroup = {
+      _id: groupId,
+      name: groupName,
+      members: [...selectedUsers, user?._id],
+      createdBy: user?._id,
+      createdAt: new Date().toISOString(),
+      isGroup: true,
+      messages: []
+    };
+    
+    // Add to state
+    setGroupChats(prev => {
+      const updated = [...prev, newGroup];
+      
+      // Save to localStorage
+      try {
+        localStorage.setItem('messagingGroupChats', JSON.stringify(updated));
+      } catch (err) {
+        console.error('Error saving group chats:', err);
+      }
+      
+      return updated;
+    });
+    
+    // Select the new group
+    setSelectedUser(groupId);
+    
+    // Close modal and reset state
+    setGroupChatModalOpen(false);
+    setGroupName('');
+    setSelectedUsers([]);
+    setIsMenuOpen(false);
+    
+    toast.success(`Group "${groupName}" created with ${selectedUsers.length} members`);
+  };
+
+  // Star message functionality
+  const handleStarMessage = (messageId) => {
+    // Check if message is already starred
+    const isAlreadyStarred = starredMessages.includes(messageId);
+    
+    if (isAlreadyStarred) {
+      // Remove from starred
+      setStarredMessages(prev => prev.filter(id => id !== messageId));
+      toast.success('Message unstarred');
+    } else {
+      // Add to starred
+      setStarredMessages(prev => [...prev, messageId]);
+      toast.success('Message starred');
+    }
+    
+    // Save to localStorage for persistence
+    try {
+      localStorage.setItem('starredMessages', JSON.stringify(
+        isAlreadyStarred 
+          ? starredMessages.filter(id => id !== messageId)
+          : [...starredMessages, messageId]
+      ));
+    } catch (err) {
+      console.error('Error saving starred messages:', err);
+    }
+  };
+
+  // View starred messages
+  const viewStarredMessages = () => {
+    if (starredMessages.length === 0) {
+      toast.error('No starred messages to display');
+      return;
+    }
+    
+    setIsViewingStarred(true);
+    setIsMenuOpen(false);
+    toast.success(`Showing ${starredMessages.length} starred messages`);
+  };
+
+  // Exit starred messages view
+  const exitStarredMessagesView = () => {
+    setIsViewingStarred(false);
+  };
+
+  // Load starred messages from localStorage
+  useEffect(() => {
+    try {
+      const savedStarred = localStorage.getItem('starredMessages');
+      if (savedStarred) {
+        setStarredMessages(JSON.parse(savedStarred));
+      }
+    } catch (err) {
+      console.error('Error loading starred messages:', err);
+    }
+  }, []);
+
+  // Filter messages to show only starred ones when in starred view
+  const getDisplayedMessages = () => {
+    if (isViewingStarred) {
+      return messages.filter(msg => starredMessages.includes(msg._id));
+    }
+    return messages;
+  };
+
+  // Update menu handlers
+  const openGroupChatModal = () => {
+    setGroupChatModalOpen(true);
+    setIsMenuOpen(false);
+  };
+
+  const handleUserSelection = (userId) => {
+    if (selectedUsers.includes(userId)) {
+      setSelectedUsers(prev => prev.filter(id => id !== userId));
+    } else {
+      setSelectedUsers(prev => [...prev, userId]);
+    }
+  };
+
+  // Toggle settings panel
+  const toggleSettings = () => {
+    setIsSettingsOpen(!isSettingsOpen);
+    if (isMenuOpen) setIsMenuOpen(false);
+    if (groupChatModalOpen) setGroupChatModalOpen(false);
+    if (isViewingStarred) setIsViewingStarred(false);
+  };
+
+  // Toggle notifications mute
+  const toggleNotifications = () => {
+    setNotificationsMuted(!notificationsMuted);
+    toast.success(notificationsMuted ? 'Notifications enabled' : 'Notifications muted');
+  };
+
+  // Update menu content to include settings button
+  const renderMenuContent = () => {
+    return (
+      <div className="absolute top-12 right-0 w-64 bg-white shadow-lg rounded-md z-50 border border-gray-200">
+        <div className="p-2">
+          <button
+            className="w-full text-left py-2 px-3 hover:bg-gray-100 rounded-md flex items-center gap-2 transition"
+            onClick={openGroupChatModal}
+          >
+            <FiUsers className="text-blue-500" />
+            <span>Create Group Chat</span>
+          </button>
+          
+          <button
+            className="w-full text-left py-2 px-3 hover:bg-gray-100 rounded-md flex items-center gap-2 transition"
+            onClick={viewStarredMessages}
+          >
+            <FiStar className="text-yellow-500" />
+            <span>Starred Messages ({starredMessages.length})</span>
+          </button>
+          
+            <button 
+            className="w-full text-left py-2 px-3 hover:bg-gray-100 rounded-md flex items-center gap-2 transition"
+            onClick={toggleSettings}
+          >
+            <FiSettings className="text-gray-500" />
+            <span>Settings</span>
+          </button>
+          
+            <button 
+            className="w-full text-left py-2 px-3 hover:bg-gray-100 rounded-md flex items-center gap-2 transition text-red-500"
+            onClick={toggleNotifications}
+          >
+            {notificationsMuted ? <FiBellOff size={16} /> : <FiBell size={16} />}
+            <span>{notificationsMuted ? 'Enable Notifications' : 'Mute Notifications'}</span>
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  // Render settings panel
+  const renderSettingsPanel = () => {
+    if (!isSettingsOpen) return null;
+    
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-medium">Settings</h3>
+            <button onClick={() => setIsSettingsOpen(false)} className="text-gray-500 hover:text-gray-700">
+              <FiX size={20} />
+            </button>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b">
+              <div>
+                <h4 className="font-medium text-gray-800">Notifications</h4>
+                <p className="text-sm text-gray-500">Enable or disable message notifications</p>
+              </div>
+              <div className="relative">
+            <input 
+                  type="checkbox"
+                  checked={!notificationsMuted}
+                  onChange={toggleNotifications}
+                  className="sr-only"
+                  id="notifications-toggle"
+                />
+                <label 
+                  htmlFor="notifications-toggle"
+                  className={`block w-12 h-6 rounded-full transition ${!notificationsMuted ? 'bg-blue-500' : 'bg-gray-300'}`}
+                >
+                  <span 
+                    className={`block w-4 h-4 mt-1 ml-1 bg-white rounded-full transition-transform transform ${!notificationsMuted ? 'translate-x-6' : ''}`}
+                  />
+                </label>
+              </div>
+          </div>
+          
+            <div className="flex items-center justify-between pb-3 border-b">
+              <div>
+                <h4 className="font-medium text-gray-800">Message Sounds</h4>
+                <p className="text-sm text-gray-500">Play sounds when messages are received</p>
+              </div>
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  checked={messageSound}
+                  onChange={() => setMessageSound(!messageSound)}
+                  className="sr-only"
+                  id="sound-toggle"
+                />
+                <label 
+                  htmlFor="sound-toggle"
+                  className={`block w-12 h-6 rounded-full transition ${messageSound ? 'bg-blue-500' : 'bg-gray-300'}`}
+                >
+                  <span 
+                    className={`block w-4 h-4 mt-1 ml-1 bg-white rounded-full transition-transform transform ${messageSound ? 'translate-x-6' : ''}`}
+                  />
+                </label>
+                      </div>
+                  </div>
+            
+            <div className="flex items-center justify-between pb-3 border-b">
+              <div>
+                <h4 className="font-medium text-gray-800">Dark Mode</h4>
+                <p className="text-sm text-gray-500">Enable dark theme for messaging</p>
+                </div>
+              <div className="relative">
+                <input
+                  type="checkbox"
+                  checked={darkMode}
+                  onChange={() => setDarkMode(!darkMode)}
+                  className="sr-only"
+                  id="dark-mode-toggle"
+                />
+                <label 
+                  htmlFor="dark-mode-toggle"
+                  className={`block w-12 h-6 rounded-full transition ${darkMode ? 'bg-blue-500' : 'bg-gray-300'}`}
+                >
+                  <span 
+                    className={`block w-4 h-4 mt-1 ml-1 bg-white rounded-full transition-transform transform ${darkMode ? 'translate-x-6' : ''}`}
+                  />
+                </label>
+            </div>
+          </div>
+          
+            <div className="space-y-2">
+              <h4 className="font-medium text-gray-800">Font Size</h4>
+              <div className="flex items-center gap-4">
+            <button 
+                  onClick={() => setFontSize('small')}
+                  className={`px-3 py-1 rounded ${fontSize === 'small' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+            >
+                  Small
+            </button>
+            <button 
+                  onClick={() => setFontSize('medium')}
+                  className={`px-3 py-1 rounded ${fontSize === 'medium' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                >
+                  Medium
+                </button>
+                <button 
+                  onClick={() => setFontSize('large')}
+                  className={`px-3 py-1 rounded ${fontSize === 'large' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+                >
+                  Large
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-6 flex justify-end">
+            <button
+              onClick={() => setIsSettingsOpen(false)}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Save Settings
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Add Group Chat Modal UI
+  const renderGroupChatModal = () => {
+    if (!groupChatModalOpen) return null;
+    
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-medium">Create Group Chat</h3>
+            <button onClick={() => setGroupChatModalOpen(false)} className="text-gray-500 hover:text-gray-700">
+              <FiX size={20} />
+            </button>
+          </div>
+          
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Group Name</label>
+            <input
+              type="text"
+              value={groupName}
+              onChange={(e) => setGroupName(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Enter group name"
+            />
+            </div>
+            
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Select Users</label>
+            <div className="max-h-60 overflow-y-auto border border-gray-200 rounded-md">
+              {users.map(user => (
+                <div 
+                  key={user._id} 
+                  className="flex items-center p-2 hover:bg-gray-100 cursor-pointer"
+                  onClick={() => handleUserSelection(user._id)}
+                >
+                  <div className="flex-shrink-0 mr-3">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                      <FiUser className="text-blue-500" />
+              </div>
+              </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {user.name || user.username || 'User'}
+                    </p>
+            </div>
+                  <div className="ml-2">
+                    {selectedUsers.includes(user._id) ? (
+                      <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                        <FiCheck className="text-white" size={12} />
+              </div>
+                    ) : (
+                      <div className="w-5 h-5 border border-gray-300 rounded-full"></div>
+                    )}
+              </div>
+            </div>
+              ))}
+            </div>
+          </div>
+          
+          <div className="flex justify-end space-x-2">
+            <button 
+              onClick={() => setGroupChatModalOpen(false)}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleCreateGroupChat}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-md hover:bg-blue-600"
+            >
+              Create Group
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Add Starred Messages Header
+  const renderStarredMessagesHeader = () => {
+    if (!isViewingStarred) return null;
+    
+    return (
+      <div className="bg-yellow-50 p-2 rounded-t-lg flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <FiStar className="text-yellow-500" />
+          <span className="font-medium">Starred Messages</span>
+        </div>
+        <button
+          onClick={exitStarredMessagesView}
+          className="text-gray-500 hover:text-gray-700"
+        >
+          <FiX size={18} />
+        </button>
+      </div>
+    );
+  };
+
+  // Update the MessageList component with combined users and groups list
+  const getCombinedContacts = () => {
+    // Convert group chats to the same format as users
+    const groupsFormatted = groupChats.map(group => ({
+      _id: group._id,
+      name: group.name,
+      username: group.name,
+      isGroup: true,
+      members: group.members,
+      lastMessage: group.messages && group.messages.length > 0 ? 
+        group.messages[group.messages.length - 1] : null
+    }));
+    
+    // Add last message info and unread counts to users
+    const usersWithLastMessage = users.map(user => {
+      // Find messages between this user and current user
+      const userMessages = messages.filter(msg => {
+        const senderId = typeof msg.senderId === 'object' ? msg.senderId?._id : msg.senderId;
+        const receiverId = typeof msg.receiverId === 'object' ? msg.receiverId?._id : msg.receiverId;
+        
+        return (senderId === user._id && receiverId === user?._id) || 
+               (senderId === user?._id && receiverId === user._id);
+      });
+      
+      // Get the most recent message
+      const lastMessage = userMessages.length > 0 ? 
+        userMessages.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0] : null;
+      
+      // Return user with last message
+      return {
+        ...user,
+        lastMessage: lastMessage ? {
+          text: lastMessage.content,
+          time: new Date(lastMessage.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        } : null,
+        unreadCount: unreadCounts[user._id] || 0
+      };
+    });
+    
+    return [...usersWithLastMessage, ...groupsFormatted];
+  };
+
+  // Update the search functionality to use filteredUsers
+  useEffect(() => {
+    if (users.length > 0 && searchQuery) {
+      const filtered = users.filter(user => {
+        // Search by name, username, firstName, middleName, lastName
+        const searchFields = [
+          user.name,
+          user.username,
+          user.firstName,
+          user.middleName,
+          user.lastName
+        ].filter(Boolean).join(' ').toLowerCase();
+        
+        return searchFields.includes(searchQuery.toLowerCase());
+      });
+      setFilteredUsers(filtered);
+    } else if (users.length > 0) {
+      setFilteredUsers(users);
+    }
+  }, [searchQuery, users]);
+
+  // Add this function to properly filter users based on search query
+  const filterUsers = (usersList, query) => {
+    if (!query || !query.trim()) return usersList;
+    
+    return usersList.filter(user => {
+      if (!user) return false;
+      
+      // Check all possible name fields
+      const searchFields = [
+        user.name,
+        user.username,
+        user.firstName,
+        user.middleName,
+        user.lastName
+      ].filter(Boolean).join(' ').toLowerCase();
+      
+      return searchFields.includes(query.toLowerCase());
+    });
+  };
+
+  // Function to mark messages as read and broadcast event for notification icon
+  const markMessagesAsRead = async (senderId) => {
+    if (!user?._id) return;
+    
+    console.log(`Marking messages from sender ${senderId} as read`);
+    
+    // Skip API calls for virtual admin user
+    if (senderId === 'system-admin') {
+      // Update local unread counts
+      setUnreadCounts(prev => ({
+        ...prev,
+        [senderId]: 0
+      }));
+      return;
+    }
+    
+    try {
+      await messageUtils.markMessagesAsRead(senderId, user._id);
+      
+      // Update local unread counts
+      setUnreadCounts(prev => ({
+        ...prev,
+        [senderId]: 0
+      }));
+      
+      // Broadcast a custom event that messages were read
+      // This allows the MessageNotificationIcon to update in real-time
+      window.dispatchEvent(new CustomEvent('messagesMarkedAsRead', {
+        detail: { 
+          senderId: senderId,
+          userId: user._id 
+        }
+      }));
+      
+      // If there's a global function to mark messages as read, call it
+      if (window.markMessageAsRead) {
+        window.markMessageAsRead(senderId);
+      }
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+    }
+  };
+
+  // Add a function to check if the selected user is a real admin (not virtual)
+  const isRealAdmin = (userId) => {
+    // Check if this is our virtual system admin
+    if (userId === 'system-admin') {
+      return false;
+    }
+    
+    const user = users.find(u => u._id === userId);
+    return user && (user.role === 'admin' || user.isAdmin) && !user.isVirtual;
+  };
+
+  // Add a refresh function to load fresh data
+  const handleRefresh = async () => {
+    toast.success("Refreshing messages and contacts...");
+    
+    try {
+      await fetchUsers();
+      await fetchUnreadCounts();
+      
+      // If we have a selected user, refresh their messages too
+      if (selectedUser) {
+        await fetchMessages(selectedUser);
+      }
+      
+      toast.success("Refresh complete!");
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+      toast.error("Failed to refresh. Please try again.");
+    }
+  };
+
+  // Add this function to get initials from both first and last names
+  const getInitials = (user) => {
+    if (!user) return 'U';
+    
+    let initials = '';
+    
+    // If we have a full name, get first letters of first and last name
+    if (user.name) {
+      const nameParts = user.name.split(' ');
+      if (nameParts.length >= 2) {
+        // Get first letter of first name and first letter of last name
+        initials = `${nameParts[0].charAt(0)}${nameParts[nameParts.length - 1].charAt(0)}`;
+      } else {
+        // If only one name part, get first letter
+        initials = nameParts[0].charAt(0);
+      }
+    } 
+    // If we have firstName and lastName fields
+    else if (user.firstName || user.lastName) {
+      if (user.firstName) initials += user.firstName.charAt(0);
+      if (user.lastName) initials += user.lastName.charAt(0);
+      // If we still don't have initials, try middleName
+      if (!initials && user.middleName) initials = user.middleName.charAt(0);
+    }
+    // Fallback to username
+    else if (user.username) {
+      initials = user.username.charAt(0);
+    }
+    
+    return initials.toUpperCase() || 'U';
+  };
+
+  // Enhanced color generator with a wider palette
+  const getAvatarColor = (userId) => {
+    try {
+      // Expanded color palette for more variety
+      const colors = [
+        { bg: '#f87171', text: '#7f1d1d' }, // Red
+        { bg: '#fb923c', text: '#7c2d12' }, // Orange
+        { bg: '#facc15', text: '#713f12' }, // Yellow
+        { bg: '#a3e635', text: '#365314' }, // Lime
+        { bg: '#4ade80', text: '#14532d' }, // Green
+        { bg: '#34d399', text: '#064e3b' }, // Emerald
+        { bg: '#2dd4bf', text: '#134e4a' }, // Teal
+        { bg: '#22d3ee', text: '#155e75' }, // Cyan
+        { bg: '#38bdf8', text: '#075985' }, // Light Blue
+        { bg: '#60a5fa', text: '#1e40af' }, // Blue
+        { bg: '#818cf8', text: '#3730a3' }, // Indigo
+        { bg: '#a78bfa', text: '#4c1d95' }, // Violet
+        { bg: '#c084fc', text: '#581c87' }, // Purple
+        { bg: '#e879f9', text: '#701a75' }, // Fuchsia
+        { bg: '#f472b6', text: '#831843' }, // Pink
+        { bg: '#fb7185', text: '#881337' }  // Rose
+      ];
+      
+      // Create a more consistent hash from the userID
+      let hash = 0;
+      const id = String(userId || '0');
+      
+      // Use all characters of the ID to generate a hash
+      for (let i = 0; i < id.length; i++) {
+        hash = ((hash << 5) - hash) + id.charCodeAt(i);
+        hash = hash & hash; // Convert to 32bit integer
+      }
+      
+      // Ensure hash is positive and get a modulo for the colors array
+      const colorIndex = Math.abs(hash) % colors.length;
+      return colors[colorIndex];
+    } catch (err) {
+      console.error("Error generating avatar color:", err);
+      return { bg: '#e5e7eb', text: '#374151' }; // Default gray
+    }
+  };
+
+  // Update the renderHeaderUserInfo function
+  const renderHeaderUserInfo = () => {
+    if (!selectedUser) return null;
+    
+    // Find the selected user data
+    const userData = users.find(u => u._id === selectedUser);
+    if (!userData) return null;
+    
+    const displayName = userData.name || userData.username || 'User';
+    const initials = getInitials(userData);
+    const role = userData.role || (userData.isAdmin ? 'Admin' : '');
+    
+    // Get consistent avatar color
+    const avatarColor = getAvatarColor(userData._id);
+    
+    return (
+      <div className="messaging-header-user-info">
+        <div className="header-user-avatar">
+          {userData.photo ? (
+            <img 
+              src={userData.photo} 
+              alt={displayName}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                // If image fails to load, show initials instead
+                e.target.onerror = null;
+                e.target.style.display = 'none';
+                e.target.parentNode.style.backgroundColor = avatarColor.bg;
+                e.target.parentNode.innerHTML = `<span style="color: ${avatarColor.text};">${initials}</span>`;
+              }}
+            />
+          ) : (
+            <div 
+              className="w-full h-full flex items-center justify-center"
+              style={{
+                backgroundColor: avatarColor.bg,
+                color: avatarColor.text
+              }}
+            >
+              <span>{initials}</span>
+            </div>
+          )}
+        </div>
+        
+        <div className="flex flex-col">
+          <span className="text-white text-sm font-medium">{displayName}</span>
+          {role && (
+            <span className="text-white/70 text-xs">{role}</span>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Render component
   return (
     <>
-      {renderGroupChatModal()}
-      {renderChatSettings()}
       {/* Main messaging container */}
       <div
         ref={containerRef}
         style={{
           position: 'fixed',
-          top: `${containerPos.y}px`,
+          top: `${Math.max(-100, containerPos.y)}px`, // Allow negative position but limit to -100px to ensure it's still visible
           left: `${containerPos.x}px`,
           width: `${containerSize.width}px`,
           height: `${containerSize.height}px`,
-          zIndex: 50
+          zIndex: 2147483647, // Maximum possible z-index value in browsers
+          maxWidth: 'none',
+          maxHeight: 'none',
+          boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.15), 0 10px 20px -5px rgba(0, 0, 0, 0.1)',
+          borderRadius: '24px',
+          border: '10px solid #111827',
+          background: '#111827',
+          overflow: 'hidden',
+          padding: '4px',
+          resize: 'both',
+          minWidth: '200px',
+          minHeight: '150px',
+          transform: 'translateZ(0)', // Force hardware acceleration
+          willChange: 'transform', // Optimize for animations
         }}
-        className={`bg-white rounded-lg shadow-2xl overflow-hidden transition-opacity ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className={`messaging-container transition-all duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'} ${darkMode ? 'dark-mode' : ''}`}
       >
-        {/* Drag handle - header */}
-        <div 
-          className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white p-3 flex items-center justify-between cursor-move"
-          onMouseDown={handleDragStart}
-          onTouchStart={handleDragStart}
-        >
-          <div className="flex items-center">
-            <button 
-              onClick={toggleMenu} 
-              className="p-1 mr-3 text-white rounded-full hover:bg-white/10 transition-all"
-            >
-              <div className={`transition-transform duration-300 ${menuOpen ? 'rotate-90' : ''}`}>
-                <RiMenu3Line size={20} />
+        {/* Phone status bar */}
+        <div className="h-5 w-full bg-[#111827] flex items-center justify-between px-6">
+          <div className="text-white text-xs font-medium">
+            {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
               </div>
-            </button>
-            <h3 className="font-semibold">Messages</h3>
-          </div>
-          <div className="flex items-center gap-2">
-            <button 
-              onClick={onClose} 
-              className="p-1 rounded-full hover:bg-white/10"
-            >
-              <FiX size={18} />
-            </button>
+          <div className="flex items-center space-x-1">
+            <div className="w-2 h-2 rounded-full bg-white/60"></div>
+            <div className="w-2 h-2 rounded-full bg-white/90"></div>
+            <div className="w-2 h-2 rounded-full bg-white"></div>
           </div>
         </div>
         
-        {/* Main content container */}
-        <div className="flex h-[calc(100%-48px)] overflow-hidden bg-gray-50">
-          {/* Render hamburger menu */}
-          {renderMenuContent()}
-          
-          {/* User list column */}
-          <div className={`${showUserList ? 'w-full' : 'w-0'} h-full bg-white md:max-w-xs md:min-w-[240px] md:w-[30%] md:block border-r transition-all duration-300 overflow-hidden`}>
-            {/* Search bar */}
-            <div className="p-3 border-b sticky top-0 bg-white z-10">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search users..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full p-2 pl-9 bg-gray-100 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <FiSearch className="absolute left-3 top-2.5 text-gray-500" size={16} />
-              </div>
-            </div>
-            
-            {/* User list */}
-            <div className="overflow-y-auto h-[calc(100%-56px)]">
-              {filteredUsers.length === 0 ? (
-                <div className="p-4 text-center text-gray-500">No users found</div>
-              ) : (
-                filteredUsers.map((user) => (
-                  <div
-                    key={user._id}
-                    onClick={() => setMessageView(user._id)}
-                    className={`p-3 flex items-center cursor-pointer hover:bg-gray-100 transition-colors ${
-                      selectedUser === user._id ? 'bg-blue-50' : ''
-                    }`}
-                  >
-                    <div className="relative">
-                      {user.photo ? (
-                        <img
-                          src={getImageUrl(user.photo)}
-                          className="w-12 h-12 rounded-full object-cover mr-3"
-                          alt={user.firstName}
-                        />
-                      ) : (
-                        <div className="w-12 h-12 rounded-full bg-blue-500 text-white flex items-center justify-center mr-3 font-semibold">
-                          {user.firstName[0]}
-                        </div>
-                      )}
-                      {userStatus === 'Online' && (
-                        <span className="absolute bottom-0 right-2 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></span>
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-center">
-                        <h4 className="font-medium text-gray-800 truncate">{user.firstName} {user.middleName}</h4>
-                        {unreadCounts[user._id] && unreadCounts[user._id] > 0 && (
-                          <span className="ml-2 bg-blue-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                            {unreadCounts[user._id]}
+        {/* Main app container with white background */}
+        <div className="h-[calc(100%-5px)] w-full rounded-t-xl bg-white overflow-hidden flex flex-col">
+          {/* Header with enhanced styling */}
+          <div 
+            className="flex items-center justify-between p-3 cursor-move border-b bg-gradient-to-r from-blue-700 to-indigo-800 shadow-md"
+            onMouseDown={handleDragStart}
+          >
+            <div className="flex items-center">
+              {isViewingStarred ? (
+                <span className="text-white text-sm">
+                  Starred Messages
                           </span>
-                        )}
-                      </div>
-                      <p className="text-gray-500 text-sm truncate">
-                        {user.online ? 'Online' : 'Offline'}
-                      </p>
-                    </div>
-                  </div>
-                ))
+              ) : (
+                renderHeaderUserInfo()
               )}
-            </div>
-          </div>
-          
-          {/* Messages column */}
-          <div className={`${showUserList ? 'hidden md:block' : 'w-full'} h-full flex-1 flex flex-col overflow-hidden`}>
-            {!selectedUser ? (
-              <div className="flex items-center justify-center h-full text-gray-500">
-                <div className="text-center p-6">
-                  <FiMessageSquare size={48} className="mx-auto mb-4 text-gray-300" />
-                  <h3 className="text-lg font-medium mb-2">No conversation selected</h3>
-                  <p className="max-w-xs text-sm">
-                    Choose a contact from the list to start messaging
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <>
-                {/* Chat header */}
-                <div className="p-3 border-b flex items-center justify-between sticky top-0 bg-white z-10">
-                  <div className="flex items-center">
-                    {isMobileView && (
-                      <button
-                        onClick={goBackToUserList}
-                        className="p-1 mr-2 rounded-full hover:bg-gray-100"
-                      >
-                        <FiArrowLeft size={16} />
-                      </button>
-                    )}
-                    {selectedUser && (
-                      <div className="flex items-center">
-                        {(() => {
-                          const chatUser = users.find(u => u._id === selectedUser);
-                          return chatUser ? (
-                            <>
-                              {chatUser.photo ? (
-                                <img
-                                  src={getImageUrl(chatUser.photo)}
-                                  className="w-10 h-10 rounded-full object-cover mr-3"
-                                  alt={chatUser.firstName}
-                                />
-                              ) : (
-                                <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center mr-3 font-semibold">
-                                  {chatUser.firstName[0]}
                                 </div>
-                              )}
-                              <div>
-                                <h4 className="font-medium text-gray-800">{chatUser.firstName} {chatUser.middleName}</h4>
-                                <p className="text-xs text-gray-500">
-                                  {isTyping ? 'Typing...' : userStatus}
-                                </p>
-                              </div>
-                            </>
-                          ) : null;
-                        })()}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    {/* Call controls */}
+            <div className="flex items-center space-x-1">
+              {/* Refresh button */}
                     <button
-                      onClick={initiateVoiceCall}
-                      className="p-2 rounded-full hover:bg-gray-100 text-gray-700"
-                      title="Voice call"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
-                      </svg>
+                className="p-2 text-white hover:bg-white/20 rounded-full transition-colors"
+                onClick={handleRefresh}
+                title="Refresh"
+              >
+                <FiRefreshCw size={16} />
+                    </button>
+              {/* Notification toggle */}
+                    <button
+                className="p-2 text-white hover:bg-white/20 rounded-full transition-colors"
+                onClick={toggleNotifications}
+                title={notificationsMuted ? "Enable Notifications" : "Mute Notifications"}
+              >
+                {notificationsMuted ? <FiBellOff size={16} /> : <FiBell size={16} />}
                     </button>
                     <button
-                      onClick={initiateVideoCall}
-                      className="p-2 rounded-full hover:bg-gray-100 text-gray-700"
-                      title="Video call"
+                className="p-2 text-white hover:bg-white/20 rounded-full transition-colors"
+                onClick={toggleSettings}
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polygon points="23 7 16 12 23 17 23 7"></polygon>
-                        <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
-                      </svg>
-                    </button>
-                    
-                    {/* Search in conversation */}
-                    <button
-                      onClick={() => setIsSearchingMessages(true)}
-                      className="p-2 rounded-full hover:bg-gray-100 text-gray-700"
-                      title="Search in conversation"
-                    >
-                      <FiSearch size={18} />
-                    </button>
-                  </div>
-                </div>
-
-                {/* Search message bar */}
-                {isSearchingMessages && (
-                  <div className="p-2 border-b flex items-center bg-white">
-                    <div className="relative flex-1">
-                      <input
-                        type="text"
-                        placeholder="Search in conversation..."
-                        value={searchMessageQuery}
-                        onChange={(e) => setSearchMessageQuery(e.target.value)}
-                        className="w-full p-2 pl-8 bg-gray-100 rounded-full text-sm focus:outline-none"
-                        autoFocus
-                      />
-                      <FiSearch className="absolute left-3 top-3 text-gray-500" size={14} />
-                    </div>
-                    <button
-                      onClick={searchMessages}
-                      className="ml-2 px-3 py-1 bg-blue-500 text-white rounded-full text-sm"
-                    >
-                      Search
+                <FiSettings size={16} />
                     </button>
                     <button
-                      onClick={resetSearch}
-                      className="ml-2 p-2 text-gray-500 hover:text-gray-700"
+                className="p-2 text-white hover:bg-white/20 rounded-full transition-colors"
+                onClick={onClose}
                     >
                       <FiX size={18} />
                     </button>
                   </div>
-                )}
-                
-                {/* Messages area */}
-                <div 
-                  ref={messageContainerRef}
-                  className="flex-1 overflow-y-auto p-4 space-y-4"
-                  onTouchStart={handleTouchStartPull}
-                  onTouchMove={handleTouchMovePull}
-                  onTouchEnd={handleTouchEndPull}
-                >
-                  {/* Pull to refresh indicator */}
-                  {isPulling && (
-                    <div 
-                      className="sticky top-0 left-0 w-full flex justify-center items-center text-blue-500 transition-transform duration-300"
-                      style={{ transform: `translateY(${pullDistance}px)` }}
-                    >
-                      <svg className="animate-spin -ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      <span>{pullDistance > 40 ? 'Release to refresh' : 'Pull to refresh'}</span>
                     </div>
-                  )}
-                  
-                  {/* Group messages by date */}
-                  {Object.entries(groupedMessages()).map(([date, msgs]) => (
-                    <div key={date}>
-                      <div className="flex justify-center mb-4">
-                        <span className="px-3 py-1 bg-gray-200 rounded-full text-sm text-gray-600">
-                          {renderDateSeparator(date)}
-                        </span>
-                      </div>
-                      <div className="space-y-3">
-                        {msgs.map((message) => {
-                          const isOwnMessage = message.senderId === user._id;
-                          return (
-                            <div
-                              key={message._id}
-                              ref={(el) => (messageRefs.current[message._id] = el)}
-                              className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
-                            >
-                              <div
-                                className={`max-w-[75%] rounded-lg px-4 py-2 ${
-                                  isOwnMessage
-                                    ? 'bg-blue-500 text-white rounded-br-none'
-                                    : 'bg-white border rounded-bl-none'
-                                }`}
-                              >
-                                {/* Reply preview */}
-                                {message.replyTo && (
-                                  <div 
-                                    className={`text-xs p-2 rounded mb-2 border-l-2 ${
-                                      isOwnMessage ? 'bg-blue-600 border-blue-300' : 'bg-gray-100 border-gray-300'
-                                    }`}
-                                  >
-                                    <div className={isOwnMessage ? 'text-blue-200' : 'text-gray-500'}>
-                                      {message.replyTo.senderId === user._id ? 'You' : users.find(u => u._id === message.replyTo.senderId)?.firstName || 'User'}
-                                    </div>
-                                    <div className="truncate">
-                                      {message.replyTo.content}
-                                    </div>
-                                  </div>
-                                )}
-                                
-                                {/* Message content */}
-                                <p>{message.content}</p>
-                                
-                                {/* File attachment */}
-                                {message.file && (
-                                  <div className="mt-2">
-                                    {message.file.match(/\.(jpg|jpeg|png|gif)$/i) ? (
-                                      <img
-                                        src={message.file}
-                                        alt="Attachment"
-                                        className="max-w-full rounded-lg cursor-pointer hover:opacity-90"
-                                        onClick={() => window.open(message.file, '_blank')}
-                                      />
-                                    ) : message.file.match(/\.(mp3|wav|ogg)$/i) ? (
-                                      <audio controls className="w-full mt-1">
-                                        <source src={message.file} />
-                                        Your browser does not support the audio element.
-                                      </audio>
-                                    ) : (
-                                      <div
-                                        className="flex items-center p-2 bg-gray-100 rounded cursor-pointer hover:bg-gray-200"
-                                        onClick={() => window.open(message.file, '_blank')}
-                                      >
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                                          <polyline points="14 2 14 8 20 8"></polyline>
-                                          <line x1="16" y1="13" x2="8" y2="13"></line>
-                                          <line x1="16" y1="17" x2="8" y2="17"></line>
-                                          <polyline points="10 9 9 9 8 9"></polyline>
-                                        </svg>
-                                        <span className="ml-2 text-sm">Attachment</span>
+          
+          {/* Main content container */}
+          <div className="flex flex-1 overflow-hidden bg-gray-50">
+            {/* User list column - full width when no user selected or forced full width on mobile */}
+            <div className={`
+              transition-all duration-300 overflow-hidden user-list
+              ${!selectedUser ? 'w-full' : isMobileView || containerSize.width < 768 ? 'w-0' : 'md:max-w-[280px] md:min-w-[250px] md:w-[30%]'}
+              h-full bg-white border-r
+            `}>
+              <MessageList 
+                users={users}
+                selectedUserId={selectedUser}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                onSelectUser={handleSelectUser}
+                unreadCounts={unreadCounts}
+              />
                                       </div>
-                                    )}
-                                  </div>
-                                )}
-                                
-                                {/* Message timestamp and status */}
-                                <div className={`flex text-xs mt-1 ${isOwnMessage ? 'text-blue-100' : 'text-gray-500'} justify-end items-center space-x-1`}>
-                                  <span>
-                                    {new Date(message.createdAt).toLocaleTimeString([], {
-                                      hour: '2-digit',
-                                      minute: '2-digit',
-                                    })}
-                                  </span>
-                                  {isOwnMessage && (
-                                    messageStatus[message._id] === 'delivered' ? (
-                                      <FiCheckCircle size={12} />
-                                    ) : messageStatus[message._id] === 'sent' ? (
-                                      <FiCheck size={12} />
-                                    ) : null
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                  <div ref={messagesEndRef} />
-                </div>
-                
-                {/* Reply bar */}
-                {replyingTo && (
-                  <div className="p-2 flex items-center bg-gray-100 border-t">
-                    <div className="flex-1 pl-2 border-l-2 border-blue-500">
-                      <div className="text-xs text-gray-500">
-                        Replying to {replyingTo.senderId === user._id ? 'yourself' : users.find(u => u._id === replyingTo.senderId)?.firstName || 'User'}
-                      </div>
-                      <div className="text-sm truncate pr-2">{replyingTo.content}</div>
-                    </div>
-                    <button
-                      onClick={handleCancelReply}
-                      className="p-1 text-gray-500 hover:text-gray-700"
-                    >
-                      <FiX size={16} />
-                    </button>
-                  </div>
-                )}
-                
-                {/* Selected file preview */}
-                {selectedFile && (
-                  <div className="p-2 flex items-center bg-gray-100 border-t">
-                    <div className="flex-1 pl-2">
-                      <div className="text-xs text-gray-500">Selected file</div>
-                      <div className="text-sm truncate">{selectedFile.name}</div>
-                    </div>
-                    <button
-                      onClick={removeSelectedFile}
-                      className="p-1 text-gray-500 hover:text-gray-700"
-                    >
-                      <FiX size={16} />
-                    </button>
-                  </div>
-                )}
-                
-                {/* Message input */}
-                <div className="p-3 border-t flex items-end">
-                  <div className="flex items-center space-x-2 mr-2">
-                    <label className="p-2 rounded-full hover:bg-gray-100 text-gray-700 cursor-pointer">
-                      <FiPaperclip size={18} />
-                      <input
-                        type="file"
-                        className="hidden"
-                        onChange={handleFileSelect}
-                        accept="image/*,audio/*,video/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                      />
-                    </label>
-                    <button
-                      onClick={() => setShowEmojis(!showEmojis)}
-                      className="p-2 rounded-full hover:bg-gray-100 text-gray-700"
-                    >
-                      <BsEmojiSmile size={18} />
-                    </button>
-                  </div>
+            
+            {/* Messages column - shown when user is selected */}
+            <div className={`
+              h-full flex-1 flex flex-col overflow-hidden relative
+              ${!selectedUser ? 'hidden' : 'w-full'}
+              ${isMobileView || containerSize.width < 768 ? 'w-full' : ''}
+            `}>
+              {selectedUser ? (
+                <>
+                  {isViewingStarred && renderStarredMessagesHeader()}
                   
-                  <div className="relative flex-1">
-                    <textarea
-                      ref={inputRef}
-                      value={newMessage}
-                      onChange={handleTyping}
-                      placeholder="Type a message..."
-                      className="w-full p-2 pr-10 border rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 max-h-32 min-h-[40px] resize-none"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSendMessage(e);
-                        }
-                      }}
-                    />
-                    {isRecording && (
-                      <div className="absolute inset-0 bg-white border rounded-lg flex items-center justify-center">
-                        <div className="text-center">
-                          <div className="text-red-500 animate-pulse mb-1">Recording... {formatTime(recordingTime)}</div>
-                          <div className="flex justify-center space-x-4">
-                            <button
-                              onClick={cancelRecording}
-                              className="px-3 py-1 bg-gray-200 rounded text-gray-700 text-sm"
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              onClick={stopRecording}
-                              className="px-3 py-1 bg-blue-500 rounded text-white text-sm"
-                            >
-                              Stop
-                            </button>
-                          </div>
+                  {/* Floating call buttons for larger screens */}
+                  {selectedUser && !isMobileView && containerSize.width >= 768 && (
+                    <div className="absolute top-4 right-4 z-10 flex items-center space-x-2">
+                    <button
+                        className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full shadow-md transition-colors"
+                        onClick={() => handlePhoneCall(selectedUser)}
+                        title="Voice Call"
+                    >
+                        <FiPhone size={20} />
+                    </button>
+                    <button
+                        className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full shadow-md transition-colors"
+                        onClick={() => handleVideoCall(selectedUser)}
+                        title="Video Call"
+                    >
+                        <FiVideo size={20} />
+                    </button>
+                  </div>
+                )}
+                
+                  <MessageChat 
+                    selectedUser={selectedUserData}
+                    messages={getDisplayedMessages()}
+                    currentUserId={user?._id}
+                    isTyping={isTyping}
+                    userStatus={selectedUserData?.isAdmin ? 'online' : userStatus}
+                    isMobile={isMobileView || containerSize.width < 768}
+                    onBackClick={goBackToUserList}
+                    onPhoneClick={() => handlePhoneCall(selectedUser)}
+                    onVideoClick={() => handleVideoCall(selectedUser)}
+                    onMenuClick={toggleMenu}
+                    onSendMessage={handleSendMessage}
+                    isLoading={isLoading}
+                    onStarMessage={handleStarMessage}
+                    starredMessages={starredMessages}
+                    isAdmin={selectedUserData?.isAdmin || selectedUserData?.role === 'admin'}
+                    containerWidth={containerSize.width}
+                  />
+                </>
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-500 bg-gray-50">
+                  <div className="text-center p-6">
+                    <FiMessageSquare size={48} className="mx-auto mb-4 text-gray-300" />
+                    <h3 className="text-lg font-medium mb-2">No conversation selected</h3>
+                    <p className="max-w-xs text-sm">
+                      Choose a contact from the list to start messaging
+                    </p>
                         </div>
                       </div>
                     )}
-                    
-                    {audioBlob && !isRecording && (
-                      <div className="absolute inset-0 bg-white border rounded-lg flex items-center justify-center">
-                        <div className="text-center w-full px-3">
-                          <audio className="w-full mb-2" controls src={URL.createObjectURL(audioBlob)}></audio>
-                          <div className="flex justify-center space-x-3">
-                            <button
-                              onClick={() => setAudioBlob(null)}
-                              className="px-3 py-1 bg-gray-200 rounded text-gray-700 text-sm"
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              onClick={sendAudioMessage}
-                              className="px-3 py-1 bg-blue-500 rounded text-white text-sm"
-                            >
-                              Send
-                            </button>
                           </div>
-                        </div>
-                      </div>
-                    )}
                   </div>
                   
-                  <div className="ml-2 flex items-center">
-                    {newMessage.trim() || selectedFile ? (
-                      <button
-                        onClick={handleSendMessage}
-                        className="p-2 bg-blue-500 text-white rounded-full hover:bg-blue-600"
-                      >
-                        <FiSend size={18} />
-                      </button>
-                    ) : (
-                      <button
-                        onClick={isRecording ? stopRecording : startRecording}
-                        className={`p-2 rounded-full ${isRecording ? 'bg-red-500 text-white animate-pulse' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-                          <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                          <line x1="12" y1="19" x2="12" y2="23"></line>
-                          <line x1="8" y1="23" x2="16" y2="23"></line>
-                        </svg>
-                      </button>
-                    )}
+          {/* Phone Home Button */}
+          <div className="h-6 w-full bg-[#111827] rounded-b-xl flex items-center justify-center">
+            <div className="w-20 h-1 bg-gray-500 rounded-full"></div>
                   </div>
                 </div>
                 
-                {/* Emoji picker */}
-                {showEmojis && (
-                  <div className="absolute bottom-16 left-16 bg-white border rounded-lg shadow-lg p-2 z-10">
-                    <div className="grid grid-cols-5 gap-2">
-                      {emojis.map((emoji) => (
-                        <button
-                          key={emoji}
-                          onClick={() => addEmoji(emoji)}
-                          className="text-xl hover:bg-gray-100 rounded w-8 h-8 flex items-center justify-center"
-                        >
-                          {emoji}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-        
-        {/* Resize handles */}
-        {resizeHandles.map(handle => (
-          <div 
-            key={handle.position}
-            className={`${handle.className} resize-handle z-10`}
-            style={{ cursor: handle.cursor }}
-            onMouseDown={(e) => handleResizeStart(e, handle.position)}
-            onTouchStart={(e) => handleResizeStart(e, handle.position)}
-          />
-        ))}
-        
-        {/* Corner resize handle with visual indicator */}
-        <div 
-          className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize z-20"
+        {/* Add resize handles for all sides and corners */}
+        <div
+          className={`resize-handle absolute bottom-4 right-4 w-4 h-4 cursor-se-resize ${isResizing ? 'bg-blue-400/30' : ''}`}
           onMouseDown={(e) => handleResizeStart(e, 'bottom-right')}
-          onTouchStart={(e) => handleResizeStart(e, 'bottom-right')}
-          style={{
-            backgroundImage: 'radial-gradient(circle, #6366f1 1px, transparent 1px)',
-            backgroundSize: '3px 3px',
-            backgroundPosition: '0 0',
-            opacity: 0.7
-          }}
+        />
+        <div
+          className={`resize-handle absolute bottom-4 w-full h-1 cursor-s-resize ${isResizing ? 'bg-blue-400/30' : ''}`}
+          onMouseDown={(e) => handleResizeStart(e, 'bottom')}
+        />
+        <div
+          className={`resize-handle absolute right-4 h-full w-1 cursor-e-resize ${isResizing ? 'bg-blue-400/30' : ''}`}
+          onMouseDown={(e) => handleResizeStart(e, 'right')}
+        />
+        <div
+          className={`resize-handle absolute top-4 w-full h-1 cursor-n-resize ${isResizing ? 'bg-blue-400/30' : ''}`}
+          onMouseDown={(e) => handleResizeStart(e, 'top')}
+        />
+        <div
+          className={`resize-handle absolute left-4 h-full w-1 cursor-w-resize ${isResizing ? 'bg-blue-400/30' : ''}`}
+          onMouseDown={(e) => handleResizeStart(e, 'left')}
+        />
+        <div
+          className={`resize-handle absolute top-4 left-4 w-4 h-4 cursor-nw-resize ${isResizing ? 'bg-blue-400/30' : ''}`}
+          onMouseDown={(e) => handleResizeStart(e, 'top-left')}
+        />
+        <div
+          className={`resize-handle absolute top-4 right-4 w-4 h-4 cursor-ne-resize ${isResizing ? 'bg-blue-400/30' : ''}`}
+          onMouseDown={(e) => handleResizeStart(e, 'top-right')}
+        />
+        <div
+          className={`resize-handle absolute bottom-4 left-4 w-4 h-4 cursor-sw-resize ${isResizing ? 'bg-blue-400/30' : ''}`}
+          onMouseDown={(e) => handleResizeStart(e, 'bottom-left')}
         />
       </div>
+      
+      {/* Context menu */}
+      {isMenuOpen && renderMenuContent()}
+      
+      {/* Group chat creation modal */}
+      {groupChatModalOpen && renderGroupChatModal()}
+      
+      {/* Settings Panel */}
+      {isSettingsOpen && renderSettingsPanel()}
+      
+      {/* Add audio elements for sounds */}
+      <audio id="message-notification-sound" preload="auto" src="/message-notification.mp3" />
+      <audio id="call-ringtone-sound" preload="auto" src="/call-ringtone.mp3" loop />
     </>
   );
 };

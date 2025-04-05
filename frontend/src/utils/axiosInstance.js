@@ -20,20 +20,58 @@ const PUBLIC_ROUTES = [
   "/managemessages/get-messages",
   "/manageimages/get-side-images",
   "/inmates/allInmates",
-  "/visitor/schedule/schedule",
-  "/visitor/schedule/schedules",
-  "/visitor/schedule/schedule/"
+  // Keep these for backward compatibility
+  "/visitorSchedule/schedule",
+  "/visitorSchedule/schedules",
+  "/visitorSchedule/schedule/",
+  "/visitorSchedule/inmates",
+  "/visitorSchedule/capacity",
+  "/visitorSchedule/daily-visits",
+  "/visitorSchedule/check-pending",
+  // Add visitor routes
+  "/visitor/schedule",
+  "/visitor/schedule/",
+  "/visitor/schedules",
+  "/visitor/schedule/inmates",
+  "/visitor/schedule/capacity",
+  "/visitor/schedule/daily-visits",
+  "/visitor/schedule/check-pending"
 ];
 
 // Request interceptor
 axiosInstance.interceptors.request.use(
   (config) => {
+    // Map old endpoints to new endpoints
+    // This helps maintain backward compatibility while transitioning APIs
+    const endpointMappings = {
+      '/visitorSchedule/schedule': '/visitor/schedule',
+      '/visitorSchedule/schedules': '/visitor/schedule/schedules',
+      '/visitorSchedule/inmates': '/visitor/schedule/inmates',
+      '/visitorSchedule/capacity': '/visitor/schedule/capacity',
+      '/visitorSchedule/daily-visits': '/visitor/schedule/daily-visits',
+      '/visitorSchedule/check-pending': '/visitor/schedule/check-pending'
+    };
+    
+    // Check if the current URL matches any old endpoint pattern
+    const currentPath = config.url.replace(/\?.*$/, ''); // Remove query parameters for matching
+    if (endpointMappings[currentPath]) {
+      console.log(`Remapping old endpoint ${currentPath} to ${endpointMappings[currentPath]}`);
+      
+      // Keep the query parameters if any
+      const queryString = config.url.includes('?') ? config.url.substring(config.url.indexOf('?')) : '';
+      config.url = endpointMappings[currentPath] + queryString;
+    }
+
+    // Log all request URLs for debugging
+    console.log(`Making API request to: ${config.url}`);
+    
     const isPublicRoute = PUBLIC_ROUTES.some(route => {
       // Handle both full paths and relative paths
       const requestUrl = config.url.startsWith('http') ? 
         new URL(config.url).pathname : 
         config.url;
-      return requestUrl.includes(route);
+      // Use more flexible matching to handle subtle differences in endpoints
+      return PUBLIC_ROUTES.some(route => requestUrl.includes(route));
     });
     
     // Special logging for login attempts
@@ -46,37 +84,134 @@ axiosInstance.interceptors.request.use(
     const token = localStorage.getItem("token");
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log("Added authorization token to request");
+    } else {
+      console.log("No token available, proceeding without authorization");
     }
 
-    // Special handling for message-related endpoints that need userId
-    if (config.url.includes('/messages/unread/count')) {
-      // Get the user from localStorage to ensure it's always available
+    // Special handling for VisitorSchedule routes
+    if (config.url.includes('visitor/schedule') || config.url.includes('visitorSchedule')) {
+      // Try to get user ID from localStorage
       try {
         const userStr = localStorage.getItem('user');
         if (userStr) {
           const userData = JSON.parse(userStr);
+          const userId = userData.id || userData._id;
+          
           // For GET requests, add userId as query param
           if (config.method === 'get') {
             config.params = {
               ...config.params,
-              currentUserId: userData._id,
-              userId: userData._id
+              userId: userId
             };
-          } 
-          // For POST requests, include userId in the body
-          else if (config.method === 'post') {
-            if (typeof config.data === 'object' && config.data !== null) {
-              config.data = {
-                ...config.data,
-                userId: userData._id
-              };
-            } else {
-              config.data = { userId: userData._id };
+          }
+          
+          console.log("Added user ID to visitor schedule request:", userId);
+        }
+      } catch (err) {
+        console.error('Error adding user ID to schedule request:', err);
+      }
+    }
+
+    // Special handling for message-related endpoints that need userId
+    if (config.url.includes('/messages')) {
+      // Check specifically for the message send endpoint
+      const isMessageSendEndpoint = config.url.includes('/messages/send');
+      
+      // Get the user from localStorage to ensure it's always available
+      try {
+        if (isMessageSendEndpoint) {
+          console.log("Processing message send request...");
+          
+          // For FormData requests (message with attachments)
+          if (config.data instanceof FormData) {
+            // Check if senderId is already included
+            let hasSenderId = false;
+            for (let pair of config.data.entries()) {
+              if (pair[0] === 'senderId') {
+                hasSenderId = true;
+                console.log("Found senderId in FormData:", pair[1]);
+                break;
+              }
             }
+            
+            // Add senderId to FormData if not present
+            if (!hasSenderId) {
+              const userStr = localStorage.getItem('user');
+              if (userStr) {
+                try {
+                  const userData = JSON.parse(userStr);
+                  const senderId = userData._id || userData.id;
+                  
+                  if (senderId) {
+                    console.log("Adding senderId to FormData:", senderId);
+                    config.data.append('senderId', senderId);
+                  } else {
+                    console.error("Failed to get senderId from user data", userData);
+                  }
+                } catch (e) {
+                  console.error("Error parsing user data for message senderId:", e);
+                }
+              }
+            }
+          } 
+          // For JSON requests
+          else if (config.data && typeof config.data === 'object') {
+            // Check if senderId is included
+            if (!config.data.senderId) {
+              const userStr = localStorage.getItem('user');
+              if (userStr) {
+                try {
+                  const userData = JSON.parse(userStr);
+                  const senderId = userData._id || userData.id;
+                  
+                  if (senderId) {
+                    console.log("Adding senderId to JSON payload:", senderId);
+                    config.data.senderId = senderId;
+                  }
+                } catch (e) {
+                  console.error("Error parsing user data for message senderId:", e);
+                }
+              }
+            }
+          }
+        } 
+        else {
+          // For other message-related endpoints
+          const userStr = localStorage.getItem('user');
+          if (userStr) {
+            const userData = JSON.parse(userStr);
+            const userId = userData._id || userData.id;
+            
+            if (!userId) {
+              console.warn('No user ID found in localStorage for messages endpoint');
+            } else {
+              // For GET requests, add userId as query param
+              if (config.method === 'get') {
+                config.params = {
+                  ...config.params,
+                  currentUserId: userId,
+                  userId: userId
+                };
+              } 
+              // For POST requests, include userId in the body
+              else if (config.method === 'post') {
+                if (typeof config.data === 'object' && config.data !== null) {
+                  config.data = {
+                    ...config.data,
+                    userId: userId
+                  };
+                } else {
+                  config.data = { userId: userId };
+                }
+              }
+            }
+          } else {
+            console.warn('No user data found in localStorage for messages endpoint');
           }
         }
       } catch (err) {
-        console.error('Error adding user ID to message request:', err);
+        console.error('Error processing message request:', err);
       }
     }
 

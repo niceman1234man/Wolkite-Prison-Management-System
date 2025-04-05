@@ -12,37 +12,126 @@ const NotificationBell = ({ dashboardType }) => {
   const [loading, setLoading] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
-  const user = useSelector((state) => state.user);
+  const userState = useSelector((state) => state.user);
+  const user = userState?.user; // Get the actual user object from the Redux state
+  
+  useEffect(() => {
+    // Debug log to see the actual user object from Redux
+    console.log("Redux user state:", userState);
+    console.log("User object from Redux:", user);
+  }, [userState, user]);
+  
+  // Get userId for consistent use - try all possible locations in user object
+  const getUserId = () => {
+    if (!user) return null;
+    
+    // First try known common patterns
+    if (user._id) return user._id;
+    if (user.id) return user.id;
+    
+    // Log the user object structure if we can't find the ID in the expected places
+    console.log("User object structure for ID debugging:", user);
+    
+    // Check if ID is nested somewhere else
+    if (typeof user === 'object') {
+      // Look for any property that might be an ID
+      for (const key in user) {
+        if (key === '_id' || key === 'id' || key === 'userId' || key === 'user_id') {
+          return user[key];
+        }
+      }
+    }
+    
+    // If we still can't find it, try to get from localStorage directly as last resort
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const userData = JSON.parse(userStr);
+        return userData._id || userData.id;
+      }
+    } catch (err) {
+      console.error("Error retrieving user ID from localStorage:", err);
+    }
+    
+    return null;
+  };
   
   // Now initialize locallyReadNotices after user is defined
   const [locallyReadNotices, setLocallyReadNotices] = useState(() => {
-    // Initialize from user-specific localStorage key
-    const localStorageKey = `readNotices_${user?.id || 'guest'}`;
+    try {
+      // Get user ID from all possible locations
+      const userId = getUserId();
+      
+      if (userId) {
+        // Try to get from user-specific localStorage using consistent key
+        const localStorageKey = `readNotices_${userId}`;
     const saved = localStorage.getItem(localStorageKey);
-    return saved ? JSON.parse(saved) : [];
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          console.log(`Loaded ${parsed.length} read notices from localStorage for user ID ${userId}`);
+          return parsed;
+        }
+      }
+      
+      // If no user ID or no saved data, initialize empty
+      return [];
+    } catch (err) {
+      console.error("Error loading read notices from localStorage:", err);
+      return [];
+    }
   });
 
   // Helper function to check if a notice is read by the current user
   const isNoticeReadByUser = (notice) => {
-    // Check if in readBy array from server
-    const isInServerReadBy = notice?.readBy && 
-                           Array.isArray(notice.readBy) && 
-                           notice.readBy.some(reader => 
-                             typeof reader === 'string' 
-                               ? reader === user.id 
-                               : reader?.id === user.id || reader?._id === user.id);
+    const userId = getUserId();
     
-    // Check if in our local backup with user-specific key
-    const isInLocalReadBy = locallyReadNotices.includes(notice?._id);
+    if (!userId) {
+      console.warn("No user ID available when checking if notice is read");
+      return false;
+    }
     
-    return isInServerReadBy || isInLocalReadBy;
+    // First check if it's explicitly marked as read in the readBy array from database
+    if (notice.readBy && Array.isArray(notice.readBy)) {
+      for (const readerId of notice.readBy) {
+        try {
+          // Handle different possible formats of readerId
+          if (typeof readerId === 'string') {
+            if (readerId === userId || readerId === userId.toString()) {
+              return true;
+            }
+          } else if (readerId) {
+            // Check object format with id or _id
+            const readerIdStr = readerId._id ? 
+              readerId._id.toString() : (readerId.id ? readerId.id.toString() : null);
+            
+            if (readerIdStr && (readerIdStr === userId || readerIdStr === userId.toString())) {
+              return true;
+            }
+          }
+        } catch (err) {
+          console.error("Error comparing reader IDs:", err);
+        }
+      }
+    }
+    
+    // Then check local storage as backup - this should only be a temporary backup
+    // during the current session until the server syncs
+    if (notice._id && locallyReadNotices.includes(notice._id)) {
+      return true;
+    }
+    
+    return false;
   };
 
   // Store locally read notices in user-specific localStorage
   useEffect(() => {
-    if (user && user.id) {
-      const localStorageKey = `readNotices_${user.id}`;
+    // Get the actual user ID using our helper function
+    const userId = getUserId();
+    if (userId) {
+      // Use a consistent key format that will be the same across logins
+      const localStorageKey = `readNotices_${userId}`;
       localStorage.setItem(localStorageKey, JSON.stringify(locallyReadNotices));
+      console.log(`Saved ${locallyReadNotices.length} read notices to localStorage for user ID ${userId}`);
     }
   }, [locallyReadNotices, user]);
 
@@ -96,7 +185,26 @@ const NotificationBell = ({ dashboardType }) => {
     try {
       console.log('Fetching notifications...');
       console.log('Dashboard type:', dashboardType);
-      const response = await axiosInstance.get('/notice/getAllNotices');
+      
+      // Get the user ID
+      const userId = getUserId();
+      console.log(`Current user ID for notifications: ${userId || 'Not found'}`);
+      
+      if (!userId) {
+        console.warn("No user ID available for fetching notifications");
+        setLoading(false);
+        return;
+      }
+      
+      // Get authentication token
+      const token = localStorage.getItem('token');
+      
+      // Fetch all notices - include user ID as query param for consistent handling
+      const response = await axiosInstance.get(`/notice/getAllNotices?userId=${userId}`, {
+        headers: token ? {
+          'Authorization': `Bearer ${token}`
+        } : {}
+      });
       
       if (response.data && response.data.success && (
         (Array.isArray(response.data.data) && response.data.data.length > 0)
@@ -107,13 +215,14 @@ const NotificationBell = ({ dashboardType }) => {
         
         // Debug first notice
         if (noticesArray.length > 0) {
-          console.log(`First notice:`, {
+          console.log(`First notice details:`, {
             title: noticesArray[0].title,
-            readBy: noticesArray[0].readBy,
-            targetAudience: noticesArray[0].targetAudience,
-            isPosted: noticesArray[0].isPosted
+            readBy: noticesArray[0].readBy ? 
+              `Array with ${noticesArray[0].readBy.length} items` : 
+              'No readBy array',
+            firstReaderId: noticesArray[0].readBy && noticesArray[0].readBy.length > 0 ? 
+              noticesArray[0].readBy[0] : 'None'
           });
-          console.log(`User ID: ${user.id}`);
         }
         
         // Filter notices based on dashboard type and targetAudience
@@ -180,42 +289,113 @@ const NotificationBell = ({ dashboardType }) => {
     e.stopPropagation(); // Prevent dropdown from closing
     
     try {
-      console.log(`Marking notice as read: ${noticeId}`);
+      // Get the user ID using our helper function
+      const userId = getUserId();
       
-      // Call the backend API to mark notice as read
-      const response = await axiosInstance.patch(`/notice/mark-as-read/${noticeId}`);
+      // Get authentication token
+      const token = localStorage.getItem('token');
       
-      // Debug backend response
-      console.log(`Backend response for marking notice ${noticeId} as read:`, response.data);
+      // If no user ID available, try to get it from localStorage as a fallback
+      if (!userId) {
+        console.warn("No user ID found for marking notice as read");
+        toast.error("Cannot mark as read - unable to identify user");
+        return;
+      }
       
-      if (response.data && response.data.success) {
-        // Update the UI to show the notice as read
+      console.log(`Marking notice ${noticeId} as read for user ${userId}`);
+      
+      // First, update the UI immediately to provide instant feedback
         setRecentNotices(prevNotices => 
           prevNotices.map(notice => 
             notice._id === noticeId ? { ...notice, isRead: true } : notice
           )
         );
         
-        // Add to local storage as well as a backup
+      // Add to local storage immediately
         if (!locallyReadNotices.includes(noticeId)) {
           setLocallyReadNotices(prev => [...prev, noticeId]);
         }
         
-        // Update unread count
+      // Update unread count immediately
         setUnreadCount(prevCount => Math.max(0, prevCount - 1));
+      
+      // Then call the backend API to mark notice as read with explicit userId param
+      // and authentication token
+      const response = await axiosInstance.patch(
+        `/notice/mark-as-read/${noticeId}?userId=${userId}`,
+        { userId }, // Also include in body as backup
+        { 
+          headers: token ? {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          } : {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      
+      // Debug backend response
+      console.log(`Backend response for marking notice ${noticeId} as read:`, response.data);
+      
+      if (response.data && response.data.success) {
+        // Notice was successfully marked as read
         toast.success("Notice marked as read");
         
-        // Force refresh data to ensure we have the latest from the server
+        // Update the readBy array from the response data if available
+        if (response.data.data && response.data.data.readBy) {
+          const updatedReadBy = response.data.data.readBy;
+          console.log('Updated readBy array from server:', updatedReadBy);
+          
+          // Update the readBy array in our local notices data
+          setRecentNotices(prevNotices => 
+            prevNotices.map(notice => 
+              notice._id === noticeId ? { ...notice, isRead: true, readBy: updatedReadBy } : notice
+            )
+          );
+          
+          // After successful server update, force a refresh after 1 second
+          // This ensures our local state is fully synced with server
         setTimeout(() => {
           fetchNotifications();
         }, 1000);
+        }
       } else {
         console.warn("Failed to mark notice as read:", response.data);
         toast.error("Failed to mark notice as read: " + (response.data?.message || "Unknown error"));
+        
+        // Revert UI changes on failure
+        setRecentNotices(prevNotices => 
+          prevNotices.map(notice => 
+            notice._id === noticeId ? { ...notice, isRead: false } : notice
+          )
+        );
+        
+        // Remove from local storage if it failed
+        if (locallyReadNotices.includes(noticeId)) {
+          setLocallyReadNotices(prev => prev.filter(id => id !== noticeId));
+        }
+        
+        // Reset unread count by fetching fresh data
+        fetchNotifications();
       }
     } catch (error) {
       console.error('Error marking notice as read:', error);
       toast.error('Failed to mark notice as read: ' + (error.response?.data?.message || error.message));
+      
+      // Revert UI changes on error
+      setRecentNotices(prevNotices => 
+        prevNotices.map(notice => 
+          notice._id === noticeId ? { ...notice, isRead: false } : notice
+        )
+      );
+      
+      // Remove from local storage if it failed
+      if (locallyReadNotices.includes(noticeId)) {
+        setLocallyReadNotices(prev => prev.filter(id => id !== noticeId));
+      }
+      
+      // Reset unread count by fetching fresh data
+      fetchNotifications();
     }
   };
 
@@ -257,13 +437,14 @@ const NotificationBell = ({ dashboardType }) => {
   useEffect(() => {
     fetchNotifications();
     
-    // Poll for new notifications every 30 seconds
-    const intervalId = setInterval(fetchNotifications, 30000);
+    // Poll for new notifications every minute instead of 30 seconds
+    // This gives more time for server changes to propagate
+    const intervalId = setInterval(fetchNotifications, 60000);
     
     return () => {
       clearInterval(intervalId);
     };
-  }, [dashboardType, user.id, locallyReadNotices.length]);
+  }, [dashboardType, user?.id, user?.user?.id, user?._id, user?.user?._id, locallyReadNotices.length]);
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -301,16 +482,25 @@ const NotificationBell = ({ dashboardType }) => {
                 No notifications available
               </div>
             ) : (
+              <div>
+                {/* Unread Notifications */}
+                {recentNotices.filter(notice => !notice.isRead).length > 0 && (
+                  <>
+                    <div className="px-3 py-2 bg-gray-100 text-xs font-medium text-gray-600">
+                      Unread Notifications
+                    </div>
               <div className="divide-y divide-gray-100">
-                {recentNotices.map((notice) => (
+                      {recentNotices
+                        .filter(notice => !notice.isRead)
+                        .map((notice) => (
                   <div
                     key={notice._id}
-                    className={`p-3 hover:bg-gray-50 cursor-pointer ${!notice.isRead ? 'bg-teal-50' : ''}`}
+                            className="p-3 hover:bg-gray-50 cursor-pointer bg-teal-50"
                     onClick={() => navigate(getNoticeDetailsPath(notice._id))}
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
-                        <p className={`text-sm font-medium ${notice.isRead ? 'text-gray-700' : 'text-teal-700'}`}>
+                                <p className="text-sm font-medium text-teal-700">
                           {notice.title}
                         </p>
                         <p className="text-xs text-gray-500 truncate mt-1">
@@ -322,23 +512,45 @@ const NotificationBell = ({ dashboardType }) => {
                         </p>
                       </div>
                       
-                      {!notice.isRead && (
                         <button
                           onClick={(e) => markAsRead(notice._id, e)}
                           className="text-xs bg-teal-100 text-teal-600 hover:bg-teal-200 px-2 py-1 rounded-full ml-2 whitespace-nowrap"
                         >
                           Mark read
                         </button>
-                      )}
+                            </div>
+                          </div>
+                        ))}
                     </div>
+                  </>
+                )}
+                
+                {/* No unread notifications message */}
+                {recentNotices.length > 0 && recentNotices.filter(notice => !notice.isRead).length === 0 && (
+                  <div className="p-3 text-center text-sm text-gray-500 bg-green-50">
+                    <span className="font-medium">All caught up!</span> You have no unread notifications.
+                    <p className="mt-2 text-xs">
+                      <button 
+                        className="text-teal-600 hover:underline" 
+                        onClick={() => navigate(getNoticesPagePath())}
+                      >
+                        View all notifications
+                      </button>
+                    </p>
                   </div>
-                ))}
+                )}
               </div>
             )}
           </div>
           
           <div className="bg-gray-50 px-4 py-2 text-xs text-center text-gray-500 border-t border-gray-100">
-            Click on a notification to view details
+            <span>Showing unread notifications only. </span>
+            <button 
+              onClick={() => navigate(getNoticesPagePath())} 
+              className="text-teal-600 hover:underline"
+            >
+              View all notifications
+            </button>
           </div>
         </div>
       )}

@@ -119,3 +119,99 @@ export const getVisitor = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+export const checkFaceDuplicate = async (req, res) => {
+  try {
+    // The face descriptor will be sent as a Float32Array converted to a regular array
+    const { faceDescriptor } = req.body;
+    
+    if (!faceDescriptor || !Array.isArray(faceDescriptor) || faceDescriptor.length !== 128) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid face descriptor data" 
+      });
+    }
+    
+    // Convert back to Float32Array for proper comparison
+    const currentDescriptor = new Float32Array(faceDescriptor);
+    
+    // Get all visitors with face descriptors
+    const visitors = await Visitor.find({ faceDescriptor: { $exists: true, $ne: null } });
+    
+    // No visitors with face data found
+    if (!visitors || visitors.length === 0) {
+      return res.status(200).json({ 
+        success: true, 
+        isDuplicate: false,
+        message: "No existing visitors with face data found" 
+      });
+    }
+    
+    // Threshold for face similarity (adjust as needed)
+    const SIMILARITY_THRESHOLD = 0.6; // 0.6 similarity or higher is considered a match
+    
+    // Check similarity with all visitors
+    let duplicateFound = false;
+    let duplicateVisitor = null;
+    
+    for (const visitor of visitors) {
+      // Skip if no descriptor
+      if (!visitor.faceDescriptor) continue;
+      
+      // Convert stored descriptor string to Float32Array
+      const storedDescriptor = new Float32Array(JSON.parse(visitor.faceDescriptor));
+      
+      // Calculate euclidean distance (lower is more similar)
+      const distance = calculateEuclideanDistance(currentDescriptor, storedDescriptor);
+      
+      // Convert distance to similarity score (0-1, higher is more similar)
+      const similarity = Math.max(0, 1 - distance);
+      
+      if (similarity >= SIMILARITY_THRESHOLD) {
+        duplicateFound = true;
+        duplicateVisitor = {
+          id: visitor._id,
+          name: `${visitor.firstName} ${visitor.middleName || ''} ${visitor.lastName}`.trim(),
+          similarity: similarity.toFixed(2)
+        };
+        break;
+      }
+    }
+    
+    if (duplicateFound) {
+      return res.status(200).json({
+        success: true,
+        isDuplicate: true,
+        message: "A visitor with a similar face already exists",
+        duplicateVisitor
+      });
+    }
+    
+    return res.status(200).json({
+      success: true,
+      isDuplicate: false,
+      message: "No duplicate face found"
+    });
+    
+  } catch (error) {
+    console.error("Error checking for duplicate face:", error);
+    return res.status(500).json({ 
+      success: false, 
+      message: "Server error while checking for duplicate faces" 
+    });
+  }
+};
+
+// Helper function to calculate euclidean distance between two descriptors
+const calculateEuclideanDistance = (descriptor1, descriptor2) => {
+  if (!descriptor1 || !descriptor2 || descriptor1.length !== descriptor2.length) {
+    return 1; // Maximum distance if invalid input
+  }
+  
+  let sum = 0;
+  for (let i = 0; i < descriptor1.length; i++) {
+    sum += Math.pow(descriptor1[i] - descriptor2[i], 2);
+  }
+  
+  return Math.sqrt(sum);
+};
