@@ -1,5 +1,5 @@
 import React from "react";
-import { FaEdit, FaTrash } from "react-icons/fa";
+import { FaEdit, FaTrash,FaEye } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "./axiosInstance";
 import { toast } from "react-hot-toast";
@@ -66,8 +66,10 @@ export const columns = [
 ];
 
 export const InmateButtons = ({ _id, onDelete }) => {
+  console.log(_id);
   const navigate = useNavigate();
-
+  const [open, setOpen] = useState(false);
+  const [view,setView]=useState(false);
   const handleDelete = async () => {
     if (window.confirm("Are you sure you want to delete this inmate?")) {
       try {
@@ -93,12 +95,15 @@ export const InmateButtons = ({ _id, onDelete }) => {
   return (
     <div className="flex space-x-2">
       <button
-        onClick={() => navigate(`/inmates/edit/${_id}`)}
+        onClick={() => setOpen(true)}
         className="p-2 text-blue-600 hover:text-blue-800 transition-colors"
         title="Edit Inmate"
       >
         <FaEdit size={18} />
       </button>
+      <AddModal open={open} setOpen={setOpen} >
+        <UpdateInmate _id={_id} />
+      </AddModal>
       <button
         onClick={handleDelete}
         className="p-2 text-red-600 hover:text-red-800 transition-colors"
@@ -106,6 +111,16 @@ export const InmateButtons = ({ _id, onDelete }) => {
       >
         <FaTrash size={18} />
       </button>
+      <button
+        onClick={()=>setView(true)}
+        className="p-2 text-blue-600 hover:text-blue-800 transition-colors"
+        title="View Inmate"
+      >
+        <FaEye size={18} />
+      </button>
+      <AddModal open={view} setOpen={setView} >
+        <ViewInmate _id={_id} />
+      </AddModal>
     </div>
   );
 };

@@ -16,16 +16,16 @@ const ViewIncident = ({setView, id}) => {
   const [incident, setIncident] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [openDelete, setOpenDelete] = useState(false);
+   const [openDelete, setOpenDelete] = useState(false);
 
   const deleteIncident = async () => {
     try {
-      const deletedIncident = await axiosInstance.delete(`/incidents/delete-incident/${id}`);
-      if (deletedIncident) {
-        toast.success("Incident deleted successfully!");
+        const deletedIncident = await axiosInstance.delete(`/incidents/delete-incident/${id}`);
+        if (deletedIncident) {
+          toast.success("Incident deleted successfully!");
         setOpenDelete(false);
         navigate("/admin-dashboard/incidents");
-      }
+        }
     } catch (error) {
       setError(error.response?.data?.error || "Error deleting incident");
       toast.error(error.response?.data?.error || "Error deleting incident");
@@ -92,13 +92,7 @@ const ViewIncident = ({setView, id}) => {
       <div className="flex flex-col justify-center items-center h-screen">
         <FaExclamationCircle className="text-red-600 text-5xl mb-4" />
         <div className="text-red-600 font-semibold text-lg mb-2">{error}</div>
-        <button
-          onClick={() => navigate("/admin-dashboard/incidents")}
-          className="mt-4 flex items-center px-4 py-2 bg-gray-200 text-gray-700 hover:bg-gray-300 rounded transition-colors"
-        >
-          <TiArrowBack className="mr-2" />
-          Back to Incidents
-        </button>
+        
       </div>
     );
   }
@@ -112,13 +106,7 @@ const ViewIncident = ({setView, id}) => {
           Incident Report
         </h2>
         <div className="flex space-x-2 print:hidden">
-          <button
-            onClick={() => navigate("/admin-dashboard/incidents")}
-            className="flex items-center px-3 py-1.5 bg-white bg-opacity-20 hover:bg-opacity-30 rounded text-sm font-medium transition-colors"
-          >
-            <TiArrowBack className="mr-1" />
-            Back
-          </button>
+          
           <button
             onClick={handlePrint}
             className="flex items-center px-3 py-1.5 bg-white text-teal-600 hover:bg-gray-100 rounded text-sm font-medium transition-colors"
@@ -171,7 +159,7 @@ const ViewIncident = ({setView, id}) => {
                 </div>
               </div>
             </div>
-          </div>
+            </div>
 
           {/* Main content grid */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
@@ -192,14 +180,14 @@ const ViewIncident = ({setView, id}) => {
                       {incident.reporter}
                     </div>
                   </div>
-                  <div>
+            <div>
                     <div className="text-sm text-gray-500 mb-1">Inmate Involved</div>
                     <div className="font-medium text-gray-900 p-3 bg-gray-50 rounded-md">
                       {incident.inmate}
                     </div>
                   </div>
                 </div>
-              </div>
+            </div>
 
               {/* Description */}
               <div className="bg-white border rounded-lg overflow-hidden shadow-sm print:shadow-none">
@@ -229,7 +217,7 @@ const ViewIncident = ({setView, id}) => {
                     {incident.incidentType}
                   </div>
                 </div>
-              </div>
+            </div>
 
               {/* Attachment */}
               {incident.attachment && (
@@ -261,8 +249,8 @@ const ViewIncident = ({setView, id}) => {
                   <div className="text-sm text-gray-500 py-2 border-b">Date Reported</div>
                   <div className="font-medium text-gray-900 py-2 mb-2">
                     {getFormattedDate(incident.createdAt || incident.incidentDate)}
-                  </div>
-                  
+            </div>
+
                   <div className="text-sm text-gray-500 py-2 border-b">Last Updated</div>
                   <div className="font-medium text-gray-900 py-2">
                     {getFormattedDate(incident.updatedAt || incident.incidentDate)}
@@ -283,22 +271,22 @@ const ViewIncident = ({setView, id}) => {
           <FaExclamationTriangle className="text-yellow-500 text-5xl mb-4" />
           <div className="text-center text-gray-600 font-medium text-lg">Incident not found.</div>
           <p className="text-gray-500 mt-2">The requested incident record could not be located.</p>
-          <button
+            <button
             onClick={() => navigate("/admin-dashboard/incidents")}
             className="mt-6 flex items-center px-4 py-2 bg-teal-600 text-white hover:bg-teal-700 rounded transition-colors"
-          >
+            >
             <TiArrowBack className="mr-2" />
             Return to Incidents
-          </button>
+            </button>
         </div>
       )}
 
-      <ConfirmModal
-        open={openDelete}
-        setOpen={setOpenDelete}
-        onDelete={deleteIncident}
-        message="Do you really want to delete this Incident? This action cannot be undone."
-      />
+               <ConfirmModal
+                        open={openDelete}
+                        setOpen={setOpenDelete}
+                        onDelete={deleteIncident}
+                        message="Do you really want to delete this Incident? This action cannot be undone."
+                      />
     </div>
   );
 };

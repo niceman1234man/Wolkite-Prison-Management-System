@@ -106,6 +106,7 @@ import VisitSchedules from "./components/visitorDashboaard/VisitSchedules";
 import VisitorList from "./components/Visitor/VisitorList";
 import DashboardNoticeList from "./components/Notices/DashboardNoticeList";
 import NoticeView from "./components/Notices/NoticeView";
+import RequestParole from "./parole/RequestParole";
 
 function App() {
   return (
@@ -135,6 +136,7 @@ function App() {
             <Route path="edit/:id" element={<EditVisitor />} />
             <Route path="view/:id" element={<ViewVisitor />} />
             <Route path="parole" element={<Parole />} />
+            <Route path="parole-request" element={<RequestParole />} />
             <Route path="ParoleList/:inmateId" element={<ParoleList />} />
             <Route path="incident" element={<Insident />} />
             <Route path="reports" element={<PoliceOfficerReports />} />

@@ -438,6 +438,7 @@ const scheduledJobs = {};
 // Get backup history
 router.get('/history', async (req, res) => {
   try {
+    
     const backups = await Backup.find()
       .sort({ createdAt: -1 })
       .select('-metadata.command'); // Exclude command from response

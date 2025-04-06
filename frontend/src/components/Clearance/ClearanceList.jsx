@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import DataTable from "react-data-table-component";
 import axiosInstance from "../../utils/axiosInstance";
 import { useSelector } from "react-redux";
-import { FaArrowLeft, FaPlus, FaSearch, FaEye, FaPen, FaTrash, FaCheckCircle, FaTimesCircle, FaHourglassHalf } from "react-icons/fa";
+import { FaArrowLeft, FaPlus, FaSearch, FaEye, FaPen, FaTrash, FaCheckCircle, FaTimesCircle, FaHourglassHalf, FaEdit } from "react-icons/fa";
 import InmateClearance from "./InmateClearance";
 import AddModal from "../Modals/AddModal";
 import ViewClearance from "./ViewClearance";
@@ -65,16 +65,15 @@ const ClearanceButtons = ({ _id, onDelete }) => {
         <ViewClearance id={_id} />
       </AddModal>
       
-      {openDelete && (
-        <ConfirmModal
-          message="Do you want to delete this clearance? This action cannot be undone."
-          onConfirm={() => {
-            handleDelete();
-            setOpenDelete(false);
-          }}
-          onCancel={() => setOpenDelete(false)}
-        />
-      )}
+      <ConfirmModal
+        open={openDelete}
+        message="Do you want to delete this clearance? This action cannot be undone."
+        onConfirm={() => {
+          handleDelete();
+          setOpenDelete(false);
+        }}
+        onCancel={() => setOpenDelete(false)}
+      />
     </div>
   );
 };

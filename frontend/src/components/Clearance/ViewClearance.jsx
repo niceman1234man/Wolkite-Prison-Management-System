@@ -481,12 +481,17 @@ function ViewClearance({id}) {
                </button>
           </div>
 
-               <ConfirmModal
-                 open={openDelete}
-                 setOpen={setOpenDelete}
-                 onDelete={deleteClearance}
-            message="Do you want to delete this clearance? This action cannot be undone."
-               />
+               {/* Conditional rendering of the ConfirmModal */}
+               {openDelete && (
+                 <ConfirmModal
+                   message="Do you want to delete this clearance? This action cannot be undone."
+                   onConfirm={() => {
+                     deleteClearance();
+                     setOpenDelete(false);
+                   }}
+                   onCancel={() => setOpenDelete(false)}
+                 />
+               )}
              </div>
       );
 }

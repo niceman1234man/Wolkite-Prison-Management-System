@@ -31,8 +31,11 @@ const BackeUp = () => {
   const fetchBackupHistory = async () => {
     setLoading(true);
     try {
-      const response = await axiosInstance.get('/api/backup/history');
-      setBackupHistory(response.data);
+      const response = await axiosInstance.get('/backup/history');
+      if(response.data){
+        setBackupHistory(response.data);
+      }
+     
       setLoading(false);
     } catch (error) {
       console.error("Error fetching backup history:", error);
@@ -47,7 +50,7 @@ const BackeUp = () => {
     setBackupInProgress(true);
     
     try {
-      const response = await axiosInstance.post('/api/backup/create', { 
+      const response = await axiosInstance.post('/backup/create', { 
         type: backupMode 
       });
       
@@ -76,7 +79,7 @@ const BackeUp = () => {
     setRestoreInProgress(true);
     
     try {
-      const response = await axiosInstance.post('/api/backup/restore', { backupId });
+      const response = await axiosInstance.post('/backup/restore', { backupId });
       
       if (response.data.success) {
         toast.success("System restored successfully from backup!");
@@ -94,7 +97,7 @@ const BackeUp = () => {
   const handleDownload = async (backupId) => {
     try {
       // Create a link to download the backup file
-      const response = await axiosInstance.get(`/api/backup/download/${backupId}`, {
+      const response = await axiosInstance.get(`/backup/download/${backupId}`, {
         responseType: 'blob'
       });
       
@@ -122,7 +125,7 @@ const BackeUp = () => {
 
   const saveScheduleConfig = async () => {
     try {
-      const response = await axiosInstance.post('/api/backup/schedule', scheduleConfig);
+      const response = await axiosInstance.post('/backup/schedule', scheduleConfig);
       
       if (response.data.success) {
         toast.success("Backup schedule updated successfully!");
@@ -138,7 +141,7 @@ const BackeUp = () => {
 
   const fetchScheduleConfig = async () => {
     try {
-      const response = await axiosInstance.get('/api/backup/schedule');
+      const response = await axiosInstance.get('/backup/schedule');
       setScheduleConfig(response.data);
     } catch (error) {
       console.error("Error fetching schedule config:", error);
@@ -157,7 +160,7 @@ const BackeUp = () => {
   };
 
   return (
-    <div className={`p-4 md:p-6 transition-all duration-300 bg-gray-50 min-h-screen ${
+    <div className={`p-4 md:p-6 transition-all duration-300 mt-10 bg-gray-50 min-h-screen ${
         isCollapsed ? "ml-16" : "ml-64"
     }`}>
       <div className="max-w-7xl mx-auto">

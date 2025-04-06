@@ -80,6 +80,17 @@ const PoliceOfficerSidebar = () => {
           </NavLink>
 
           <NavLink
+            to="/policeOfficer-dashboard/parole-request"
+            className={({ isActive }) =>
+              `flex items-center p-2 rounded-lg hover:bg-teal-600 transition-colors ${
+                isActive ? "bg-teal-600" : ""
+              } ${isCollapsed ? "justify-center" : "justify-start"}`
+            }
+          >
+            <FaExclamationCircle className="h-6 w-6" />
+            {!isCollapsed && <span className="ml-3">Request Parole</span>}
+          </NavLink>
+          <NavLink
             to="/policeOfficer-dashboard/incident"
             className={({ isActive }) =>
               `flex items-center p-2 rounded-lg hover:bg-teal-600 transition-colors ${

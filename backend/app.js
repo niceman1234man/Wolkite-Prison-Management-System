@@ -15,7 +15,7 @@ app.use(express.json());
 // ... other middleware and setup ...
 
 // Use the backup routes
-app.use('/backup', backupRoutes);
+
 // Routes
 app.use("/api/reports", reportsRouter);
 app.use("/api/transfer", transferRouter);
