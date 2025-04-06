@@ -175,9 +175,25 @@ const SecurityStaffReport = () => {
       
       try {
         // Fetch inmates
-        const inmatesResponse = await axiosInstance.get("/inmate/getAll");
-        if (inmatesResponse.data?.inmates) {
-          reportDataTemp.inmateStats = processInmateData(inmatesResponse.data.inmates);
+        const inmatesResponse = await axiosInstance.get("/inmates/allInmates");
+        if (inmatesResponse.data?.inmates || inmatesResponse.data) {
+          const inmatesData = inmatesResponse.data?.inmates || inmatesResponse.data || [];
+          if (Array.isArray(inmatesData)) {
+            const processedInmates = inmatesData.map((inmate) => ({
+              _id: inmate._id,
+              name: [inmate.firstName, inmate.middleName, inmate.lastName].filter(Boolean).join(" ") || "Not available",
+              age: inmate.age || "N/A",
+              gender: inmate.gender || "N/A",
+              caseType: inmate.caseType || "Not specified",
+              reason: inmate.sentenceReason || "",
+              sentence: inmate.sentenceYear ? `${inmate.sentenceYear} ${inmate.sentenceYear === 1 ? 'year' : 'years'}` : "Not specified",
+              location: [inmate.currentWereda, inmate.currentZone].filter(Boolean).join(", ") || "Not specified",
+              photo: inmate.photo,
+              status: inmate.status || "active",
+              admissionDate: inmate.createdAt
+            }));
+            reportDataTemp.inmateStats = processInmateData(processedInmates);
+          }
         }
       } catch (error) {
         console.error("Error fetching inmate data:", error);
@@ -262,22 +278,39 @@ const SecurityStaffReport = () => {
   });
 
   const processInmateData = (inmates = []) => {
+    // Process case types with proper categorization
     const inmateCategories = {};
+    const sentenceDuration = {};
+    
     inmates.forEach(inmate => {
-      const category = inmate?.caseType || 'Uncategorized';
+      // Process case types (convert to lowercase for consistency)
+      const category = inmate.caseType.toLowerCase();
       inmateCategories[category] = (inmateCategories[category] || 0) + 1;
+      
+      // Process sentence durations
+      if (inmate.sentence && inmate.sentence !== "Not specified") {
+        const years = parseInt(inmate.sentence);
+        if (!isNaN(years)) {
+          sentenceDuration[years] = (sentenceDuration[years] || 0) + 1;
+        }
+      }
     });
 
     return {
       total: inmates.length,
-      active: inmates.filter(i => i?.status?.toLowerCase() === 'active').length,
-      released: inmates.filter(i => i?.status?.toLowerCase() === 'released').length,
+      active: inmates.filter(i => i.status.toLowerCase() === 'active').length,
+      released: inmates.filter(i => i.status.toLowerCase() === 'released').length,
       byCategory: inmateCategories,
+      sentenceDuration: sentenceDuration,
       recentInmates: inmates.slice(0, 5).map(i => ({
-        name: `${i.firstName || ''} ${i.lastName || ''}`.trim() || 'N/A',
-        caseType: i.caseType || 'Uncategorized',
-        status: i.status || 'Unknown',
-        admissionDate: i.createdAt ? new Date(i.createdAt).toLocaleDateString() : 'N/A'
+        name: i.name,
+        age: i.age,
+        gender: i.gender,
+        caseType: i.caseType,
+        sentence: i.sentence,
+        location: i.location,
+        status: i.status,
+        admissionDate: i.admissionDate ? new Date(i.admissionDate).toLocaleDateString() : 'N/A'
       }))
     };
   };
@@ -801,55 +834,144 @@ const SecurityStaffReport = () => {
               <span className="text-gray-600">Released</span>
               <span className="font-semibold text-gray-600">{reportData.inmateStats.released}</span>
             </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Criminal Cases</span>
+              <span className="font-semibold text-red-600">
+                {reportData.inmateStats.byCategory['criminal'] || 0}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Civil Cases</span>
+              <span className="font-semibold text-blue-600">
+                {reportData.inmateStats.byCategory['civil'] || 0}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-600">Administrative Cases</span>
+              <span className="font-semibold text-green-600">
+                {reportData.inmateStats.byCategory['administrative'] || 0}
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Inmate Categories Chart */}
+        {/* Case Type Distribution Chart */}
         <div className="bg-white p-6 rounded-lg shadow-md border border-gray-100">
-          <h3 className="text-xl font-semibold mb-4 text-gray-800">Categories Distribution</h3>
+          <h3 className="text-xl font-semibold mb-4 text-gray-800">Case Type Distribution</h3>
           <div className="h-[300px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={Object.entries(reportData.inmateStats.byCategory).map(([category, count]) => ({
-                  category,
-                  count
-                }))}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="category" />
-                <YAxis />
+              <PieChart>
+                <Pie
+                  data={[
+                    { name: "Criminal", value: reportData.inmateStats.byCategory['criminal'] || 0, color: '#EF4444' },
+                    { name: "Civil", value: reportData.inmateStats.byCategory['civil'] || 0, color: '#3B82F6' },
+                    { name: "Administrative", value: reportData.inmateStats.byCategory['administrative'] || 0, color: '#10B981' },
+                    { name: "Other", value: reportData.inmateStats.byCategory['other'] || 0, color: '#6B7280' }
+                  ]}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {[
+                    { color: '#EF4444' },
+                    { color: '#3B82F6' },
+                    { color: '#10B981' },
+                    { color: '#6B7280' }
+                  ].map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="count" fill="#8884d8" />
-              </BarChart>
+              </PieChart>
             </ResponsiveContainer>
           </div>
         </div>
       </div>
 
-      {/* Recent Inmates */}
+      {/* Recent Inmates Table */}
       <div className="bg-white p-6 rounded-lg shadow-md border border-gray-100">
         <h3 className="text-xl font-semibold mb-4 text-gray-800">Recent Inmates</h3>
-        <div className="space-y-4">
-          {reportData.inmateStats.recentInmates.map((inmate, index) => (
-            <div key={index} className="p-4 bg-gray-50 rounded-lg">
-              <div className="flex justify-between items-start">
-                <div>
-                  <p className="font-medium text-gray-800">{inmate.name}</p>
-                  <p className="text-sm text-gray-600">Case Type: {inmate.caseType}</p>
-                  <p className="text-xs text-gray-500 mt-1">Admitted: {inmate.admissionDate}</p>
-                </div>
-                <div className="text-right">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    inmate.status === 'active' ? 'bg-green-100 text-green-800' :
-                    'bg-gray-100 text-gray-800'
-                  }`}>
-                    {inmate.status.charAt(0).toUpperCase() + inmate.status.slice(1)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          ))}
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Age</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Case Type</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sentence</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {reportData.inmateStats.recentInmates.map((inmate, index) => (
+                <tr key={index} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="font-medium text-gray-900">{inmate.name}</div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {inmate.age || 'N/A'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">
+                    {inmate.gender || 'N/A'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      inmate.caseType?.toLowerCase() === 'criminal' ? 'bg-red-100 text-red-800' :
+                      inmate.caseType?.toLowerCase() === 'civil' ? 'bg-blue-100 text-blue-800' :
+                      inmate.caseType?.toLowerCase() === 'administrative' ? 'bg-green-100 text-green-800' :
+                      'bg-gray-100 text-gray-800'
+                    }`}>
+                      {inmate.caseType || 'Not specified'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {inmate.sentence || 'Not specified'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {inmate.location || 'Not specified'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      inmate.status === 'active' ? 'bg-green-100 text-green-800' :
+                      inmate.status === 'released' ? 'bg-gray-100 text-gray-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {inmate.status.charAt(0).toUpperCase() + inmate.status.slice(1)}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Sentence Duration Distribution */}
+      <div className="mt-6 bg-white p-6 rounded-lg shadow-md border border-gray-100">
+        <h3 className="text-xl font-semibold mb-4 text-gray-800">Sentence Duration Distribution</h3>
+        <div className="h-[300px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={Object.entries(reportData.inmateStats.sentenceDuration || {}).map(([duration, count]) => ({
+                duration: duration === '1' ? '1 year' : `${duration} years`,
+                count
+              }))}
+              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="duration" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="count" fill="#3B82F6" name="Inmates" />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </>
