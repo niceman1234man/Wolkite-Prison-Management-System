@@ -27,7 +27,6 @@ const AddUser = ({setOpen}) => {
     email: "",
     gender: "",
     role: "",
-    password: "",
     prison: "",
   };
 
@@ -100,7 +99,6 @@ const AddUser = ({setOpen}) => {
     formData.append("email", user.email);
     formData.append("role", user.role);
     formData.append("gender", user.gender);
-    formData.append("password", user.password);
     formData.append("prison", user.prison);
     
     if (photo) {
@@ -127,7 +125,7 @@ const AddUser = ({setOpen}) => {
 
   // Check completion percentage
   const getCompletionPercentage = () => {
-    const requiredFields = ['firstName', 'lastName', 'email', 'gender', 'role', 'password', 'prison'];
+    const requiredFields = ['firstName', 'lastName', 'email', 'gender', 'role', 'prison'];
     const filledFields = requiredFields.filter(field => user[field]);
     return Math.round((filledFields.length / requiredFields.length) * 100);
   };
@@ -353,33 +351,7 @@ const AddUser = ({setOpen}) => {
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Password */}
-          <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Password <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <FaLock className="text-gray-400" />
-                  </div>
-            <input
-              type="password"
-              name="password"
-                    placeholder="••••••••"
-                    value={user.password}
-              onChange={handleChange}
-                    className={`pl-10 p-2.5 block w-full border ${errors.password ? "border-red-500" : "border-gray-300"} rounded-md focus:ring-teal-500 focus:border-teal-500`}
-              required
-            />
-                </div>
-                {errors.password && (
-                  <p className="text-red-500 text-xs mt-1">{errors.password}</p>
-                )}
-                <p className="text-gray-500 text-xs mt-1">
-                  Password must be at least 8 characters and include uppercase, lowercase, and number
-                </p>
-          </div>
-
+          
           {/* Role Selection */}
           <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">

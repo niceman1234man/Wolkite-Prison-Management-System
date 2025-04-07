@@ -372,96 +372,96 @@ const ParoleRequestForm = ({ isOpen, onClose, parole }) => {
 
         <div className="relative mt-4">
           <Card className="p-6 mx-auto mt-5 shadow-lg rounded-lg border border-gray-200" ref={printableContentRef}>
-            <CardContent>
+          <CardContent>
               <div className="absolute top-6 right-6">
                 <div className="flex items-center mb-2">
                   <span className="font-medium text-gray-700">ቁጥር:</span>
-                  <Input
+                <Input
                     type="text"
-                    name="number"
+                  name="number"
                     value={data.number}
-                    onChange={handleChange}
+                  onChange={handleChange}
                     className="ml-3 w-36 bg-gray-50 border-gray-200"
                     readOnly
-                  />
-                </div>
+                />
+              </div>
                 <div className="flex items-center">
                   <span className="font-medium text-gray-700">ቀን:</span>
-                  <Input
-                    type="date"
-                    name="date"
+                <Input
+                  type="date"
+                  name="date"
                     value={data.date}
-                    onChange={handleChange}
+                  onChange={handleChange}
                     className="ml-3 w-36 bg-gray-50 border-gray-200"
-                  />
-                </div>
+                />
               </div>
+            </div>
 
               <div className="mt-24">
                 <div className="flex items-center mb-4">
                   <span className="font-medium text-gray-700">ለ:</span>
-                  <Input
-                    name="receiverName"
-                    placeholder="ለ"
+              <Input
+                name="receiverName"
+                placeholder="ለ"
                     value={data.receiverName}
-                    onChange={handleChange}
+                onChange={handleChange}
                     className="mx-3 w-64 bg-gray-50 border-gray-200"
-                    required
-                  />
+                required
+              />
                   <span className="font-medium text-gray-700">ፍ/ቤት</span>
-                </div>
+            </div>
 
                 <div className="flex items-center mb-8">
                   <span className="font-medium text-gray-700">የወ/መ/ቁ:</span>
-                  <Input
-                    name="referenceNumber"
-                    placeholder="የማጣቀሻ ቁጥር"
+              <Input
+                name="referenceNumber"
+                placeholder="የማጣቀሻ ቁጥር"
                     value={data.referenceNumber}
-                    onChange={handleChange}
+                onChange={handleChange}
                     className="mx-3 w-64 bg-gray-50 border-gray-200"
                     readOnly
-                  />
-                </div>
+              />
+            </div>
 
                 <div className="space-y-4 bg-gray-50 p-6 rounded-lg border border-gray-100 mb-6">
                   <p className="text-gray-800 leading-relaxed flex flex-wrap items-center gap-2">
                     <span className="font-medium">የህግ ታራሚ ስም:</span>
-                    <Input
-                      name="prisonerName"
+                <Input
+                  name="prisonerName"
                       value={formData.prisonerName}
                       readOnly
                       className="w-64 bg-white border-gray-200"
                     />
                     <span>የተባለው የህግ ታራሚ በአመክሮ መፈቻ ጥያቄ በተከሰሰበት</span>
-                    <Input
-                      name="crimeType"
+                <Input
+                  name="crimeType"
                       value={formData.crimeType}
                       readOnly
                       className="w-64 bg-white border-gray-200"
                     />
                     <span>ወንጀል እስራት እንዲቀጣ በወሰነው መሠረት ከዚህ ውስጥ 2/3ኛው</span>
-                    <Input
+                <Input
                       name="durationToParole"
                       value={formData.durationToParole}
                       readOnly
                       className="w-36 bg-white border-gray-200"
                     />
                     <span>በእስራት የፈጸመ ሲሆን 1/3ኛውን</span>
-                    <Input
+                <Input
                       name="durationFromParoleToEnd"
                       value={formData.durationFromParoleToEnd}
                       readOnly
                       className="w-36 bg-white border-gray-200"
                     />
                     <span>ቅናሽ አግጋቶዋል፡፡ አሁንም በጠቅላላው ከተፈረደበት የእስራት ጊዜ ውስጥ ወደፊት የሚቀረው</span>
-                    <Input
-                      name="remainingSentence"
+                <Input
+                  name="remainingSentence"
                       value={formData.durationFromParoleToEnd}
                       readOnly
                       className="w-36 bg-white border-gray-200"
-                    />
-                  </p>
-                </div>
+                />
+              </p>
+            </div>
 
                 <div className="my-6 bg-blue-50 p-6 rounded-lg border border-blue-100">
                   <p className="text-gray-800 leading-relaxed">
@@ -476,61 +476,61 @@ const ParoleRequestForm = ({ isOpen, onClose, parole }) => {
                 <div className="space-y-4 mt-6 bg-gray-50 p-6 rounded-lg border border-gray-100">
                   <div className="flex items-center">
                     <span className="font-medium text-gray-700 w-64">1/ ታራሚው ማ/ቤት የገባበት:</span>
-                    <Input
-                      type="date"
-                      name="startDate"
+              <Input
+                type="date"
+                name="startDate"
                       value={formData.startDate}
                       readOnly
                       className="w-48 bg-white border-gray-200"
-                    />
-                  </div>
+              />
+            </div>
 
                   <div className="flex items-center">
                     <span className="font-medium text-gray-700 w-64">2/ ታራሚው አስራቱ ጨርሶ የሚፈታው:</span>
-                    <Input
-                      type="date"
-                      name="endDate"
+              <Input
+                type="date"
+                name="endDate"
                       value={formData.endDate}
                       readOnly
                       className="w-48 bg-white border-gray-200"
-                    />
-                  </div>
+              />
+            </div>
 
                   <div className="flex items-center">
                     <span className="font-medium text-gray-700 w-64">3/ በአመክሮ የሚፈታው:</span>
-                    <Input
-                      type="date"
-                      name="paroleDate"
+              <Input
+                type="date"
+                name="paroleDate"
                       value={formData.paroleDate}
                       readOnly
                       className="w-48 bg-white border-gray-200"
-                    />
-                  </div>
+              />
+            </div>
 
                   <div className="flex items-center">
                     <span className="font-medium text-gray-700 w-64">4/ በፀባይ ነጥብ መስጨ የተገኘ:</span>
-                    <Input
-                      type="number"
-                      name="point"
+              <Input
+                type="number"
+                name="point"
                       value={formData.point}
                       readOnly
                       className="w-48 bg-white border-gray-200"
-                    />
-                  </div>
+              />
+              </div>
                 </div>
 
                 <div className="mt-6 bg-gray-50 p-6 rounded-lg border border-gray-100">
                   <p className="text-gray-800 leading-relaxed">
-                    5/ ስለጉዳት ካሣና እርቅ ማዉረድ የተሠጠ መግለጫ 6 ስለ ሙያና ሥራ ችሎታ ስለ መተዳደሪያ ከተቀመጠው
-                    ኮሚቴ የተሠጠው የምስክርነት በአጠቃላይ ያቀረብን በ997 በወጣው የኢፊድሪ የወ/መ/ህ/ቁጥር 12 በአንቀጽ
-                    13 በወ/መ/ቁ 206 በአንቀጽ 201207 በአንቀጽ 202 209 እና 204 በወንጀል ህጉ መሠረት
-                    በአመክሮ እንዲፈታ እንጠይቃለን፡፡
+              5/ ስለጉዳት ካሣና እርቅ ማዉረድ የተሠጠ መግለጫ 6 ስለ ሙያና ሥራ ችሎታ ስለ መተዳደሪያ ከተቀመጠው
+              ኮሚቴ የተሠጠው የምስክርነት በአጠቃላይ ያቀረብን በ997 በወጣው የኢፊድሪ የወ/መ/ህ/ቁጥር 12 በአንቀጽ
+              13 በወ/መ/ቁ 206 በአንቀጽ 201207 በአንቀጽ 202 209 እና 204 በወንጀል ህጉ መሠረት
+              በአመክሮ እንዲፈታ እንጠይቃለን፡፡ 
                   </p>
                   <p className="text-right mt-6 font-medium text-gray-700">ከሠላምታ ጋር</p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+          </CardContent>
+        </Card>
         </div>
 
         <DialogFooter className="mt-6 flex items-center justify-end gap-3">
@@ -552,7 +552,7 @@ const ParoleRequestForm = ({ isOpen, onClose, parole }) => {
             ) : (
               <>
                 <FiSend className="h-4 w-4" />
-                ማስገባት
+            ማስገባት
               </>
             )}
           </Button>

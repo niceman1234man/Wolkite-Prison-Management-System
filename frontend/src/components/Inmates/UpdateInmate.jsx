@@ -337,74 +337,74 @@ const UpdateInmate = ({setOpen, _id}) => {
               />
               {renderError('middleName')}
             </div>
-            <div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-              <input
-                type="text"
+            <input
+              type="text"
                 name="lastName"
                 value={formData.lastName}
                 placeholder="Enter Last name"
-                onChange={handleChange}
+              onChange={handleChange}
                 onBlur={handleBlur}
                 className={`w-full px-4 py-2 border ${errors.lastName ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                required
-              />
+              required
+            />
               {renderError('lastName')}
-            </div>
-            <div>
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Birth Date</label>
-              <input
-                type="date"
-                name="birthDate"
-                value={formData.birthDate}
-                onChange={handleChange}
+            <input
+              type="date"
+              name="birthDate"
+              value={formData.birthDate}
+              onChange={handleChange}
                 onBlur={handleBlur}
                 className={`w-full px-4 py-2 border ${errors.birthDate ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                required
-              />
+              required
+            />
               {renderError('birthDate')}
-            </div>
-            <div>
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
-              <input
-                type="number"
-                name="age"
-                value={formData.age}
-                placeholder="Enter age"
-                onChange={handleChange}
+            <input
+              type="number"
+              name="age"
+              value={formData.age}
+              placeholder="Enter age"
+              onChange={handleChange}
                 onBlur={handleBlur}
                 className={`w-full px-4 py-2 border ${errors.age ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
                 readOnly
-              />
+            />
               {renderError('age')}
-            </div>
-            <div>
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Mother's Name</label>
-              <input
-                type="text"
-                name="motherName"
-                value={formData.motherName}
-                placeholder="Enter mother's name"
-                onChange={handleChange}
+            <input
+              type="text"
+              name="motherName"
+              value={formData.motherName}
+              placeholder="Enter mother's name"
+              onChange={handleChange}
                 onBlur={handleBlur}
                 className={`w-full px-4 py-2 border ${errors.motherName ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              />
+            />
               {renderError('motherName')}
-            </div>
-            <div>
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
-              <select
-                name="gender"
-                value={formData.gender}
-                onChange={handleChange}
+            <select
+              name="gender"
+              value={formData.gender}
+              onChange={handleChange}
                 onBlur={handleBlur}
                 className={`w-full px-4 py-2 border ${errors.gender ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                required
-              >
-                <option value="">Select Gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-              </select>
+              required
+            >
+              <option value="">Select Gender</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
               {renderError('gender')}
             </div>
             <div>
@@ -500,111 +500,111 @@ const UpdateInmate = ({setOpen, _id}) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Region</label>
-                  <input
-                    type="text"
-                    name="birthRegion"
-                    value={formData.birthRegion}
-                    placeholder="Enter birth region"
-                    onChange={handleChange}
+              <input
+                type="text"
+                name="birthRegion"
+                value={formData.birthRegion}
+                placeholder="Enter birth region"
+                onChange={handleChange}
                     onBlur={handleBlur}
                     className={`w-full px-4 py-2 border ${errors.birthRegion ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
+              />
                   {renderError('birthRegion')}
-                </div>
-                <div>
+            </div>
+            <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
-                  <input
-                    type="text"
-                    name="birthZone"
-                    value={formData.birthZone}
-                    placeholder="Enter birth zone"
-                    onChange={handleChange}
+              <input
+                type="text"
+                name="birthZone"
+                value={formData.birthZone}
+                placeholder="Enter birth zone"
+                onChange={handleChange}
                     onBlur={handleBlur}
                     className={`w-full px-4 py-2 border ${errors.birthZone ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
+              />
                   {renderError('birthZone')}
-                </div>
-                <div>
+            </div>
+            <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Wereda</label>
-                  <input
-                    type="text"
-                    name="birthWereda"
-                    value={formData.birthWereda}
-                    placeholder="Enter birth wereda"
-                    onChange={handleChange}
+              <input
+                type="text"
+                name="birthWereda"
+                value={formData.birthWereda}
+                placeholder="Enter birth wereda"
+                onChange={handleChange}
                     onBlur={handleBlur}
                     className={`w-full px-4 py-2 border ${errors.birthWereda ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
+              />
                   {renderError('birthWereda')}
-                </div>
-                <div>
+            </div>
+            <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Kebele</label>
-                  <input
-                    type="text"
-                    name="birthKebele"
-                    value={formData.birthKebele}
-                    placeholder="Enter birth kebele"
-                    onChange={handleChange}
+              <input
+                type="text"
+                name="birthKebele"
+                value={formData.birthKebele}
+                placeholder="Enter birth kebele"
+                onChange={handleChange}
                     onBlur={handleBlur}
                     className={`w-full px-4 py-2 border ${errors.birthKebele ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
+              />
                   {renderError('birthKebele')}
-                </div>
-              </div>
             </div>
+          </div>
+        </div>
             <div>
               <h4 className="text-xl font-medium mb-4 text-gray-700">Current Address</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Region</label>
-                  <input
-                    type="text"
-                    name="currentRegion"
-                    value={formData.currentRegion}
-                    placeholder="Enter current region"
-                    onChange={handleChange}
+              <input
+                type="text"
+                name="currentRegion"
+                value={formData.currentRegion}
+                placeholder="Enter current region"
+                onChange={handleChange}
                     onBlur={handleBlur}
                     className={`w-full px-4 py-2 border ${errors.currentRegion ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
+              />
                   {renderError('currentRegion')}
-                </div>
-                <div>
+            </div>
+            <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
-                  <input
-                    type="text"
-                    name="currentZone"
-                    value={formData.currentZone}
-                    placeholder="Enter current zone"
-                    onChange={handleChange}
+              <input
+                type="text"
+                name="currentZone"
+                value={formData.currentZone}
+                placeholder="Enter current zone"
+                onChange={handleChange}
                     onBlur={handleBlur}
                     className={`w-full px-4 py-2 border ${errors.currentZone ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
+              />
                   {renderError('currentZone')}
-                </div>
-                <div>
+            </div>
+            <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Wereda</label>
-                  <input
-                    type="text"
-                    name="currentWereda"
-                    value={formData.currentWereda}
-                    placeholder="Enter current wereda"
-                    onChange={handleChange}
+              <input
+                type="text"
+                name="currentWereda"
+                value={formData.currentWereda}
+                placeholder="Enter current wereda"
+                onChange={handleChange}
                     onBlur={handleBlur}
                     className={`w-full px-4 py-2 border ${errors.currentWereda ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
+              />
                   {renderError('currentWereda')}
-                </div>
-                <div>
+            </div>
+            <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Kebele</label>
-                  <input
-                    type="text"
-                    name="currentKebele"
-                    value={formData.currentKebele}
-                    placeholder="Enter current kebele"
-                    onChange={handleChange}
+              <input
+                type="text"
+                name="currentKebele"
+                value={formData.currentKebele}
+                placeholder="Enter current kebele"
+                onChange={handleChange}
                     onBlur={handleBlur}
                     className={`w-full px-4 py-2 border ${errors.currentKebele ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
+              />
                   {renderError('currentKebele')}
                 </div>
               </div>
@@ -616,12 +616,12 @@ const UpdateInmate = ({setOpen, _id}) => {
         <div className="bg-gray-50 p-6 rounded-lg">
           <h3 className="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">Physical Characteristics</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Height (cm)</label>
-              <select
+            <select
                 name="height"
                 value={formData.height}
-                onChange={handleChange}
+              onChange={handleChange}
                 onBlur={handleBlur}
                 className={`w-full px-4 py-2 border ${errors.height ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
               >
@@ -629,15 +629,15 @@ const UpdateInmate = ({setOpen, _id}) => {
                 {Array.from({length: 81}, (_, i) => i + 150).map(height => (
                   <option key={height} value={height}>{height} cm</option>
                 ))}
-              </select>
+            </select>
               {renderError('height')}
-            </div>
-            <div>
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Hair Type</label>
               <select
-                name="hairType"
-                value={formData.hairType}
-                onChange={handleChange}
+              name="hairType"
+              value={formData.hairType}
+              onChange={handleChange}
                 onBlur={handleBlur}
                 className={`w-full px-4 py-2 border ${errors.hairType ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
               >
@@ -649,13 +649,13 @@ const UpdateInmate = ({setOpen, _id}) => {
                 <option value="Bald">Bald</option>
               </select>
               {renderError('hairType')}
-            </div>
-            <div>
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Face</label>
               <select
-                name="face"
-                value={formData.face}
-                onChange={handleChange}
+              name="face"
+              value={formData.face}
+              onChange={handleChange}
                 onBlur={handleBlur}
                 className={`w-full px-4 py-2 border ${errors.face ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
               >
@@ -668,13 +668,13 @@ const UpdateInmate = ({setOpen, _id}) => {
                 <option value="Rectangular">Rectangular</option>
               </select>
               {renderError('face')}
-            </div>
-            <div>
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Forehead</label>
               <select
-                name="foreHead"
-                value={formData.foreHead}
-                onChange={handleChange}
+              name="foreHead"
+              value={formData.foreHead}
+              onChange={handleChange}
                 onBlur={handleBlur}
                 className={`w-full px-4 py-2 border ${errors.foreHead ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
               >
@@ -686,13 +686,13 @@ const UpdateInmate = ({setOpen, _id}) => {
                 <option value="Sloped">Sloped</option>
               </select>
               {renderError('foreHead')}
-            </div>
-            <div>
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nose</label>
               <select
-                name="nose"
-                value={formData.nose}
-                onChange={handleChange}
+              name="nose"
+              value={formData.nose}
+              onChange={handleChange}
                 onBlur={handleBlur}
                 className={`w-full px-4 py-2 border ${errors.nose ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
               >
@@ -705,13 +705,13 @@ const UpdateInmate = ({setOpen, _id}) => {
                 <option value="Snub">Snub</option>
               </select>
               {renderError('nose')}
-            </div>
-            <div>
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Eye Color</label>
               <select
-                name="eyeColor"
-                value={formData.eyeColor}
-                onChange={handleChange}
+              name="eyeColor"
+              value={formData.eyeColor}
+              onChange={handleChange}
                 onBlur={handleBlur}
                 className={`w-full px-4 py-2 border ${errors.eyeColor ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
               >
@@ -725,13 +725,13 @@ const UpdateInmate = ({setOpen, _id}) => {
                 <option value="Amber">Amber</option>
               </select>
               {renderError('eyeColor')}
-            </div>
-            <div>
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Teeth</label>
               <select
-                name="teeth"
-                value={formData.teeth}
-                onChange={handleChange}
+              name="teeth"
+              value={formData.teeth}
+              onChange={handleChange}
                 onBlur={handleBlur}
                 className={`w-full px-4 py-2 border ${errors.teeth ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
               >
@@ -744,13 +744,13 @@ const UpdateInmate = ({setOpen, _id}) => {
                 <option value="Other">Other</option>
               </select>
               {renderError('teeth')}
-            </div>
-            <div>
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Lip</label>
               <select
-                name="lip"
-                value={formData.lip}
-                onChange={handleChange}
+              name="lip"
+              value={formData.lip}
+              onChange={handleChange}
                 onBlur={handleBlur}
                 className={`w-full px-4 py-2 border ${errors.lip ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
               >
@@ -762,13 +762,13 @@ const UpdateInmate = ({setOpen, _id}) => {
                 <option value="Heart-shaped">Heart-shaped</option>
               </select>
               {renderError('lip')}
-            </div>
-            <div>
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Ear</label>
               <select
-                name="ear"
-                value={formData.ear}
-                onChange={handleChange}
+              name="ear"
+              value={formData.ear}
+              onChange={handleChange}
                 onBlur={handleBlur}
                 className={`w-full px-4 py-2 border ${errors.ear ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
               >
@@ -781,18 +781,18 @@ const UpdateInmate = ({setOpen, _id}) => {
                 <option value="Pointed">Pointed</option>
               </select>
               {renderError('ear')}
-            </div>
-            <div>
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Special Symbol</label>
               <textarea
-                name="specialSymbol"
-                value={formData.specialSymbol}
+              name="specialSymbol"
+              value={formData.specialSymbol}
                 placeholder="Describe any tattoos, scars, birthmarks, or other distinguishing features"
-                onChange={handleChange}
+              onChange={handleChange}
                 onBlur={handleBlur}
                 rows="2"
                 className={`w-full px-4 py-2 border ${errors.specialSymbol ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              />
+            />
               {renderError('specialSymbol')}
             </div>
           </div>
@@ -887,12 +887,12 @@ const UpdateInmate = ({setOpen, _id}) => {
         <div className="bg-gray-50 p-6 rounded-lg">
           <h3 className="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">Case Information</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Case Type</label>
               <select
-                name="caseType"
-                value={formData.caseType}
-                onChange={handleChange}
+              name="caseType"
+              value={formData.caseType}
+              onChange={handleChange}
                 onBlur={handleBlur}
                 className={`w-full px-4 py-2 border ${errors.caseType ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
               >
@@ -908,39 +908,39 @@ const UpdateInmate = ({setOpen, _id}) => {
                 <option value="Other">Other</option>
               </select>
               {renderError('caseType')}
-            </div>
-            <div>
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-              <input
-                type="date"
+            <input
+              type="date"
                 name="startDate"
                 value={formData.startDate}
-                onChange={handleChange}
+              onChange={handleChange}
                 onBlur={handleBlur}
                 className={`w-full px-4 py-2 border ${errors.startDate ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              />
+            />
               {renderError('startDate')}
-            </div>
-            <div>
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Sentence Year</label>
               <input
                 type="number"
                 name="sentenceYear"
                 value={formData.sentenceYear}
-                onChange={handleChange}
+              onChange={handleChange}
                 onBlur={handleBlur}
                 className={`w-full px-4 py-2 border ${errors.sentenceYear ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
                 step="0.5"
               />
               {renderError('sentenceYear')}
-            </div>
-            <div>
+          </div>
+          <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Released Date</label>
-              <input
-                type="date"
-                name="releasedDate"
-                value={formData.releasedDate}
-                onChange={handleChange}
+            <input
+              type="date"
+              name="releasedDate"
+              value={formData.releasedDate}
+              onChange={handleChange}
                 onBlur={handleBlur}
                 className={`w-full px-4 py-2 border ${errors.releasedDate ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
                 readOnly

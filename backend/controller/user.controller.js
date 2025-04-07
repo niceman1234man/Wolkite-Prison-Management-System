@@ -16,20 +16,19 @@ export const createAccount = async (req, res) => {
       gender,
       prison,
       role, 
-      password,
+  
     } = req.body;
     
     const photo = req.file ? req.file.filename : 'default-avatar.png';
 
-    if (!firstName || !email || !password) {
+    if (!firstName || !email) {
       return res.status(400).json({ error: true, message: "All fields required" });
     }
     const isUser = await User.findOne({ email });
     if (isUser) {
       return res.status(400).json({ error: true, message: "User already exists" });
     }
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+   
     const newUser = new User({
       firstName,
       middleName,
@@ -39,7 +38,7 @@ export const createAccount = async (req, res) => {
       prison,
       role,
       photo,
-      password: hashedPassword, 
+     
     });
 
     await newUser.save();
@@ -318,6 +317,94 @@ export const deleteUser = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+
+// Function to generate a secure random password
+function generatePassword() {
+  const length = 10;
+  const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+";
+  let password = "";
+  for (let i = 0; i < length; i++) {
+    const randomIndex = Math.floor(Math.random() * charset.length);
+    password += charset[randomIndex];
+  }
+  return password;
+}
+
+// Send password email route
+export const sendPassword = async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "User ID is required" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    const newPassword = generatePassword();
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+    // Only update password fields
+    user.password = hashedPassword;
+    user.passwordChanged = false;
+
+    // ✅ Skip validation
+    await user.save({ validateBeforeSave: false });
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.USER_EMAIL,
+        pass: process.env.PASSWORD,
+      },
+    });
+
+    const mailOptions = {
+      from: process.env.USER_EMAIL,
+      to: user.email,
+      subject: "Your Account Password",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
+          <h2 style="color: #333; text-align: center;">Prison Management System</h2>
+          <p>Hello ${user.firstName},</p>
+          <p>Your account has been created in the Prison Management System. Here are your login credentials:</p>
+          <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+            <p><strong>Email:</strong> ${user.email}</p>
+            <p><strong>Password:</strong> ${newPassword}</p>
+          </div>
+          <p>Please log in at <a href="${process.env.FRONTEND_URL}">${process.env.FRONTEND_URL}</a> and change your password immediately.</p>
+          <p>For security reasons, we recommend changing this password as soon as you log in.</p>
+          <p style="margin-top: 20px;">Thank you,<br>Prison Management System Team</p>
+        </div>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    return res.status(200).json({
+      success: true,
+      message: "Password email sent successfully",
+    });
+
+  } catch (error) {
+    console.error("Error sending password email:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to send password email",
+      error: error.message,
+    });
+  }
+};
+
+
+
+
 
 export const ForgotPassword = async (req, res) => {
   const { email } = req.body;

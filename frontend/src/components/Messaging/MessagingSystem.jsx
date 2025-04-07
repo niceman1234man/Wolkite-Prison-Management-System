@@ -780,7 +780,7 @@ const MessagingSystem = ({ isOpen, onClose }) => {
   const handleSendMessage = async (content, attachment) => {
     try {
       // Get current user ID
-      const currentUserId = user?._id || user?.id;
+      let currentUserId = user?._id || user?.id;
       
       // Fallback to localStorage if Redux store doesn't have user ID
       if (!currentUserId) {

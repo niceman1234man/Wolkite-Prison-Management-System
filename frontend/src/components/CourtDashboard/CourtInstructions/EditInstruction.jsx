@@ -206,19 +206,19 @@ const EditInstruction = ({ setOpen, id }) => {
               <label htmlFor="verdict" className="block text-sm font-medium text-gray-700 mb-1">
                 Verdict
               </label>
-              <select
+            <select
                 id="verdict"
-                name="verdict"
-                value={formData.verdict}
-                onChange={handleChange}
+              name="verdict"
+              value={formData.verdict}
+              onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                required
-              >
-                <option value="">Select Verdict</option>
-                <option value="guilty">Guilty</option>
-                <option value="not_guilty">Not Guilty</option>
-              </select>
-            </div>
+              required
+            >
+              <option value="">Select Verdict</option>
+              <option value="guilty">Guilty</option>
+              <option value="not_guilty">Not Guilty</option>
+            </select>
+          </div>
           </div>
         </div>
 
@@ -284,15 +284,15 @@ const EditInstruction = ({ setOpen, id }) => {
             <FiCheckCircle className="mr-2" /> Instruction Details
           </h3>
           <div>
-            <textarea
+          <textarea
               id="instructions"
-              name="instructions"
-              value={formData.instructions}
-              onChange={handleChange}
-              rows="4"
+            name="instructions"
+            value={formData.instructions}
+            onChange={handleChange}
+            rows="4"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="Enter details regarding the verdict or instructions to the prison"
-              required
+            required
             ></textarea>
           </div>
         </div>
@@ -387,7 +387,7 @@ const EditInstruction = ({ setOpen, id }) => {
                 <FiSave className="mr-2" /> Save Changes
               </>
             )}
-          </button>
+        </button>
         </div>
       </form>
     </div>

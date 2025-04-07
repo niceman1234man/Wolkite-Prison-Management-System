@@ -10,7 +10,7 @@ const ViewInstruction = ({ id }) => {
   const [instruction, setInstruction] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [openDelete, setOpenDelete] = useState(false);
+   const [openDelete, setOpenDelete] = useState(false);
   const contentRef = useRef(null);
 
   // Format date to localized string
@@ -29,11 +29,11 @@ const ViewInstruction = ({ id }) => {
 
   const deleteInstruct = async () => {
     try {
-      const deletedInstruct = await axiosInstance.delete(
-        `/instruction/delete/${id}`
-      );
-      if (deletedInstruct) {
-        toast.success("Instruction deleted successfully!");
+        const deletedInstruct = await axiosInstance.delete(
+          `/instruction/delete/${id}`
+        );
+        if (deletedInstruct) {
+          toast.success("Instruction deleted successfully!");
         setOpenDelete(false);
         navigate("/court-dashboard/list");
       }
@@ -297,7 +297,7 @@ const ViewInstruction = ({ id }) => {
 
       {/* Main content */}
       <div className="bg-white rounded-b-lg shadow-md p-6 border border-gray-200">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Information Cards */}
           <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
             <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Prison Name</h3>
@@ -313,8 +313,8 @@ const ViewInstruction = ({ id }) => {
             <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Verdict</h3>
             <p className={`text-lg font-medium ${instruction.verdict === "guilty" ? "text-red-600" : "text-green-600"}`}>
               {instruction.verdict === "guilty" ? "Guilty" : instruction.verdict === "not_guilty" ? "Not Guilty" : instruction.verdict}
-            </p>
-          </div>
+              </p>
+            </div>
 
           <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
             <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Hearing Date</h3>
@@ -322,7 +322,7 @@ const ViewInstruction = ({ id }) => {
               <FiCalendar className="mr-2 text-gray-500" size={16} />
               {formatDate(instruction.hearingDate)}
             </p>
-          </div>
+            </div>
 
           {/* Full width instruction text */}
           <div className="md:col-span-2 bg-blue-50 p-5 rounded-lg border border-blue-100">
@@ -331,7 +331,7 @@ const ViewInstruction = ({ id }) => {
               <h3 className="text-sm font-semibold text-blue-800 uppercase">Instructions</h3>
             </div>
             <p className="text-gray-800 whitespace-pre-line">{instruction.instructions}</p>
-          </div>
+            </div>
 
           <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
             <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Effective Date</h3>
@@ -339,7 +339,7 @@ const ViewInstruction = ({ id }) => {
               <FiCalendar className="mr-2 text-gray-500" size={16} />
               {formatDate(instruction.effectiveDate)}
             </p>
-          </div>
+            </div>
 
           <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
             <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Send Date</h3>
@@ -348,11 +348,11 @@ const ViewInstruction = ({ id }) => {
               {formatDate(instruction.sendDate)}
             </p>
           </div>
-        </div>
+            </div>
 
         {/* Document section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-          <div>
+            <div>
             <h3 className="text-sm font-semibold text-gray-500 uppercase mb-3 flex items-center">
               <FiFilePlus className="mr-2" /> Attachment
             </h3>
@@ -365,7 +365,7 @@ const ViewInstruction = ({ id }) => {
             </div>
           </div>
           
-          <div>
+            <div>
             <h3 className="text-sm font-semibold text-gray-500 uppercase mb-3 flex items-center">
               <FiFilePlus className="mr-2" /> Signature
             </h3>
@@ -376,17 +376,17 @@ const ViewInstruction = ({ id }) => {
                 className="max-h-[200px] object-contain"
               />
             </div>
+            </div>
+            </div>
           </div>
-        </div>
-      </div>
 
       {/* Delete confirmation modal */}
-      <ConfirmModal
-        open={openDelete}
-        setOpen={setOpenDelete}
-        onDelete={deleteInstruct}
-        message="Do you really want to delete this Instruction? This action cannot be undone."
-      />
+            <ConfirmModal
+              open={openDelete}
+              setOpen={setOpenDelete}
+              onDelete={deleteInstruct}
+              message="Do you really want to delete this Instruction? This action cannot be undone."
+            />
     </div>
   );
 };

@@ -85,7 +85,7 @@ function Welcome() {
           setMessages(messagesWithFullUrls);
         } else {
           toast.error("No messages found.", toastConfig);
-        }       
+        }
       } catch (error) {
         console.error("Error fetching content:", error);
         toast.error(`Failed to load content: ${error.response?.data?.message || error.message}`, toastConfig);

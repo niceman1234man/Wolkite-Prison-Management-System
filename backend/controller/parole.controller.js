@@ -21,18 +21,12 @@ export const addBehaviorLog = async (req, res) => {
     // Validate input
 
     // Get file paths for signatures
-    const signature1 = req.files?.signature1?.[0]?.filename;
-    const signature2 = req.files?.signature2?.[0]?.filename;
-    const signature3 = req.files?.signature3?.[0]?.filename;
-    const signature4 = req.files?.signature4?.[0]?.filename;
-    const signature5 = req.files?.signature5?.[0]?.filename;
+    const signature = req.files?.signature?.[0]?.filename;
+    
 
     console.log("Signature Paths:", [
-      signature1,
-      signature2,
-      signature3,
-      signature4,
-      signature5,
+      signature
+     
     ]);
     let parsedbehaviorLogs = JSON.parse(behaviorLogs);
     
@@ -62,11 +56,8 @@ export const addBehaviorLog = async (req, res) => {
       paroleTracking.behaviorLogs.push(...logsToSave);
       paroleTracking.committeeNames = committeeNames;
       paroleTracking.signatures = [
-        signature1,
-        signature2,
-        signature3,
-        signature4,
-        signature5,
+        signature,
+        
       ].filter(Boolean);
     } else {
       // Create new record
@@ -84,7 +75,7 @@ export const addBehaviorLog = async (req, res) => {
         durationFromParoleToEnd,
         behaviorLogs: logsToSave,
         committeeNames,
-        signatures: [signature1, signature2, signature3, signature4, signature5].filter(Boolean)
+        signatures: [signature].filter(Boolean)
       });
     }
 

@@ -34,13 +34,7 @@ export const validateUserForm = (userData) => {
     }
   
     // Password validation
-    if (!userData.password) {
-      errors.password = "Password is required";
-    } else if (userData.password.length < 8) {
-      errors.password = "Password must be at least 8 characters";
-    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(userData.password)) {
-      errors.password = "Password must contain uppercase, lowercase, and number";
-    }
+   
   
     return errors;
   };

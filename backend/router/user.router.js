@@ -1,5 +1,5 @@
 import express from 'express'
-import { createAccount,getUser,getAllUsers,login, updateUser, updatePassword, activateUser, deleteUser, ForgotPassword, ResetPassword, updateProfile } from '../controller/user.controller.js';
+import { createAccount,getUser,getAllUsers,login, updateUser, updatePassword, activateUser, deleteUser, ForgotPassword, ResetPassword, updateProfile, sendPassword } from '../controller/user.controller.js';
 import { authenticateToken } from '../utilities.js';
 import { upload } from '../fileMiddleware.js';
 export const userRouter = express.Router();
@@ -13,7 +13,7 @@ userRouter.put('/activate-user/:id',authenticateToken,activateUser);
 userRouter.delete('/delete-user/:id',authenticateToken,deleteUser);
 userRouter.post('/forget',ForgotPassword);
 userRouter.post('/reset/:id/:token', ResetPassword);
-
+userRouter.put('/send-password-email',sendPassword);
 // Debug route - REMOVE IN PRODUCTION
 userRouter.get('/sample-users', async (req, res) => {
   try {

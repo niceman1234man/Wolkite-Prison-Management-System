@@ -12,7 +12,7 @@ const ViewUser = ({ id }) => {
   const [loading, setLoading] = useState(true);
   const [openDelete, setOpenDelete] = useState(false);
 const [openActivate, setOpenActivate] = useState(false);
-  const [prison, setPrison] = useState(null);
+  
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -23,16 +23,7 @@ const [openActivate, setOpenActivate] = useState(false);
         setUser(response.data.user);
         
         // Fetch prison details if user has prison ID
-        if (response.data.user.prison) {
-          try {
-            const prisonResponse = await axiosInstance.get(`/prison/get-prison/${response.data.user.prison}`);
-            if (prisonResponse.data.prison) {
-              setPrison(prisonResponse.data.prison);
-            }
-          } catch (error) {
-            console.error("Error fetching prison details:", error);
-          }
-        }
+      
       } catch (error) {
         toast.error(error.response?.data?.error || "Error fetching user details");
       } finally {
@@ -204,7 +195,7 @@ const [openActivate, setOpenActivate] = useState(false);
                     <div>
                       <p className="text-sm text-gray-500">Assigned Prison</p>
                       <p className="text-gray-800 font-medium">
-                        {prison ? prison.prison_name : user.prison ? user.prison : 'Not assigned'}
+                        { user.prison ? user.prison : 'Not assigned'}
                       </p>
                     </div>
                   </div>

@@ -25,6 +25,10 @@ const userSchema=new mongoose.Schema({
         type:String ,
         required:true
     },
+    passwordChanged:{
+        type:Boolean,
+        default:false,
+    },
     isactivated:{
     type:Boolean,
     default:false,
@@ -40,7 +44,7 @@ const userSchema=new mongoose.Schema({
     },
     password:{
         type:String ,
-        required:true
+        
     }
 },{timestamps:true});
 export const User=mongoose.model('User',userSchema);

@@ -42,20 +42,11 @@ const InmateBehavior = () => {
   const [paroleScore, setParoleScore] = useState(null);
   const [loadingInmates, setLoadingInmates] = useState(false); 
   const [trackedDays, setTrackedDays] = useState(0); 
-   const [signature1, setSignature1] = useState(null);
-   const [signature2, setSignature2] = useState(null);
-   const [signature3, setSignature3] = useState(null);
-   const [signature4, setSignature4] = useState(null);
-   const [signature5, setSignature5] = useState(null);
-   const [formdata,setFormData]=useState({
-    committeeName1:"",
-    committeeName2:"",
-    committeeName3:"",
-    committeeName4:"",
-    committeeName5:""
-   
-
-   })
+  const [signature, setSignature] = useState(null);
+  const [formdata, setFormData] = useState({
+    committeeName: ""
+  });
+  
   // Sidebar collapse state from Redux
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
 
@@ -72,18 +63,18 @@ const InmateBehavior = () => {
       const response = await axiosInstance.get(
         `/inmates/get-inmate/${inmateId}`
       );
-      console.log(response.data.inmate)
+      
       if (response.data?.inmate) {
         const inmate = response.data.inmate;
         setInmateDetails({
           _id: inmate._id,
-          inmate_name:inmate.firstName +" "+ inmate.middleName+" "+inmate.lastName   || "N/A",
+          inmate_name: inmate.firstName + " " + inmate.middleName + " " + inmate.lastName || "N/A",
           age: inmate.age || "N/A",
-          sentenceYear:inmate.sentenceYear,
+          sentenceYear: inmate.sentenceYear,
           gender: inmate.gender || "N/A",
           sentence: inmate.caseType || "N/A", 
-          releaseDate:inmate.releasedDate|| "N/A",
-          startDate:inmate.startDate|| "N/A",
+          releaseDate: inmate.releasedDate || "N/A",
+          startDate: inmate.startDate || "N/A",
           paroleDate: inmate.paroleDate || "N/A",
           durationToParole: inmate.durationToParole || "N/A",
           durationFromParoleToEnd: inmate.durationFromParoleToEnd || "N/A"
@@ -98,7 +89,6 @@ const InmateBehavior = () => {
       setLoadingInmates(false);
     }
   };
-  console.log(inmateDetails);
 
   useEffect(() => {
     if (inmateId) {
@@ -106,22 +96,16 @@ const InmateBehavior = () => {
     }
   }, [inmateId]);
 
-  
   const handleRadioChange = (ruleId, value) => {
     setSelectedBehaviors((prev) => ({
       ...prev,
       [ruleId]: value,
     }));
   };
-
   
   const calculateTrackedDays = (behaviorLogs) => {
     if (!behaviorLogs || behaviorLogs.length === 0) return 0;
-
-    // Extract all dates from behavior logs
     const dates = behaviorLogs.map((log) => new Date(log.date).toDateString());
-
-    // Remove duplicate dates to get the unique tracked days
     const uniqueDates = [...new Set(dates)];
     return uniqueDates.length;
   };
@@ -174,6 +158,7 @@ const InmateBehavior = () => {
 
     return paroleEligible;
   };
+  
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prevData) => ({
@@ -181,6 +166,7 @@ const InmateBehavior = () => {
       [name]: value,
     }));
   };
+  
   // Submit behavior log
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -201,15 +187,6 @@ const InmateBehavior = () => {
         };
       });
   
-      // Prepare committee names
-      const committeeNames = [
-        formdata.committeeName1,
-        formdata.committeeName2,
-        formdata.committeeName3,
-        formdata.committeeName4,
-        formdata.committeeName5,
-      ];
-      console.log(typeof committeeNames)
       // Create a FormData object
       const formData = new FormData();
   
@@ -229,179 +206,206 @@ const InmateBehavior = () => {
       
       // Append existing behavior logs and committee data
       formData.append('behaviorLogs', JSON.stringify(behaviorLogs));
-      formData.append('committeeNames', JSON.stringify(committeeNames));
+      formData.append('committeeNames', formdata.committeeName);
       
-      // Append signature files if they exist
-      if (signature1) formData.append('signature1', signature1);
-      if (signature2) formData.append('signature2', signature2);
-      if (signature3) formData.append('signature3', signature3);
-      if (signature4) formData.append('signature4', signature4);
-      if (signature5) formData.append('signature5', signature5);
+      // Append signature file if it exists - using exact field name expected by backend
+      if (signature) {
+        formData.append('signature', signature);
+      }
+  
+      // Log form data for debugging
+      for (let pair of formData.entries()) {
+        console.log(pair[0] + ': ' + pair[1]);
+      }
   
       // Send data to the backend
       const response = await axiosInstance.post(`/parole-tracking/add/${inmateDetails._id}`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+        headers: { 
+          "Content-Type": "multipart/form-data"
+        }
       });
     
       if (response.status === 201) {
         alert("Behavior log submitted successfully!");
-        navigate(`policeOfficer-dashboard/parole`);
+        navigate(`/policeOfficer-dashboard/parole`);
       } else {
         alert("Failed to submit behavior log.");
       }
     } catch (error) {
       console.error("Error submitting behavior log:", error);
-      alert("Error submitting behavior log. Please try again.");
+      alert(`Error submitting behavior log: ${error.message}`);
     }
   };
 
   return (
     <div
-      className={`max-w-4xl mx-auto mt-10 bg-white p-8 pt-3 rounded-md shadow-md ${
+      className={`max-w-7xl mx-auto mt-12 bg-white rounded-lg shadow-md ${
         isCollapsed ? "ml-16" : "ml-64"
-      }`}
+      } transition-all duration-300`}
     >
-      <h2 className="text-2xl font-bold mb-6 text-center">
-        Inmate Behavior Tracking
-      </h2>
-
-      {loadingInmates ? (
-        <div className="text-center text-gray-600">
-          Loading inmate details...
-        </div>
-      ) : inmateDetails ? (
-        <div className="mb-6">
-          <h3 className="text-xl font-semibold mb-4 text-center">
-            Inmate Details
-          </h3>
-          <div className="flex flex-wrap sm:space-x-8 text-center">
-            <div className="flex-1 mb-4 sm:mb-0">
-              <p>
-                <strong>የህግ ታራሚው ስም:</strong> {inmateDetails.inmate_name}
-              </p>
-              <p>
-                <strong>Age:</strong> {inmateDetails.age}
-              </p>
-            </div>
-            <div className="flex-1 mb-4 sm:mb-0">
-              <p>
-                <strong>Gender:</strong> {inmateDetails.gender}
-              </p>
-              <p>
-                <strong>Sentence:</strong> {inmateDetails.sentence} 
-              </p>
-              
-              <p>
-                <strong>Start Date:</strong> {formatToLocalDate(inmateDetails.startDate)}
-              </p>
-              <p>
-                <strong>Released Date:</strong> {formatToLocalDate(inmateDetails.releaseDate)}
-              </p>
-            </div>
-          </div>
-          <div className="mb-4">
-            <h3 className="text-lg font-semibold mb-2">Parole Information</h3>
-            <p><strong>Parole Date:</strong> {formatToLocalDate(inmateDetails.paroleDate)}</p>
-            <p><strong>Duration Until Parole:</strong> {inmateDetails.durationToParole}</p>
-            <p><strong>Duration From Parole to Release:</strong> {inmateDetails.durationFromParoleToEnd}</p>
-          </div>
-        </div>
-      ) : (
-        <div className="text-center text-gray-600">Inmate not found.</div>
-      )}
-
-      {/* Display tracked days */}
-      <div className="text-center text-lg font-semibold mt-4">
-        <p>
-          <strong>Tracked Days:</strong> {trackedDays}
-        </p>
+      <div className="bg-teal-600 text-white py-4 px-6 rounded-t-lg">
+        <h2 className="text-2xl font-bold text-center">
+          Inmate Behavior Tracking
+        </h2>
       </div>
 
-      <form onSubmit={handleSubmit}>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse table-auto border border-gray-300">
-            <thead>
-              <tr className="bg-gray-200">
-                <th className="border border-gray-300 p-3 text-left">Rule</th>
-                {behaviorRules[0].options.map((opt) => (
-                  <th
-                    key={opt}
-                    className="border border-gray-300 p-3 text-center"
-                  >
-                    {opt} pts
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {behaviorRules.map((rule, index) => (
-                <tr
-                  key={rule.id}
-                  className={`border border-gray-300 ${
-                    index % 2 === 0 ? "bg-gray-50" : "bg-white"
-                  }`}
-                >
-                  <td className="border border-gray-300 p-3 font-semibold">
-                    {rule.label}
-                  </td>
-                  {rule.options.map((opt) => (
-                    <td
-                      key={opt}
-                      className="border border-gray-300 p-3 text-center"
-                    >
-                      <input
-                        type="radio"
-                        name={`rule-${rule.id}`}
-                        value={opt}
-                        checked={selectedBehaviors[rule.id] === opt}
-                        onChange={(e) =>
-                          handleRadioChange(rule.id, parseInt(e.target.value))
-                        }
-                      />
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-            ➢ ማሳሰቢያ ከዚህ በላይ የተመለከቱት ቁጥሮች እያንዳንዳቸው መሥፈርት የሚሆኑ ማጣሪያ ነጥቦች ግን 75 ሲሆን
-            ነው፡፡
-          </table>
+      {loadingInmates ? (
+        <div className="flex justify-center items-center h-40">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal-600"></div>
+          <span className="ml-3 text-gray-600">Loading inmate details...</span>
         </div>
-       
-        
-          <div className="grid grid-cols-2 gap-5 mt-4">
-          <p>የአመክሮ ኮሚቴ ስም</p> <p> ፌርማ</p>
-          <input type="text" name="committeeName1" onChange={handleChange} className="border mb-3 p-2"/>
-          <input type="file" name="signature1"  onChange={(e)=>setSignature1(e.target.files[0])}/>
-          <input type="text"  name="committeeName2"  onChange={handleChange} className="border mb-3 p-2"/>
-          <input type="file" name="signature2"  onChange={(e)=>setSignature2(e.target.files[0])} />
-          <input type="text"  name="committeeName3"  onChange={handleChange} className="border mb-3 p-2" />
-          <input type="file" name="signature3"  onChange={(e)=>setSignature3(e.target.files[0])} />
-          <input type="text"  name="committeeName4"  onChange={handleChange} className="border mb-3 p-2"/>
-          <input type="file" name="signature4"  onChange={(e)=>setSignature4(e.target.files[0])} />
-          <input type="text"  name="committeeName5"  onChange={handleChange} className="border mb-3 p-2"/>
-          <input type="file" name="signature5"  onChange={(e)=>setSignature5(e.target.files[0])} />
+      ) : inmateDetails ? (
+        <div className="p-6">
+          <div className="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-200">
+            <h3 className="text-xl font-semibold mb-4 text-teal-700 border-b pb-2">
+              Inmate Details
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="mb-2">
+                  <span className="font-semibold">የህግ ታራሚው ስም:</span> {inmateDetails.inmate_name}
+                </p>
+                <p className="mb-2">
+                  <span className="font-semibold">Age:</span> {inmateDetails.age}
+                </p>
+                <p className="mb-2">
+                  <span className="font-semibold">Gender:</span> {inmateDetails.gender}
+                </p>
+              </div>
+              <div>
+                <p className="mb-2">
+                  <span className="font-semibold">Sentence:</span> {inmateDetails.sentence}
+                </p>
+                <p className="mb-2">
+                  <span className="font-semibold">Start Date:</span> {formatToLocalDate(inmateDetails.startDate)}
+                </p>
+                <p className="mb-2">
+                  <span className="font-semibold">Released Date:</span> {formatToLocalDate(inmateDetails.releaseDate)}
+                </p>
+              </div>
+            </div>
+            
+            <div className="mt-4 bg-blue-50 p-3 rounded-md border border-blue-200">
+              <h3 className="text-lg font-semibold mb-2 text-blue-700">Parole Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <p><span className="font-semibold">Parole Date:</span> {formatToLocalDate(inmateDetails.paroleDate)}</p>
+                <p><span className="font-semibold">Duration Until Parole:</span> {inmateDetails.durationToParole}</p>
+                <p><span className="font-semibold">Duration After Parole:</span> {inmateDetails.durationFromParoleToEnd}</p>
+              </div>
+            </div>
+            
+            <div className="mt-4 text-center">
+              <div className="inline-block bg-teal-100 px-4 py-2 rounded-full">
+                <span className="font-semibold">Tracked Days:</span> {trackedDays}
+              </div>
+            </div>
           </div>
-        
-        <button
-          type="submit"
-          className="w-full mt-6 bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 rounded-lg transition duration-200 ease-in-out transform hover:scale-105"
-        >
-          Submit Behavior Log
-        </button>
-      </form>
 
-      {paroleScore !== null && (
-        <div className="mt-6 p-4 bg-gray-100 rounded-md text-center">
-          <h3 className="text-xl font-semibold">
-            Parole Eligibility: {paroleScore}%
-          </h3>
-          {paroleScore >= 75 ? (
-            <p className="text-green-600 font-bold">Eligible for Parole</p>
-          ) : (
-            <p className="text-red-600 font-bold">Not Eligible for Parole</p>
+          <form onSubmit={handleSubmit}>
+            <div className="overflow-x-auto bg-white rounded-lg border border-gray-200 mb-6">
+              <table className="w-full border-collapse table-auto">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="border-b border-r border-gray-300 p-3 text-left">Rule</th>
+                    {behaviorRules[0].options.map((opt) => (
+                      <th
+                        key={opt}
+                        className="border-b border-r border-gray-300 p-3 text-center w-16"
+                      >
+                        {opt} pts
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {behaviorRules.map((rule, index) => (
+                    <tr
+                      key={rule.id}
+                      className={`border-b border-gray-300 ${
+                        index % 2 === 0 ? "bg-gray-50" : "bg-white"
+                      } hover:bg-gray-100`}
+                    >
+                      <td className="border-r border-gray-300 p-3 font-semibold">
+                        {rule.label}
+                      </td>
+                      {rule.options.map((opt) => (
+                        <td
+                          key={opt}
+                          className="border-r border-gray-300 p-3 text-center"
+                        >
+                          <input
+                            type="radio"
+                            name={`rule-${rule.id}`}
+                            value={opt}
+                            checked={selectedBehaviors[rule.id] === opt}
+                            onChange={(e) =>
+                              handleRadioChange(rule.id, parseInt(e.target.value))
+                            }
+                            className="form-radio h-4 w-4 text-teal-600"
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="p-3 bg-yellow-50 text-sm italic border-t border-yellow-200">
+                ➢ ማሳሰቢያ ከዚህ በላይ የተመለከቱት ቁጥሮች እያንዳንዳቸው መሥፈርት የሚሆኑ ማጣሪያ ነጥቦች ግን 75 ሲሆን ነው፡፡
+              </div>
+            </div>
+          
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+              <h3 className="text-lg font-semibold mb-4 text-teal-700">Committee Signature</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-gray-700 mb-2">የአመክሮ ኮሚቴ ስም</label>
+                  <input 
+                    type="text" 
+                    name="committeeName" 
+                    onChange={handleChange} 
+                    className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                    placeholder="Enter committee name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-700 mb-2">ፌርማ</label>
+                  <input 
+                    type="file" 
+                    name="signature"  
+                    onChange={(e) => setSignature(e.target.files[0])}
+                    className="w-full border border-gray-300 rounded-md p-2 text-sm file:mr-4 file:py-2 file:px-4
+                    file:rounded-md file:border-0 file:text-sm file:font-semibold
+                    file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <div className="text-center">
+              <button
+                type="submit"
+                className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-8 rounded-lg transition duration-200 ease-in-out transform hover:scale-105 shadow-md"
+              >
+                Submit Behavior Log
+              </button>
+            </div>
+          </form>
+
+          {paroleScore !== null && (
+            <div className="mt-6 p-4 bg-gray-100 rounded-md text-center">
+              <h3 className="text-xl font-semibold">
+                Parole Eligibility: {paroleScore}%
+              </h3>
+              {paroleScore >= 75 ? (
+                <p className="text-green-600 font-bold">Eligible for Parole</p>
+              ) : (
+                <p className="text-red-600 font-bold">Not Eligible for Parole</p>
+              )}
+            </div>
           )}
         </div>
+      ) : (
+        <div className="text-center text-gray-600 p-10">Inmate not found.</div>
       )}
     </div>
   );
