@@ -77,6 +77,7 @@ const ParoleSend = () => {
           gender: parole.gender || "N/A",
           sentence: parole.caseType || "N/A",
           status: parole.status || "N/A",
+          paroleDate:parole.paroleDate,
           action: <InmateButtons _id={parole.inmateId} onDelete={fetchInmates} status={parole.status} />,
         }));
 

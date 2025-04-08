@@ -7,9 +7,34 @@ import 'react-toastify/dist/ReactToastify.css'; // Import toast CS
 import { CloudCog } from "lucide-react";
 import { validateInmateField, validateInmateForm } from "../../utils/formValidation";
 
+import { FaUser, FaMapMarkerAlt, FaIdCard, FaPhone, FaGavel, FaArrowLeft, FaArrowRight } from "react-icons/fa";
+
+// CSS for animations
+const styles = {
+  fadeIn: `
+    @keyframes fadeIn {
+      0% { opacity: 0; transform: translateY(10px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fadeIn {
+      animation: fadeIn 0.3s ease-out forwards;
+    }
+  `,
+  hideScrollbar: `
+    .hide-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .hide-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  `
+};
+
 const UpdateInmate = ({setOpen, _id}) => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState("personal");
   
   const [formData, setFormData] = useState({
     firstName: "",
@@ -63,6 +88,30 @@ const UpdateInmate = ({setOpen, _id}) => {
   // Separate state for file uploads
   const [signature, setSignature] = useState(null);
   const [profileImage, setProfileImage] = useState(null);
+
+  // Define tabs for navigation
+  const tabs = [
+    { id: "personal", label: "Personal Info", icon: <FaUser className="mr-2" /> },
+    { id: "location", label: "Location", icon: <FaMapMarkerAlt className="mr-2" /> },
+    { id: "physical", label: "Physical", icon: <FaIdCard className="mr-2" /> },
+    { id: "contact", label: "Contact", icon: <FaPhone className="mr-2" /> },
+    { id: "case", label: "Case Details", icon: <FaGavel className="mr-2" /> },
+  ];
+
+  // Navigate between tabs
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+  };
+
+  // Navigate to next/previous tab
+  const navigateTab = (direction) => {
+    const currentIndex = tabs.findIndex(tab => tab.id === activeTab);
+    if (direction === 'next' && currentIndex < tabs.length - 1) {
+      setActiveTab(tabs[currentIndex + 1].id);
+    } else if (direction === 'prev' && currentIndex > 0) {
+      setActiveTab(tabs[currentIndex - 1].id);
+    }
+  };
 
   // Calculate age based on birth date
   const calculateAge = (birthDate) => {
@@ -119,6 +168,19 @@ const UpdateInmate = ({setOpen, _id}) => {
     };
     fetchInmateData();
   }, [_id]);
+
+  // Add styles to document head
+  useEffect(() => {
+    // Create style element
+    const styleElement = document.createElement('style');
+    styleElement.innerHTML = styles.fadeIn + styles.hideScrollbar;
+    document.head.appendChild(styleElement);
+    
+    // Clean up
+    return () => {
+      document.head.removeChild(styleElement);
+    };
+  }, []);
 
   // Handle changes for both text and file inputs
   const handleChange = (e) => {
@@ -202,12 +264,39 @@ const UpdateInmate = ({setOpen, _id}) => {
     if (Object.keys(formErrors).length > 0) {
       toast.error("Please fix the errors in the form");
       
-      // Scroll to first error
+      // Navigate to the tab with the first error
       const firstErrorField = Object.keys(formErrors)[0];
-      const element = document.querySelector(`[name="${firstErrorField}"]`);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
+      const tabMap = {
+        firstName: "personal", middleName: "personal", lastName: "personal", birthDate: "personal", 
+        age: "personal", motherName: "personal", gender: "personal", nationality: "personal",
+        religion: "personal", maritalStatus: "personal", degreeLevel: "personal", work: "personal",
+        
+        birthRegion: "location", birthZone: "location", birthWereda: "location", birthKebele: "location",
+        currentRegion: "location", currentZone: "location", currentWereda: "location", currentKebele: "location",
+        
+        height: "physical", hairType: "physical", face: "physical", foreHead: "physical",
+        nose: "physical", eyeColor: "physical", teeth: "physical", lip: "physical",
+        ear: "physical", specialSymbol: "physical",
+        
+        contactName: "contact", contactRegion: "contact", contactZone: "contact",
+        contactWereda: "contact", contactKebele: "contact", phoneNumber: "contact",
+        
+        caseType: "case", startDate: "case", sentenceYear: "case", sentenceReason: "case",
+        releasedDate: "case", paroleDate: "case"
+      };
+      
+      // Switch to the tab containing the error
+      const tabWithError = tabMap[firstErrorField] || "personal";
+      setActiveTab(tabWithError);
+      
+      // Scroll to first error
+      setTimeout(() => {
+        const element = document.querySelector(`[name="${firstErrorField}"]`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.focus();
+        }
+      }, 100);
       
       return;
     }
@@ -260,13 +349,62 @@ const UpdateInmate = ({setOpen, _id}) => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto mt-10 bg-white p-8 rounded-lg shadow-lg">
-      <div className="flex justify-between items-center mb-8">
-        <h2 className="text-3xl font-bold text-gray-800">Update Inmate</h2>
-        
+    <div className="max-w-5xl mx-auto bg-white p-8 rounded-lg shadow-lg">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-800">Update Inmate</h2>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Tab Navigation */}
+        <div className="bg-white rounded-xl shadow-md mb-6 overflow-hidden border border-gray-200">
+          <div className="flex justify-between items-center border-b border-gray-200">
+            <div className="flex overflow-x-auto hide-scrollbar">
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => handleTabChange(tab.id)}
+                  className={`px-6 py-4 flex items-center whitespace-nowrap ${
+                    activeTab === tab.id
+                      ? 'text-blue-600 border-b-2 border-blue-600 font-medium'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  {tab.icon}
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            
+            <div className="flex pr-2">
+              <button
+                type="button"
+                onClick={() => navigateTab('prev')}
+                disabled={activeTab === tabs[0].id}
+                className={`p-2 rounded-full ${
+                  activeTab === tabs[0].id
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <FaArrowLeft />
+              </button>
+              <button
+                type="button"
+                onClick={() => navigateTab('next')}
+                disabled={activeTab === tabs[tabs.length - 1].id}
+                className={`p-2 rounded-full ${
+                  activeTab === tabs[tabs.length - 1].id
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <FaArrowRight />
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Profile Image Upload */}
         <div className="bg-gray-50 p-6 rounded-lg">
           <h3 className="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">Profile Image</h3>
@@ -337,74 +475,74 @@ const UpdateInmate = ({setOpen, _id}) => {
               />
               {renderError('middleName')}
             </div>
-          <div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-            <input
-              type="text"
+              <input
+                type="text"
                 name="lastName"
                 value={formData.lastName}
                 placeholder="Enter Last name"
-              onChange={handleChange}
+                onChange={handleChange}
                 onBlur={handleBlur}
                 className={`w-full px-4 py-2 border ${errors.lastName ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              required
-            />
+                required
+              />
               {renderError('lastName')}
-          </div>
-          <div>
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Birth Date</label>
-            <input
-              type="date"
-              name="birthDate"
-              value={formData.birthDate}
-              onChange={handleChange}
+              <input
+                type="date"
+                name="birthDate"
+                value={formData.birthDate}
+                onChange={handleChange}
                 onBlur={handleBlur}
                 className={`w-full px-4 py-2 border ${errors.birthDate ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              required
-            />
+                required
+              />
               {renderError('birthDate')}
-          </div>
-          <div>
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
-            <input
-              type="number"
-              name="age"
-              value={formData.age}
-              placeholder="Enter age"
-              onChange={handleChange}
+              <input
+                type="number"
+                name="age"
+                value={formData.age}
+                placeholder="Enter age"
+                onChange={handleChange}
                 onBlur={handleBlur}
                 className={`w-full px-4 py-2 border ${errors.age ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
                 readOnly
-            />
+              />
               {renderError('age')}
-          </div>
-          <div>
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Mother's Name</label>
-            <input
-              type="text"
-              name="motherName"
-              value={formData.motherName}
-              placeholder="Enter mother's name"
-              onChange={handleChange}
+              <input
+                type="text"
+                name="motherName"
+                value={formData.motherName}
+                placeholder="Enter mother's name"
+                onChange={handleChange}
                 onBlur={handleBlur}
                 className={`w-full px-4 py-2 border ${errors.motherName ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-            />
+              />
               {renderError('motherName')}
-          </div>
-          <div>
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
-            <select
-              name="gender"
-              value={formData.gender}
-              onChange={handleChange}
+              <select
+                name="gender"
+                value={formData.gender}
+                onChange={handleChange}
                 onBlur={handleBlur}
                 className={`w-full px-4 py-2 border ${errors.gender ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              required
-            >
-              <option value="">Select Gender</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-            </select>
+                required
+              >
+                <option value="">Select Gender</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </select>
               {renderError('gender')}
             </div>
             <div>
@@ -494,473 +632,482 @@ const UpdateInmate = ({setOpen, _id}) => {
         {/* Location Information Section */}
         <div className="bg-gray-50 p-6 rounded-lg">
           <h3 className="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">Location Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div>
-              <h4 className="text-xl font-medium mb-4 text-gray-700">Birth Place</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Location Tab */}
+          {activeTab === "location" && (
+            <div className="animate-fadeIn">
+              <h3 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2">Birth Address</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Region</label>
-              <input
-                type="text"
-                name="birthRegion"
-                value={formData.birthRegion}
-                placeholder="Enter birth region"
-                onChange={handleChange}
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Birth Region</label>
+                  <input
+                    type="text"
+                    name="birthRegion"
+                    value={formData.birthRegion}
+                    placeholder="Enter birth region"
+                    onChange={handleChange}
                     onBlur={handleBlur}
                     className={`w-full px-4 py-2 border ${errors.birthRegion ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              />
+                  />
                   {renderError('birthRegion')}
-            </div>
-            <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
-              <input
-                type="text"
-                name="birthZone"
-                value={formData.birthZone}
-                placeholder="Enter birth zone"
-                onChange={handleChange}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Birth Zone</label>
+                  <input
+                    type="text"
+                    name="birthZone"
+                    value={formData.birthZone}
+                    placeholder="Enter birth zone"
+                    onChange={handleChange}
                     onBlur={handleBlur}
                     className={`w-full px-4 py-2 border ${errors.birthZone ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              />
+                  />
                   {renderError('birthZone')}
-            </div>
-            <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Wereda</label>
-              <input
-                type="text"
-                name="birthWereda"
-                value={formData.birthWereda}
-                placeholder="Enter birth wereda"
-                onChange={handleChange}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Birth Wereda</label>
+                  <input
+                    type="text"
+                    name="birthWereda"
+                    value={formData.birthWereda}
+                    placeholder="Enter birth wereda"
+                    onChange={handleChange}
                     onBlur={handleBlur}
                     className={`w-full px-4 py-2 border ${errors.birthWereda ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              />
+                  />
                   {renderError('birthWereda')}
-            </div>
-            <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Kebele</label>
-              <input
-                type="text"
-                name="birthKebele"
-                value={formData.birthKebele}
-                placeholder="Enter birth kebele"
-                onChange={handleChange}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Birth Kebele</label>
+                  <input
+                    type="text"
+                    name="birthKebele"
+                    value={formData.birthKebele}
+                    placeholder="Enter birth kebele"
+                    onChange={handleChange}
                     onBlur={handleBlur}
                     className={`w-full px-4 py-2 border ${errors.birthKebele ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              />
+                  />
                   {renderError('birthKebele')}
-            </div>
-          </div>
-        </div>
-            <div>
-              <h4 className="text-xl font-medium mb-4 text-gray-700">Current Address</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                </div>
+              </div>
+              
+              <h3 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2">Current Address</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Region</label>
-              <input
-                type="text"
-                name="currentRegion"
-                value={formData.currentRegion}
-                placeholder="Enter current region"
-                onChange={handleChange}
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Current Region</label>
+                  <input
+                    type="text"
+                    name="currentRegion"
+                    value={formData.currentRegion}
+                    placeholder="Enter current region"
+                    onChange={handleChange}
                     onBlur={handleBlur}
                     className={`w-full px-4 py-2 border ${errors.currentRegion ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              />
+                  />
                   {renderError('currentRegion')}
-            </div>
-            <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
-              <input
-                type="text"
-                name="currentZone"
-                value={formData.currentZone}
-                placeholder="Enter current zone"
-                onChange={handleChange}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Current Zone</label>
+                  <input
+                    type="text"
+                    name="currentZone"
+                    value={formData.currentZone}
+                    placeholder="Enter current zone"
+                    onChange={handleChange}
                     onBlur={handleBlur}
                     className={`w-full px-4 py-2 border ${errors.currentZone ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              />
+                  />
                   {renderError('currentZone')}
-            </div>
-            <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Wereda</label>
-              <input
-                type="text"
-                name="currentWereda"
-                value={formData.currentWereda}
-                placeholder="Enter current wereda"
-                onChange={handleChange}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Current Wereda</label>
+                  <input
+                    type="text"
+                    name="currentWereda"
+                    value={formData.currentWereda}
+                    placeholder="Enter current wereda"
+                    onChange={handleChange}
                     onBlur={handleBlur}
                     className={`w-full px-4 py-2 border ${errors.currentWereda ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              />
+                  />
                   {renderError('currentWereda')}
-            </div>
-            <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Kebele</label>
-              <input
-                type="text"
-                name="currentKebele"
-                value={formData.currentKebele}
-                placeholder="Enter current kebele"
-                onChange={handleChange}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Current Kebele</label>
+                  <input
+                    type="text"
+                    name="currentKebele"
+                    value={formData.currentKebele}
+                    placeholder="Enter current kebele"
+                    onChange={handleChange}
                     onBlur={handleBlur}
                     className={`w-full px-4 py-2 border ${errors.currentKebele ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              />
+                  />
                   {renderError('currentKebele')}
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Physical Characteristics Section */}
         <div className="bg-gray-50 p-6 rounded-lg">
           <h3 className="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">Physical Characteristics</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Height (cm)</label>
-            <select
-                name="height"
-                value={formData.height}
-              onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-4 py-2 border ${errors.height ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              >
-                <option value="">Select Height</option>
-                {Array.from({length: 81}, (_, i) => i + 150).map(height => (
-                  <option key={height} value={height}>{height} cm</option>
-                ))}
-            </select>
-              {renderError('height')}
-          </div>
-          <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Hair Type</label>
-              <select
-              name="hairType"
-              value={formData.hairType}
-              onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-4 py-2 border ${errors.hairType ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              >
-                <option value="">Select Hair Type</option>
-                <option value="Straight">Straight</option>
-                <option value="Wavy">Wavy</option>
-                <option value="Curly">Curly</option>
-                <option value="Coily">Coily</option>
-                <option value="Bald">Bald</option>
-              </select>
-              {renderError('hairType')}
-          </div>
-          <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Face</label>
-              <select
-              name="face"
-              value={formData.face}
-              onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-4 py-2 border ${errors.face ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              >
-                <option value="">Select Face Shape</option>
-                <option value="Oval">Oval</option>
-                <option value="Round">Round</option>
-                <option value="Square">Square</option>
-                <option value="Heart">Heart</option>
-                <option value="Diamond">Diamond</option>
-                <option value="Rectangular">Rectangular</option>
-              </select>
-              {renderError('face')}
-          </div>
-          <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Forehead</label>
-              <select
-              name="foreHead"
-              value={formData.foreHead}
-              onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-4 py-2 border ${errors.foreHead ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              >
-                <option value="">Select Forehead Type</option>
-                <option value="Small">Small</option>
-                <option value="Medium">Medium</option>
-                <option value="Large">Large</option>
-                <option value="Prominent">Prominent</option>
-                <option value="Sloped">Sloped</option>
-              </select>
-              {renderError('foreHead')}
-          </div>
-          <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nose</label>
-              <select
-              name="nose"
-              value={formData.nose}
-              onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-4 py-2 border ${errors.nose ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              >
-                <option value="">Select Nose Type</option>
-                <option value="Straight">Straight</option>
-                <option value="Roman">Roman</option>
-                <option value="Button">Button</option>
-                <option value="Nubian">Nubian</option>
-                <option value="Hawk">Hawk</option>
-                <option value="Snub">Snub</option>
-              </select>
-              {renderError('nose')}
-          </div>
-          <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Eye Color</label>
-              <select
-              name="eyeColor"
-              value={formData.eyeColor}
-              onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-4 py-2 border ${errors.eyeColor ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              >
-                <option value="">Select Eye Color</option>
-                <option value="Brown">Brown</option>
-                <option value="Black">Black</option>
-                <option value="Blue">Blue</option>
-                <option value="Green">Green</option>
-                <option value="Gray">Gray</option>
-                <option value="Hazel">Hazel</option>
-                <option value="Amber">Amber</option>
-              </select>
-              {renderError('eyeColor')}
-          </div>
-          <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Teeth</label>
-              <select
-              name="teeth"
-              value={formData.teeth}
-              onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-4 py-2 border ${errors.teeth ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              >
-                <option value="">Select Teeth Characteristic</option>
-                <option value="Straight">Straight</option>
-                <option value="Crooked">Crooked</option>
-                <option value="Gap">Gap-toothed</option>
-                <option value="Missing">Missing teeth</option>
-                <option value="Gold">Gold teeth</option>
-                <option value="Other">Other</option>
-              </select>
-              {renderError('teeth')}
-          </div>
-          <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Lip</label>
-              <select
-              name="lip"
-              value={formData.lip}
-              onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-4 py-2 border ${errors.lip ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              >
-                <option value="">Select Lip Type</option>
-                <option value="Thin">Thin</option>
-                <option value="Medium">Medium</option>
-                <option value="Full">Full</option>
-                <option value="Asymmetric">Asymmetric</option>
-                <option value="Heart-shaped">Heart-shaped</option>
-              </select>
-              {renderError('lip')}
-          </div>
-          <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Ear</label>
-              <select
-              name="ear"
-              value={formData.ear}
-              onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-4 py-2 border ${errors.ear ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              >
-                <option value="">Select Ear Type</option>
-                <option value="Small">Small</option>
-                <option value="Medium">Medium</option>
-                <option value="Large">Large</option>
-                <option value="Attached">Attached</option>
-                <option value="Detached">Detached</option>
-                <option value="Pointed">Pointed</option>
-              </select>
-              {renderError('ear')}
-          </div>
-          <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Special Symbol</label>
-              <textarea
-              name="specialSymbol"
-              value={formData.specialSymbol}
-                placeholder="Describe any tattoos, scars, birthmarks, or other distinguishing features"
-              onChange={handleChange}
-                onBlur={handleBlur}
-                rows="2"
-                className={`w-full px-4 py-2 border ${errors.specialSymbol ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-            />
-              {renderError('specialSymbol')}
+          {/* Physical Characteristics Tab */}
+          {activeTab === "physical" && (
+            <div className="animate-fadeIn">
+              <h3 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2">Physical Characteristics</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Height (cm)</label>
+                  <input
+                    type="number"
+                    name="height"
+                    value={formData.height}
+                    placeholder="Enter height in cm"
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.height ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  />
+                  {renderError('height')}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Hair Type</label>
+                  <input
+                    type="text"
+                    name="hairType"
+                    value={formData.hairType}
+                    placeholder="Describe hair type"
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.hairType ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  />
+                  {renderError('hairType')}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Face</label>
+                  <input
+                    type="text"
+                    name="face"
+                    value={formData.face}
+                    placeholder="Describe face shape"
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.face ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  />
+                  {renderError('face')}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Forehead</label>
+                  <input
+                    type="text"
+                    name="foreHead"
+                    value={formData.foreHead}
+                    placeholder="Describe forehead"
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.foreHead ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  />
+                  {renderError('foreHead')}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nose</label>
+                  <input
+                    type="text"
+                    name="nose"
+                    value={formData.nose}
+                    placeholder="Describe nose"
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.nose ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  />
+                  {renderError('nose')}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Eye Color</label>
+                  <input
+                    type="text"
+                    name="eyeColor"
+                    value={formData.eyeColor}
+                    placeholder="Describe eye color"
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.eyeColor ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  />
+                  {renderError('eyeColor')}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Teeth</label>
+                  <input
+                    type="text"
+                    name="teeth"
+                    value={formData.teeth}
+                    placeholder="Describe teeth"
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.teeth ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  />
+                  {renderError('teeth')}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Lip</label>
+                  <input
+                    type="text"
+                    name="lip"
+                    value={formData.lip}
+                    placeholder="Describe lip"
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.lip ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  />
+                  {renderError('lip')}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Ear</label>
+                  <input
+                    type="text"
+                    name="ear"
+                    value={formData.ear}
+                    placeholder="Describe ear"
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.ear ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  />
+                  {renderError('ear')}
+                </div>
+                <div className="md:col-span-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Special Symbol or Mark</label>
+                  <textarea
+                    name="specialSymbol"
+                    value={formData.specialSymbol}
+                    placeholder="Describe any special symbols, birthmarks, scars, etc."
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    rows="3"
+                    className={`w-full px-4 py-2 border ${errors.specialSymbol ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  ></textarea>
+                  {renderError('specialSymbol')}
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Contact Information Section */}
         <div className="bg-gray-50 p-6 rounded-lg">
           <h3 className="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">Contact Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Contact Name</label>
-              <input
-                type="text"
-                name="contactName"
-                value={formData.contactName}
-                placeholder="Enter contact name"
-                onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-4 py-2 border ${errors.contactName ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              />
-              {renderError('contactName')}
+          {/* Contact Information Tab */}
+          {activeTab === "contact" && (
+            <div className="animate-fadeIn">
+              <h3 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2">Emergency Contact Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact Name</label>
+                  <input
+                    type="text"
+                    name="contactName"
+                    value={formData.contactName}
+                    placeholder="Enter contact name"
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.contactName ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  />
+                  {renderError('contactName')}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                  <input
+                    type="tel"
+                    name="phoneNumber"
+                    value={formData.phoneNumber}
+                    placeholder="Enter phone number"
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.phoneNumber ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  />
+                  {renderError('phoneNumber')}
+                </div>
+              </div>
+              
+              <h4 className="font-medium text-gray-700 mt-6 mb-4">Contact Address</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Region</label>
+                  <input
+                    type="text"
+                    name="contactRegion"
+                    value={formData.contactRegion}
+                    placeholder="Enter region"
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.contactRegion ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  />
+                  {renderError('contactRegion')}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
+                  <input
+                    type="text"
+                    name="contactZone"
+                    value={formData.contactZone}
+                    placeholder="Enter zone"
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.contactZone ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  />
+                  {renderError('contactZone')}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Wereda</label>
+                  <input
+                    type="text"
+                    name="contactWereda"
+                    value={formData.contactWereda}
+                    placeholder="Enter wereda"
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.contactWereda ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  />
+                  {renderError('contactWereda')}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Kebele</label>
+                  <input
+                    type="text"
+                    name="contactKebele"
+                    value={formData.contactKebele}
+                    placeholder="Enter kebele"
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.contactKebele ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  />
+                  {renderError('contactKebele')}
+                </div>
+              </div>
+
+              <h4 className="font-medium text-gray-700 mt-6 mb-4">Registrar Information</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Registrar Worker Name</label>
+                  <input
+                    type="text"
+                    name="registrarWorkerName"
+                    value={formData.registrarWorkerName}
+                    placeholder="Enter registrar worker name"
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.registrarWorkerName ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  />
+                  {renderError('registrarWorkerName')}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Signature</label>
+                  <input
+                    type="file"
+                    name="signature"
+                    onChange={handleChange}
+                    className="block w-full text-sm text-gray-500
+                      file:mr-4 file:py-2 file:px-4
+                      file:rounded-full file:border-0
+                      file:text-sm file:font-semibold
+                      file:bg-blue-50 file:text-blue-700
+                      hover:file:bg-blue-100"
+                  />
+                  {formData.signature && (
+                    <div className="mt-2">
+                      <img 
+                        src={formData.signature} 
+                        alt="Signature" 
+                        className="max-h-20 border border-gray-200 rounded p-1" 
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Contact Region</label>
-              <input
-                type="text"
-                name="contactRegion"
-                value={formData.contactRegion}
-                placeholder="Enter contact region"
-                onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-4 py-2 border ${errors.contactRegion ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              />
-              {renderError('contactRegion')}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Contact Zone</label>
-              <input
-                type="text"
-                name="contactZone"
-                value={formData.contactZone}
-                placeholder="Enter contact zone"
-                onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-4 py-2 border ${errors.contactZone ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              />
-              {renderError('contactZone')}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Contact Wereda</label>
-              <input
-                type="text"
-                name="contactWereda"
-                value={formData.contactWereda}
-                placeholder="Enter contact wereda"
-                onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-4 py-2 border ${errors.contactWereda ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              />
-              {renderError('contactWereda')}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Contact Kebele</label>
-              <input
-                type="text"
-                name="contactKebele"
-                value={formData.contactKebele}
-                placeholder="Enter contact kebele"
-                onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-4 py-2 border ${errors.contactKebele ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              />
-              {renderError('contactKebele')}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-              <input
-                type="text"
-                name="phoneNumber"
-                value={formData.phoneNumber}
-                placeholder="Enter phone number"
-                onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-4 py-2 border ${errors.phoneNumber ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              />
-              {renderError('phoneNumber')}
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Case Information Section */}
         <div className="bg-gray-50 p-6 rounded-lg">
           <h3 className="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">Case Information</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Case Type</label>
-              <select
-              name="caseType"
-              value={formData.caseType}
-              onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-4 py-2 border ${errors.caseType ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              >
-                <option value="">Select Case Type</option>
-                <option value="Theft">Theft</option>
-                <option value="Robbery">Robbery</option>
-                <option value="Assault">Assault</option>
-                <option value="Homicide">Homicide</option>
-                <option value="Fraud">Fraud</option>
-                <option value="DrugOffense">Drug Offense</option>
-                <option value="SexualOffense">Sexual Offense</option>
-                <option value="Kidnapping">Kidnapping</option>
-                <option value="Other">Other</option>
-              </select>
-              {renderError('caseType')}
-          </div>
-          <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-            <input
-              type="date"
-                name="startDate"
-                value={formData.startDate}
-              onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-4 py-2 border ${errors.startDate ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-            />
-              {renderError('startDate')}
-          </div>
-          <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Sentence Year</label>
-              <input
-                type="number"
-                name="sentenceYear"
-                value={formData.sentenceYear}
-              onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-4 py-2 border ${errors.sentenceYear ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                step="0.5"
-              />
-              {renderError('sentenceYear')}
-          </div>
-          <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Released Date</label>
-            <input
-              type="date"
-              name="releasedDate"
-              value={formData.releasedDate}
-              onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-4 py-2 border ${errors.releasedDate ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                readOnly
-              />
-              {renderError('releasedDate')}
+          {/* Case Information Tab */}
+          {activeTab === "case" && (
+            <div className="animate-fadeIn">
+              <h3 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2">Case Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Case Type</label>
+                  <select
+                    name="caseType"
+                    value={formData.caseType}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.caseType ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  >
+                    <option value="">Select Case Type</option>
+                    <option value="Criminal">Criminal</option>
+                    <option value="Civil">Civil</option>
+                    <option value="Administrative">Administrative</option>
+                  </select>
+                  {renderError('caseType')}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Sentence (Years)</label>
+                  <input
+                    type="number"
+                    name="sentenceYear"
+                    value={formData.sentenceYear}
+                    placeholder="Enter sentence in years"
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    min="0"
+                    step="0.5"
+                    className={`w-full px-4 py-2 border ${errors.sentenceYear ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  />
+                  {renderError('sentenceYear')}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                  <input
+                    type="date"
+                    name="startDate"
+                    value={formData.startDate}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.startDate ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  />
+                  {renderError('startDate')}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Release Date</label>
+                  <input
+                    type="date"
+                    name="releasedDate"
+                    value={formData.releasedDate}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.releasedDate ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                    readOnly
+                  />
+                  {renderError('releasedDate')}
+                </div>
+                <div className="md:col-span-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Sentence Reason</label>
+                  <textarea
+                    name="sentenceReason"
+                    value={formData.sentenceReason}
+                    placeholder="Enter reason for sentence"
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    rows="3"
+                    className={`w-full px-4 py-2 border ${errors.sentenceReason ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  ></textarea>
+                  {renderError('sentenceReason')}
+                </div>
+              </div>
             </div>
-            <div className="md:col-span-2 lg:col-span-3">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Sentence Reason</label>
-              <textarea
-                name="sentenceReason"
-                value={formData.sentenceReason}
-                placeholder="Enter sentence reason"
-                onChange={handleChange}
-                onBlur={handleBlur}
-                rows="3"
-                className={`w-full px-4 py-2 border ${errors.sentenceReason ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              />
-              {renderError('sentenceReason')}
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Signature Upload */}
@@ -1006,7 +1153,7 @@ const UpdateInmate = ({setOpen, _id}) => {
         <div className="flex justify-end space-x-4 pt-6">
           <button
             type="button"
-            onClick={() => navigate("/securityStaff-dashboard/inmates")}
+            onClick={() => setOpen && setOpen(false)}
             className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
           >
             Cancel

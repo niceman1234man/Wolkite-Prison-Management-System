@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axiosInstance from "../utils/axiosInstance"; // Axios utility
 import { useSelector } from "react-redux"; // To access sidebar state
+import { FaExclamationTriangle } from "react-icons/fa";
 const behaviorRules = [
   { id: 1, label: "የማ/ቤቱ አባሎች የሚያከብር", options: [1, 2, 3, 4, 5] },
   { id: 2, label: "በማንኛውም የአድማ ሥራ ላይ የማይግኝ", options: [1, 2, 3, 4, 5] },
@@ -46,6 +47,8 @@ const InmateBehavior = () => {
   const [formdata, setFormData] = useState({
     committeeName: ""
   });
+  const [alreadyTrackedThisMonth, setAlreadyTrackedThisMonth] = useState(false);
+  const [lastTrackedDate, setLastTrackedDate] = useState(null);
   
   // Sidebar collapse state from Redux
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
@@ -79,6 +82,9 @@ const InmateBehavior = () => {
           durationToParole: inmate.durationToParole || "N/A",
           durationFromParoleToEnd: inmate.durationFromParoleToEnd || "N/A"
         });
+        
+        // Check for monthly tracking right after getting inmate details
+        fetchBehaviorLogs();
       } else {
         console.error("Inmate data not found", response);
       }
@@ -119,25 +125,74 @@ const InmateBehavior = () => {
         return;
       }
 
+      console.log("Checking behavior logs for inmate ID:", inmateId);
       const response = await axiosInstance.get(`/parole-tracking/${inmateId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
-      if (response.data?.behaviorLogs) {
-        const trackedDaysCount = calculateTrackedDays(
-          response.data.behaviorLogs
-        );
+      console.log("Parole tracking response:", response.data);
+
+      if (response.data?.parole?.behaviorLogs) {
+        const behaviorLogs = response.data.parole.behaviorLogs;
+        console.log("Behavior logs found:", behaviorLogs);
+        
+        const trackedDaysCount = calculateTrackedDays(behaviorLogs);
         setTrackedDays(trackedDaysCount);
+        
+        // Check if there's already a tracking record for the current month
+        const currentDate = new Date();
+        const currentMonth = currentDate.getMonth();
+        const currentYear = currentDate.getFullYear();
+        
+        console.log("Checking for month:", currentMonth, "year:", currentYear);
+        
+        // Get logs with dates from this month
+        const logsThisMonth = behaviorLogs.filter(log => {
+          const logDate = new Date(log.date);
+          console.log("Log date:", logDate, "Month:", logDate.getMonth(), "Year:", logDate.getFullYear());
+          return logDate.getMonth() === currentMonth && logDate.getFullYear() === currentYear;
+        });
+        
+        console.log("Logs this month:", logsThisMonth);
+        
+        // If there are any logs from this month, we've already tracked
+        if (logsThisMonth.length > 0) {
+          console.log("FOUND LOGS FOR CURRENT MONTH - tracking already done");
+          setAlreadyTrackedThisMonth(true);
+          setLastTrackedDate(new Date(logsThisMonth[0].date));
+          
+          // Force alert to make sure user notices
+          setTimeout(() => {
+            alert("You have already submitted behavior tracking for this inmate this month. You can only track behavior once per month.");
+          }, 1000);
+        } else {
+          console.log("NO LOGS FOUND for current month - tracking not done yet");
+          setAlreadyTrackedThisMonth(false);
+          
+          // Sort logs by date (newest first) for last tracked date
+          const sortedLogs = [...behaviorLogs].sort((a, b) => 
+            new Date(b.date) - new Date(a.date)
+          );
+          
+          if (sortedLogs.length > 0) {
+            setLastTrackedDate(new Date(sortedLogs[0].date));
+          }
+        }
+      } else {
+        console.log("No behavior logs found for this inmate");
+        // Reset states if no behavior logs found
+        setAlreadyTrackedThisMonth(false);
+        setLastTrackedDate(null);
+        setTrackedDays(0);
       }
     } catch (error) {
       console.error("Error fetching behavior logs:", error);
-      alert("Failed to fetch behavior logs.");
+      // Reset states on error
+      setAlreadyTrackedThisMonth(false);
+      setLastTrackedDate(null);
+      setTrackedDays(0);
     }
   };
-
-  useEffect(() => {
-    fetchBehaviorLogs(); 
-  }, [inmateId]);
 
   // Function to calculate parole eligibility
   const checkParoleEligibility = () => {
@@ -170,7 +225,7 @@ const InmateBehavior = () => {
   // Submit behavior log
   const handleSubmit = async (e) => {
     e.preventDefault();
-  
+    
     // Validate if at least one behavior is selected
     if (Object.keys(selectedBehaviors).length === 0) {
       alert("Please select at least one behavior.");
@@ -208,14 +263,9 @@ const InmateBehavior = () => {
       formData.append('behaviorLogs', JSON.stringify(behaviorLogs));
       formData.append('committeeNames', formdata.committeeName);
       
-      // Append signature file if it exists - using exact field name expected by backend
+      // Append signature file if it exists
       if (signature) {
         formData.append('signature', signature);
-      }
-  
-      // Log form data for debugging
-      for (let pair of formData.entries()) {
-        console.log(pair[0] + ': ' + pair[1]);
       }
   
       // Send data to the backend
@@ -225,15 +275,22 @@ const InmateBehavior = () => {
         }
       });
     
-      if (response.status === 201) {
+      if (response.data.success) {
         alert("Behavior log submitted successfully!");
+        // Update the tracking status for this month
+        setAlreadyTrackedThisMonth(true);
+        setLastTrackedDate(new Date());
         navigate(`/policeOfficer-dashboard/parole`);
       } else {
-        alert("Failed to submit behavior log.");
+        alert(response.data.message || "Failed to submit behavior log.");
       }
     } catch (error) {
       console.error("Error submitting behavior log:", error);
-      alert(`Error submitting behavior log: ${error.message}`);
+      if (error.response?.data?.message) {
+        alert(error.response.data.message);
+      } else {
+        alert(`Error submitting behavior log: ${error.message}`);
+      }
     }
   };
 
@@ -247,6 +304,14 @@ const InmateBehavior = () => {
         <h2 className="text-2xl font-bold text-center">
           Inmate Behavior Tracking
         </h2>
+        {alreadyTrackedThisMonth && (
+          <div className="mt-3 bg-red-800 text-white p-3 rounded-md text-center shadow-md transform transition-all animate-pulse">
+            <p className="font-bold flex items-center justify-center">
+              <FaExclamationTriangle className="text-yellow-300 text-xl mr-2" />
+              <span className="text-lg uppercase tracking-wider">Monthly tracking for {inmateDetails?.inmate_name} already completed!</span>
+            </p>
+          </div>
+        )}
       </div>
 
       {loadingInmates ? (
@@ -256,6 +321,28 @@ const InmateBehavior = () => {
         </div>
       ) : inmateDetails ? (
         <div className="p-6">
+          {alreadyTrackedThisMonth && (
+            <div className="mb-6 p-4 bg-gradient-to-r from-red-50 to-red-100 border-l-4 border-red-500 rounded-lg shadow-md">
+              <div className="flex items-center">
+                <div className="bg-red-500 rounded-full p-2 mr-4">
+                  <FaExclamationTriangle className="text-white text-2xl" />
+                </div>
+                <div>
+                  <h3 className="text-red-700 font-bold text-lg mb-1">Monthly Tracking Already Completed</h3>
+                  <p className="text-red-600">
+                    You have already submitted behavior tracking for <span className="font-bold">{inmateDetails.inmate_name}</span> this month.
+                  </p>
+                  <p className="text-red-600 mt-2">
+                    <span className="font-semibold">Last tracked on:</span> {formatToLocalDate(lastTrackedDate)}
+                  </p>
+                  <p className="text-red-600 mt-2 font-medium">
+                    The next tracking period will be available starting next month.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-200">
             <h3 className="text-xl font-semibold mb-4 text-teal-700 border-b pb-2">
               Inmate Details
@@ -298,6 +385,11 @@ const InmateBehavior = () => {
               <div className="inline-block bg-teal-100 px-4 py-2 rounded-full">
                 <span className="font-semibold">Tracked Days:</span> {trackedDays}
               </div>
+              {lastTrackedDate && (
+                <div className="inline-block bg-blue-100 px-4 py-2 rounded-full ml-3">
+                  <span className="font-semibold">Last Tracked:</span> {formatToLocalDate(lastTrackedDate)}
+                </div>
+              )}
             </div>
           </div>
 
@@ -381,12 +473,56 @@ const InmateBehavior = () => {
               </div>
             </div>
             
+            {alreadyTrackedThisMonth && (
+              <div className="fixed inset-0 bg-black bg-opacity-20 z-10 flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+                <div className="bg-white p-6 rounded-lg shadow-lg max-w-2xl w-full m-4 border-2 border-red-500">
+                  <h2 className="text-xl font-bold text-red-600 mb-4 flex items-center">
+                    <FaExclamationTriangle className="mr-2 text-2xl" /> Form Locked - Monthly Tracking Limit Reached
+                  </h2>
+                  <p className="mb-3">
+                    You have already submitted behavior tracking for <span className="font-bold">{inmateDetails.inmate_name}</span> on <span className="font-bold">{formatToLocalDate(lastTrackedDate)}</span>.
+                  </p>
+                  <p className="mb-3">
+                    According to the system policy, behavior tracking can only be done once per month for each inmate.
+                  </p>
+                  <p className="mb-4 font-medium">
+                    The next tracking period will be available starting next month.
+                  </p>
+                  <div className="mt-4 text-center">
+                    <button 
+                      type="button" 
+                      onClick={() => navigate('/policeOfficer-dashboard/parole')}
+                      className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded-md font-medium"
+                    >
+                      Return to Parole List
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="text-center">
+              {alreadyTrackedThisMonth && (
+                <div className="mb-4 p-4 bg-red-50 border-2 border-red-300 rounded-lg shadow">
+                  <p className="text-red-600 font-bold flex items-center justify-center">
+                    <FaExclamationTriangle className="text-red-500 text-xl mr-2" />
+                    <span className="text-lg">Form locked: Tracking already completed for {formatToLocalDate(lastTrackedDate)}</span>
+                  </p>
+                  <p className="text-red-600 mt-2">
+                    You can only track behavior once per month. Next tracking will be available next month.
+                  </p>
+                </div>
+              )}
               <button
                 type="submit"
-                className="bg-teal-600 hover:bg-teal-700 text-white font-bold py-3 px-8 rounded-lg transition duration-200 ease-in-out transform hover:scale-105 shadow-md"
+                className={`${
+                  alreadyTrackedThisMonth 
+                    ? "bg-gray-400 cursor-not-allowed" 
+                    : "bg-teal-600 hover:bg-teal-700 transform hover:scale-105"
+                } text-white font-bold py-3 px-8 rounded-lg transition duration-200 ease-in-out shadow-md`}
+                disabled={alreadyTrackedThisMonth}
               >
-                Submit Behavior Log
+                {alreadyTrackedThisMonth ? "Monthly Tracking Already Completed" : "Submit Behavior Log"}
               </button>
             </div>
           </form>

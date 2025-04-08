@@ -4,6 +4,22 @@ import axios from "axios";
 import AddModal from "@/components/Modals/AddModal";
 import ViewParole from "@/components/CourtDashboard/CourtInstructions/ViewParole";
 import { useState } from "react";
+
+// Function to format dates
+const formatDate = (dateString) => {
+  if (!dateString) return "N/A";
+  try {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric'
+    });
+  } catch (error) {
+    console.error("Date formatting error:", error);
+    return dateString;
+  }
+};
+
 export const columns = [
   {
     name: "S No",
@@ -20,13 +36,19 @@ export const columns = [
     name: "Age",
     selector: (row) => row.age || "N/A",
     sortable: true,
-    width: "70px",
+    width: "90px",
+  },
+  {
+    name: "Parole Date",
+    selector: (row) => formatDate(row.paroleDate),
+    sortable: true,
+    width: "150px",
   },
   {
     name: "Gender",
     selector: (row) => row.gender || "N/A",
     sortable: true,
-    width: "90px",
+    width: "110px",
   },
   {
     name: "Sentence",
@@ -34,15 +56,37 @@ export const columns = [
     sortable: true,
   },
   {
+    name: "Status",
+    selector: (row) => row.status,
+    sortable: true,
+    cell: (row) => (
+      <div>
+        {row.status && (
+          <span
+            className={`px-3 py-1 rounded-full text-white text-sm font-medium ${
+              row.status === "accepted"
+                ? "bg-green-600"
+                : row.status === "rejected"
+                ? "bg-red-600"
+                : "bg-yellow-600"
+            }`}
+          >
+            {row.status}
+          </span>
+        )}
+      </div>
+    ),
+    width: "130px",
+  },
+  {
     name: "Action",
     selector: (row) => row.action,
   },
 ];
 
-export const ParoleRequestButtons = ({ _id,status }) => {
+export const ParoleRequestButtons = ({ _id }) => {
   const navigate = useNavigate();
-  const [view,setView]=useState(false);
-
+  const [view, setView] = useState(false);
 
   return (
     <div className="flex space-x-3 text-white">
@@ -55,21 +99,6 @@ export const ParoleRequestButtons = ({ _id,status }) => {
       <AddModal open={view} setOpen={setView}>
         <ViewParole id={_id} />
       </AddModal>
-     
-      {status && (
-        <button
-          className={`px-3 py-1 rounded ${
-            status === "accepted"
-              ? "bg-green-600 hover:bg-green-700"
-              : status === "rejected"
-              ? "bg-red-600 hover:bg-red-700"
-              : "bg-yellow-600 hover:bg-yellow-700"
-          }`}
-        >
-          {status}
-        </button>
-      )}
-   
     </div>
   );
 };

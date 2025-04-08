@@ -23,25 +23,30 @@ export const addBehaviorLog = async (req, res) => {
     // Get file paths for signatures
     const signature = req.files?.signature?.[0]?.filename;
     
-
-    console.log("Signature Paths:", [
-      signature
-     
-    ]);
+    console.log("Signature Paths:", [signature]);
     let parsedbehaviorLogs = JSON.parse(behaviorLogs);
     
-    const logsToSave = parsedbehaviorLogs.map((log) => ({
-      rule: log.behaviorType,
-      points: log.points,
-      date: new Date(), 
-    }));
-
-    console.log("Behavior Logs to Save:", logsToSave);
-
-  
+    // First, check if there are any logs for the current month
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+    
     let paroleTracking = await ParoleTracking.findOne({ inmateId });
-
+    
     if (paroleTracking) {
+      // Check for existing logs in the current month
+      const existingLogsThisMonth = paroleTracking.behaviorLogs.filter(log => {
+        const logDate = new Date(log.date);
+        return logDate.getMonth() === currentMonth && logDate.getFullYear() === currentYear;
+      });
+      
+      if (existingLogsThisMonth.length > 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Behavior tracking has already been completed for this month. You can only track behavior once per month."
+        });
+      }
+      
       // Update existing record
       paroleTracking.fullName = fullName;
       paroleTracking.age = age;
@@ -53,14 +58,25 @@ export const addBehaviorLog = async (req, res) => {
       paroleTracking.sentenceYear = sentenceYear;
       paroleTracking.durationToParole = durationToParole;
       paroleTracking.durationFromParoleToEnd = durationFromParoleToEnd;
+      
+      // Add new logs with current date
+      const logsToSave = parsedbehaviorLogs.map((log) => ({
+        rule: log.behaviorType,
+        points: log.points,
+        date: new Date(),
+      }));
+      
       paroleTracking.behaviorLogs.push(...logsToSave);
       paroleTracking.committeeNames = committeeNames;
-      paroleTracking.signatures = [
-        signature,
-        
-      ].filter(Boolean);
+      paroleTracking.signatures = [signature].filter(Boolean);
     } else {
       // Create new record
+      const logsToSave = parsedbehaviorLogs.map((log) => ({
+        rule: log.behaviorType,
+        points: log.points,
+        date: new Date(),
+      }));
+      
       paroleTracking = new ParoleTracking({
         inmateId,
         fullName,
@@ -80,8 +96,6 @@ export const addBehaviorLog = async (req, res) => {
     }
 
     await paroleTracking.calculatePoints();
-
-    //
     await paroleTracking.save();
 
     console.log("ParoleTracking record saved successfully:", paroleTracking);
@@ -219,7 +233,68 @@ export const updateResponse = async (req, res) => {
 };
 
 
+export const updateReport = async (req, res) => {
+  try {
+    const { inmateId } = req.params;
+    const { isReported, paroleDate } = req.body;
+    const files = req.files;
+    
+    let paroleResponse = await ParoleTracking.findOne({ inmateId });
 
+    if (!paroleResponse) {
+      return res.status(404).json({ message: "Parole request not found" });
+    }
+
+    // Update the report status
+    paroleResponse.isReported = isReported;
+    
+    // Only update paroleDate if it's provided and valid
+    if (paroleDate && paroleDate !== "undefined") {
+      paroleResponse.paroleDate = paroleDate;
+    }
+    
+    // Process committee data and signatures
+    const committeeData = [];
+    const signatures = files.map(file => file.filename);
+    
+    // Extract committee data from request body
+    Object.keys(req.body).forEach(key => {
+      if (key.startsWith('committee[')) {
+        const index = key.match(/\[(\d+)\]/)[1];
+        const field = key.split('.').pop();
+        
+        if (!committeeData[index]) {
+          committeeData[index] = {};
+        }
+        
+        committeeData[index][field] = req.body[key];
+      }
+    });
+    
+    // Combine committee data with signatures
+    if (committeeData.length > 0) {
+      paroleResponse.committeeData = committeeData.map((member, index) => ({
+        name: member.name,
+        position: member.position,
+        signature: signatures[index] || null,
+        signatureType: member.signatureType || 'application/octet-stream'
+      }));
+    }
+
+    await paroleResponse.save();
+
+    res.status(200).json({
+      message: "Parole Report Sent Successfully",
+      paroleResponse
+    });
+  } catch (error) {
+    console.error("Error updating parole report:", error);
+    res.status(500).json({
+      message: "Internal server error",
+      error: error.message
+    });
+  }
+};
 
 
 export const getParoleRecordById = async (req, res) => {

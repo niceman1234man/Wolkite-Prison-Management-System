@@ -84,7 +84,7 @@ export const columns = [
     name: "Hearing Date",
     selector: (row) => row.hearingDate,
     sortable: true,
-    width: "100px",
+    width: "150px",
     cell: (row) => (
       <div className="flex items-center text-gray-700">
         <FiCalendar className="mr-1.5 text-gray-500" size={14} />
@@ -96,7 +96,7 @@ export const columns = [
     name: "Effective Date",
     selector: (row) => row.effectiveDate,
     sortable: true,
-    width: "100px",
+    width: "150px",
     cell: (row) => (
       <div className="flex items-center text-gray-700">
         <FiCalendar className=" text-gray-500" size={14} />
@@ -108,7 +108,7 @@ export const columns = [
     name: "Action",
     selector: (row) => row.action,
     center: true,
-    width: "120px",
+    width: "200px",
   },
 ];
 
@@ -121,7 +121,7 @@ export const UserButtons = ({ _id }) => {
   return (
     <div className="flex space-x-2">
       <button
-        className=" py-1.5 bg-gradient-to-r from-teal-500 to-teal-600 text-white rounded-md shadow-sm hover:from-teal-600 hover:to-teal-700 transition-colors flex items-center text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-opacity-50"
+        className=" py-1.5 px-3 bg-gradient-to-r from-teal-500 to-teal-600 text-white rounded-md shadow-sm hover:from-teal-600 hover:to-teal-700 transition-colors flex items-center text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-opacity-50"
         onClick={() => setView(true)}
       >
         <FiEye className="mr-1.5" size={14} />

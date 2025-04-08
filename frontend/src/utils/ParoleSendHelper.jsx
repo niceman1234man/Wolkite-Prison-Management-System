@@ -7,9 +7,9 @@ import { useState } from "react";
 
 export const columns = [
   {
-    name: "S No",
+    name: "P_No",
     selector: (row) => row.sno,
-    width: "60px",
+    width: "80px",
     
   },
   {
@@ -21,18 +21,48 @@ export const columns = [
     name: "Age",
     selector: (row) => row.age || "N/A",
     sortable: true,
-    width: "70px",
+    width: "90px",
   },
   {
     name: "Gender",
     selector: (row) => row.gender || "N/A",
     sortable: true,
-    width: "90px",
+    width: "100px",
   },
+  {
+    name: "Parole Date",
+    selector: (row) => row.paroleDate || "N/A",
+    sortable: true,
+    width: "150px",
+  },
+  
   {
     name: "Sentence",
     selector: (row) => row.sentence || "N/A",
     sortable: true,
+  },
+  {
+    name: "Status",
+    selector: (row) => row.status,
+    sortable: true,
+    cell: (row) => (
+      <div>
+        {row.status && (
+          <span
+            className={`px-3 py-1 rounded-full text-white text-sm font-medium ${
+              row.status === "accepted"
+                ? "bg-green-600"
+                : row.status === "rejected"
+                ? "bg-red-600"
+                : "bg-yellow-600"
+            }`}
+          >
+            {row.status}
+          </span>
+        )}
+      </div>
+    ),
+    width: "120px",
   },
   {
     name: "Action",
@@ -40,7 +70,7 @@ export const columns = [
   },
 ];
 
-export const InmateButtons = ({ _id, status, onDelete }) => {
+export const InmateButtons = ({ _id, onDelete }) => {
   const navigate = useNavigate();
   const [view, setView] = useState(false);
 
@@ -80,20 +110,6 @@ export const InmateButtons = ({ _id, status, onDelete }) => {
       >
         View
       </button>
-
-      {status && (
-        <button
-          className={`px-3 py-1 rounded ${
-            status === "accepted"
-              ? "bg-green-600 hover:bg-green-700"
-              : status === "rejected"
-              ? "bg-red-600 hover:bg-red-700"
-              : "bg-yellow-600 hover:bg-yellow-700"
-          }`}
-        >
-          {status}
-        </button>
-      )}
 
       <AddModal open={view} setOpen={setView}>
         <ViewParole id={_id} />

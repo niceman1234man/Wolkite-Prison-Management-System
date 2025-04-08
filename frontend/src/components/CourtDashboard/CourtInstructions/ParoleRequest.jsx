@@ -14,6 +14,7 @@ const ParoleRequest = () => {
   const [filteredInmates, setFilteredInmates] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeFilter, setActiveFilter] = useState("All");
 
   // Fetch inmates from backend
   const fetchInmates = async () => {
@@ -31,7 +32,8 @@ const ParoleRequest = () => {
             age: inmate.age || "N/A",
             gender: inmate.gender || "N/A",
             sentence: inmate.caseType || "N/A",
-            status: inmate.status || "Pending", // ✅ Added status field for filtering
+            paroleDate: inmate.paroleDate || "N/A",
+            status: inmate.status || "Pending",
             action: <ParoleRequestButtons _id={inmate.inmateId} onDelete={fetchInmates} status={ inmate.status } />,
           }));
 
@@ -71,6 +73,7 @@ const ParoleRequest = () => {
 
   // Filter by status
   const filterByStatus = (status) => {
+    setActiveFilter(status);
     if (status === "All") {
       setFilteredInmates(inmates);
     } else {
@@ -79,67 +82,131 @@ const ParoleRequest = () => {
     }
   };
 
+  const customStyles = {
+    headCells: {
+      style: {
+        fontSize: '16px',
+        fontWeight: 'bold',
+        backgroundColor: '#f0f9fa',
+        paddingTop: '12px',
+        paddingBottom: '12px',
+      },
+    },
+    rows: {
+      style: {
+        fontSize: '14px',
+        minHeight: '56px',
+        '&:nth-of-type(odd)': {
+          backgroundColor: '#f8fbfd',
+        },
+        '&:hover': {
+          backgroundColor: '#f0f7fa',
+          cursor: 'pointer',
+        },
+      },
+    },
+    pagination: {
+      style: {
+        borderTop: '1px solid #e2e8f0',
+        fontSize: '14px',
+      },
+    },
+  };
+
   return (
     <div
-      className={`p-6 mt-24 transition-all duration-300 ${
-        isCollapsed ? "ml-16 w-[calc(100%-4rem)]" : "ml-64 w-[calc(100%-16rem)]"
+      className={`transition-all mt-10 duration-300 ${
+        isCollapsed ? "ml-16" : "ml-64"
       }`}
     >
-      {/* Header Bar */}
-      <div
-        className={`bg-white shadow-md p-4 fixed top-12 z-20 flex justify-between items-center transition-all duration-300 ml-2 ${
-          isCollapsed ? "left-16 w-[calc(100%-5rem)]" : "left-64 w-[calc(100%-17rem)]"
-        }`}
-        style={{ zIndex: 20 }}
-      >
-        <h3 className="text-2xl font-bold text-gray-800 text-center">
-          Manage Parole Applications
-        </h3>
+      <div className="bg-white rounded-lg shadow-md overflow-hidden m-6">
+        {/* Header with gradient background */}
+        <div className="bg-gradient-to-r from-teal-600 to-teal-500 text-white p-6">
+          <h2 className="text-2xl font-bold">Manage Parole Applications</h2>
+          <p className="text-teal-100 mt-1">Review and respond to parole requests</p>
+        </div>
 
-        {/* Search Bar */}
-        <div className="relative flex items-center w-72 md:w-1/2 lg:w-1/3 ml-auto">
-          <FaSearch className="absolute left-4 text-gray-500" />
-          <input
-            type="text"
-            placeholder="Search by inmate name..."
-            className="px-4 py-2 pl-10 border border-gray-300 rounded-lg shadow-sm w-full focus:outline-none focus:ring-2 focus:ring-teal-500"
-            onChange={handleSearch}
-            value={searchQuery}
-          />
+        {/* Controls section */}
+        <div className="p-6 border-b border-gray-200">
+          <div className="grid grid-cols-12 gap-4 items-center">
+            {/* Search input */}
+            <div className="col-span-12 md:col-span-5 relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <FaSearch className="h-5 w-5 text-gray-400" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search by inmate name"
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-md w-full focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                onChange={handleSearch}
+                value={searchQuery}
+              />
+            </div>
+            
+            {/* Filter buttons */}
+            <div className="col-span-12 md:col-span-7 flex justify-end space-x-2">
+              {["All", "Pending", "Accepted", "Rejected"].map((status) => (
+                <button
+                  key={status}
+                  className={`px-4 py-2 rounded-md transition-all duration-200 whitespace-nowrap ${
+                    activeFilter === status 
+                    ? status === "All" 
+                      ? "bg-teal-600 text-white" 
+                      : status === "Pending" 
+                      ? "bg-yellow-500 text-white" 
+                      : status === "Accepted" 
+                      ? "bg-green-600 text-white" 
+                      : "bg-red-600 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                  onClick={() => filterByStatus(status)}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Table section */}
+        <div className="p-6">
+          {loading ? (
+            <div className="flex justify-center items-center h-60">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal-600"></div>
+              <span className="ml-3 text-gray-600">Loading parole requests...</span>
+            </div>
+          ) : filteredInmates.length === 0 ? (
+            <div className="text-center py-16 text-gray-500">
+              <svg className="w-16 h-16 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="mt-4 text-lg">No parole requests found</p>
+              <button
+                onClick={() => {
+                  setActiveFilter("All");
+                  setFilteredInmates(inmates);
+                  setSearchQuery("");
+                }}
+                className="mt-2 text-teal-600 underline hover:text-teal-800"
+              >
+                Reset filters
+              </button>
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-lg border border-gray-200">
+              <DataTable 
+                columns={columns} 
+                data={filteredInmates} 
+                pagination 
+                customStyles={customStyles}
+                highlightOnHover
+                pointerOnHover
+                responsive
+              />
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Filters */}
-      <div className="flex flex-col md:flex-row justify-between mt-10 items-center mb-6 gap-4">
-        <div className="flex flex-wrap gap-2">
-          {["All", "Pending", "Accepted", "Rejected"].map((status) => (
-            <button
-              key={status}
-              className={`px-3 py-1 rounded-md text-white ${
-                status === "All"
-                  ? "bg-gray-600 hover:bg-gray-700"
-                  : status === "Pending"
-                  ? "bg-yellow-600 hover:bg-yellow-700"
-                  : status === "Accepted"
-                  ? "bg-green-600 hover:bg-green-700"
-                  : "bg-red-600 hover:bg-red-700"
-              }`}
-              onClick={() => filterByStatus(status)}
-            >
-              {status}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Data Table */}
-      {loading ? (
-        <div className="text-center text-gray-600">Loading inmates...</div>
-      ) : (
-        <div className="overflow-x-auto bg-white p-5 rounded-lg shadow-md">
-          <DataTable columns={columns} data={filteredInmates} pagination />
-        </div>
-      )}
     </div>
   );
 };

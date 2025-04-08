@@ -3,14 +3,31 @@ import axiosInstance from "../../../utils/axiosInstance";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import ConfirmModal from "@/components/Modals/ConfirmModal";
-import { FiArrowLeft, FiTrash2, FiSend, FiPrinter, FiFilePlus, FiFileText, FiCalendar } from "react-icons/fi";
+import { FiArrowLeft, FiTrash2, FiSend, FiPrinter, FiFilePlus, FiFileText, FiCalendar, FiUser, FiMapPin } from "react-icons/fi";
+
+// Helper function to calculate age from birthdate
+const calculateAge = (birthdate) => {
+  if (!birthdate) return "N/A";
+  
+  const birthDate = new Date(birthdate);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  
+  // Adjust age if birthday hasn't occurred yet this year
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  
+  return age;
+};
 
 const ViewInstruction = ({ id }) => {
   const navigate = useNavigate();
   const [instruction, setInstruction] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-   const [openDelete, setOpenDelete] = useState(false);
+  const [openDelete, setOpenDelete] = useState(false);
   const contentRef = useRef(null);
 
   // Format date to localized string
@@ -136,40 +153,78 @@ const ViewInstruction = ({ id }) => {
             <div class="case-number">Case Number: ${instruction?.courtCaseNumber || "N/A"}</div>
           </div>
           
-          <div class="grid">
-            <div class="field">
-              <div class="field-label">Prison Name:</div>
-              <div class="field-value">${instruction?.prisonName || "N/A"}</div>
+          <div class="section">
+            <div class="section-title">Personal Information</div>
+            <div class="grid">
+              <div class="field">
+                <div class="field-label">Name:</div>
+                <div class="field-value">${instruction?.firstName || ""} ${instruction?.middleName || ""} ${instruction?.lastName || ""}</div>
+              </div>
+              
+              <div class="field">
+                <div class="field-label">Gender:</div>
+                <div class="field-value">${instruction?.gender || "N/A"}</div>
+              </div>
+              
+              <div class="field">
+                <div class="field-label">Birth Date:</div>
+                <div class="field-value">${formatDate(instruction?.birthdate)}</div>
+              </div>
+              
+              <div class="field">
+                <div class="field-label">Age:</div>
+                <div class="field-value">${calculateAge(instruction?.birthdate)}</div>
+              </div>
+              
+              <div class="field">
+                <div class="field-label">Nationality:</div>
+                <div class="field-value">${instruction?.nationality || "N/A"}</div>
+              </div>
+              
+              <div class="field">
+                <div class="field-label">Marital Status:</div>
+                <div class="field-value">${instruction?.maritalStatus || "N/A"}</div>
+              </div>
             </div>
-            
-            <div class="field">
-              <div class="field-label">Judge Name:</div>
-              <div class="field-value">${instruction?.judgeName || "N/A"}</div>
-            </div>
-            
-            <div class="field">
-              <div class="field-label">Verdict:</div>
-              <div class="field-value">${instruction?.verdict === "guilty" ? "Guilty" : instruction?.verdict === "not_guilty" ? "Not Guilty" : instruction?.verdict || "N/A"}</div>
-            </div>
-            
-            <div class="field">
-              <div class="field-label">Hearing Date:</div>
-              <div class="field-value">${formatDate(instruction?.hearingDate)}</div>
-            </div>
-            
-            <div class="field full-width">
-              <div class="field-label">Instructions:</div>
-              <div class="field-value">${instruction?.instructions || "N/A"}</div>
-            </div>
-            
-            <div class="field">
-              <div class="field-label">Effective Date:</div>
-              <div class="field-value">${formatDate(instruction?.effectiveDate)}</div>
-            </div>
-            
-            <div class="field">
-              <div class="field-label">Send Date:</div>
-              <div class="field-value">${formatDate(instruction?.sendDate)}</div>
+          </div>
+          
+          <div class="section">
+            <div class="section-title">Case Information</div>
+            <div class="grid">
+              <div class="field">
+                <div class="field-label">Prison Name:</div>
+                <div class="field-value">${instruction?.prisonName || "N/A"}</div>
+              </div>
+              
+              <div class="field">
+                <div class="field-label">Judge Name:</div>
+                <div class="field-value">${instruction?.judgeName || "N/A"}</div>
+              </div>
+              
+              <div class="field">
+                <div class="field-label">Verdict:</div>
+                <div class="field-value">${instruction?.verdict === "guilty" ? "Guilty" : instruction?.verdict === "not_guilty" ? "Not Guilty" : instruction?.verdict || "N/A"}</div>
+              </div>
+              
+              <div class="field">
+                <div class="field-label">Hearing Date:</div>
+                <div class="field-value">${formatDate(instruction?.hearingDate)}</div>
+              </div>
+              
+              <div class="field full-width">
+                <div class="field-label">Instructions:</div>
+                <div class="field-value">${instruction?.instructions || "N/A"}</div>
+              </div>
+              
+              <div class="field">
+                <div class="field-label">Effective Date:</div>
+                <div class="field-value">${formatDate(instruction?.effectiveDate)}</div>
+              </div>
+              
+              <div class="field">
+                <div class="field-label">Send Date:</div>
+                <div class="field-value">${formatDate(instruction?.sendDate)}</div>
+              </div>
             </div>
           </div>
           
@@ -297,58 +352,170 @@ const ViewInstruction = ({ id }) => {
 
       {/* Main content */}
       <div className="bg-white rounded-b-lg shadow-md p-6 border border-gray-200">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Information Cards */}
-          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Prison Name</h3>
-            <p className="text-lg font-medium text-gray-800">{instruction.prisonName}</p>
-          </div>
-
-          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Judge Name</h3>
-            <p className="text-lg font-medium text-gray-800">{instruction.judgeName || instruction.inmate}</p>
-          </div>
-
-          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Verdict</h3>
-            <p className={`text-lg font-medium ${instruction.verdict === "guilty" ? "text-red-600" : "text-green-600"}`}>
-              {instruction.verdict === "guilty" ? "Guilty" : instruction.verdict === "not_guilty" ? "Not Guilty" : instruction.verdict}
+        {/* Personal Information Section */}
+        <div className="mb-8">
+          <h3 className="text-lg font-semibold text-indigo-800 mb-4 flex items-center border-b pb-2">
+            <FiUser className="mr-2" /> Personal Information
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">Full Name</h4>
+              <p className="text-base font-medium text-gray-800">
+                {instruction.firstName} {instruction.middleName} {instruction.lastName}
               </p>
             </div>
-
-          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Hearing Date</h3>
-            <p className="text-lg font-medium text-gray-800 flex items-center">
-              <FiCalendar className="mr-2 text-gray-500" size={16} />
-              {formatDate(instruction.hearingDate)}
-            </p>
+            
+            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">Birth Date</h4>
+              <p className="text-base font-medium text-gray-800 flex items-center">
+                <FiCalendar className="mr-2 text-gray-500" size={14} />
+                {formatDate(instruction.birthdate)}
+              </p>
             </div>
-
-          {/* Full width instruction text */}
-          <div className="md:col-span-2 bg-blue-50 p-5 rounded-lg border border-blue-100">
-            <div className="flex items-center mb-3">
-              <FiFileText className="text-blue-500 mr-2" />
-              <h3 className="text-sm font-semibold text-blue-800 uppercase">Instructions</h3>
+            
+            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">Age</h4>
+              <p className="text-base font-medium text-gray-800">
+                {calculateAge(instruction.birthdate)}
+              </p>
             </div>
-            <p className="text-gray-800 whitespace-pre-line">{instruction.instructions}</p>
+            
+            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">Gender</h4>
+              <p className="text-base font-medium text-gray-800">
+                {instruction.gender ? instruction.gender.charAt(0).toUpperCase() + instruction.gender.slice(1) : "N/A"}
+              </p>
             </div>
-
-          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Effective Date</h3>
-            <p className="text-lg font-medium text-gray-800 flex items-center">
-              <FiCalendar className="mr-2 text-gray-500" size={16} />
-              {formatDate(instruction.effectiveDate)}
-            </p>
+            
+            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">Nationality</h4>
+              <p className="text-base font-medium text-gray-800">
+                {instruction.nationality || "N/A"}
+              </p>
             </div>
-
-          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Send Date</h3>
-            <p className="text-lg font-medium text-gray-800 flex items-center">
-              <FiCalendar className="mr-2 text-gray-500" size={16} />
-              {formatDate(instruction.sendDate)}
-            </p>
+            
+            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">Marital Status</h4>
+              <p className="text-base font-medium text-gray-800">
+                {instruction.maritalStatus ? instruction.maritalStatus.charAt(0).toUpperCase() + instruction.maritalStatus.slice(1) : "N/A"}
+              </p>
+            </div>
           </div>
+        </div>
+        
+        {/* Address Information Section */}
+        <div className="mb-8">
+          <h3 className="text-lg font-semibold text-green-800 mb-4 flex items-center border-b pb-2">
+            <FiMapPin className="mr-2" /> Address Information
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-green-50 p-4 rounded-lg border border-green-100">
+              <h4 className="text-sm font-semibold text-green-800 mb-2">Birth Address</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs text-gray-500">Region</p>
+                  <p className="font-medium">{instruction.birthRegion || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Zone</p>
+                  <p className="font-medium">{instruction.birthZone || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Woreda</p>
+                  <p className="font-medium">{instruction.birthWoreda || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Kebele</p>
+                  <p className="font-medium">{instruction.birthKebele || "N/A"}</p>
+                </div>
+              </div>
             </div>
+            
+            <div className="bg-amber-50 p-4 rounded-lg border border-amber-100">
+              <h4 className="text-sm font-semibold text-amber-800 mb-2">Current Address</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs text-gray-500">Region</p>
+                  <p className="font-medium">{instruction.currentRegion || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Zone</p>
+                  <p className="font-medium">{instruction.currentZone || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Woreda</p>
+                  <p className="font-medium">{instruction.currentWoreda || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Kebele</p>
+                  <p className="font-medium">{instruction.currentKebele || "N/A"}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Case Information Section */}
+        <div className="mb-8">
+          <h3 className="text-lg font-semibold text-blue-800 mb-4 flex items-center border-b pb-2">
+            <FiFileText className="mr-2" /> Case Information
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Information Cards */}
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Prison Name</h3>
+              <p className="text-lg font-medium text-gray-800">{instruction.prisonName}</p>
+            </div>
+
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Judge Name</h3>
+              <p className="text-lg font-medium text-gray-800">{instruction.judgeName || instruction.inmate}</p>
+            </div>
+
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Verdict</h3>
+              <p className={`text-lg font-medium ${instruction.verdict === "guilty" ? "text-red-600" : "text-green-600"}`}>
+                {instruction.verdict === "guilty" ? "Guilty" : instruction.verdict === "not_guilty" ? "Not Guilty" : instruction.verdict}
+                </p>
+              </div>
+
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Hearing Date</h3>
+              <p className="text-lg font-medium text-gray-800 flex items-center">
+                <FiCalendar className="mr-2 text-gray-500" size={16} />
+                {formatDate(instruction.hearingDate)}
+              </p>
+              </div>
+
+            {/* Full width instruction text */}
+            <div className="md:col-span-2 bg-blue-50 p-5 rounded-lg border border-blue-100">
+              <div className="flex items-center mb-3">
+                <FiFileText className="text-blue-500 mr-2" />
+                <h3 className="text-sm font-semibold text-blue-800 uppercase">Instructions</h3>
+              </div>
+              <p className="text-gray-800 whitespace-pre-line">{instruction.instructions}</p>
+              </div>
+
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Effective Date</h3>
+              <p className="text-lg font-medium text-gray-800 flex items-center">
+                <FiCalendar className="mr-2 text-gray-500" size={16} />
+                {formatDate(instruction.effectiveDate)}
+              </p>
+              </div>
+
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2">Send Date</h3>
+              <p className="text-lg font-medium text-gray-800 flex items-center">
+                <FiCalendar className="mr-2 text-gray-500" size={16} />
+                {formatDate(instruction.sendDate)}
+              </p>
+            </div>
+          </div>
+        </div>
 
         {/* Document section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">

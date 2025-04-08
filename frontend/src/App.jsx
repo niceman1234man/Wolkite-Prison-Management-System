@@ -107,6 +107,8 @@ import VisitorList from "./components/Visitor/VisitorList";
 import DashboardNoticeList from "./components/Notices/DashboardNoticeList";
 import NoticeView from "./components/Notices/NoticeView";
 import RequestParole from "./parole/RequestParole";
+import SecurityStaffDashboardSidebar from "./components/SecurityStaff/SecurityStaffDashboardSidebar";
+import SecurityStaffReport from "./components/SecurityStaff/SecurityStaffReport";
 
 function App() {
   return (
@@ -254,7 +256,7 @@ function App() {
             <Route path="add-inmate" element={<AddInmate />} />
             <Route path="update-inmate/:id" element={<UpdateInmate />} />
             <Route path="view-inmate/:id" element={<ViewInmate />} />
-            <Route path="reports" element={<SecurityReport />} />
+            <Route path="reports" element={<SecurityStaffReport />} />
             <Route path="clearance" element={<ClearancesList />} />
             <Route path="add-clearance" element={<InmateClearance />} />
             <Route path="update-profile" element={<UpdateProfile />} />

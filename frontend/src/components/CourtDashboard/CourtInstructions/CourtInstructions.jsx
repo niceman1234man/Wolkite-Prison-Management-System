@@ -2,13 +2,31 @@ import React, { useState, useEffect } from "react";
 import axiosInstance from "../../../utils/axiosInstance";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
-import { FiSend, FiFile, FiFileText, FiCalendar, FiCheckCircle, FiUpload } from "react-icons/fi";
+import { FiSend, FiFile, FiFileText, FiCalendar, FiCheckCircle, FiUpload, FiUser, FiMapPin, FiBookOpen, FiBriefcase } from "react-icons/fi";
+
+// Helper function to calculate age from birthdate
+const calculateAge = (birthdate) => {
+  if (!birthdate) return "";
+  
+  const birthDate = new Date(birthdate);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  
+  // Adjust age if birthday hasn't occurred yet this year
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  
+  return age;
+};
 
 const CourtInstructions = ({ setOpen }) => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    prisonerName: "",
+    // Case information
     courtCaseNumber: "",
+
     judgeName: "",
     prisonName: "",
     verdict: "",
@@ -16,6 +34,34 @@ const CourtInstructions = ({ setOpen }) => {
     hearingDate: new Date().toISOString().substring(0, 10),
     effectiveDate: new Date().toISOString().substring(0, 10),
     sendDate: new Date().toISOString().substring(0, 10),
+    
+    // Personal information
+    firstName: "",
+    middleName: "",
+    lastName: "",
+    age: "",
+    gender: "",
+    birthdate: "",
+    maritalStatus: "",
+    nationality: "Ethiopian",
+    educationLevel: "",
+    occupation: "",
+    
+    // Birth address
+    birthRegion: "",
+    birthZone: "",
+    birthWoreda: "",
+    birthKebele: "",
+    
+    // Current address
+    currentRegion: "",
+    currentZone: "",
+    currentWoreda: "",
+    currentKebele: "",
+    
+    // Case details
+    caseType: "",
+    sentenceYear: "",
   });
   const [signature, setSignature] = useState(null);
   const [attachment, setAttachment] = useState(null);
@@ -27,6 +73,19 @@ const CourtInstructions = ({ setOpen }) => {
   useEffect(() => {
     generateCaseNumber();
   }, []);
+
+  // Update prisoner name when first, middle, and last names change
+  useEffect(() => {
+    if (formData.firstName || formData.middleName || formData.lastName) {
+      const fullName = [formData.firstName, formData.middleName, formData.lastName]
+        .filter(Boolean)
+        .join(" ");
+      setFormData(prev => ({
+        ...prev,
+        prisonerName: fullName
+      }));
+    }
+  }, [formData.firstName, formData.middleName, formData.lastName]);
 
   const generateCaseNumber = () => {
     const currentDate = new Date();
@@ -45,10 +104,20 @@ const CourtInstructions = ({ setOpen }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prevData) => ({
-      ...prevData,
-      [name]: value,
-    }));
+    
+    // When birthdate changes, calculate age automatically
+    if (name === "birthdate" && value) {
+      setFormData((prevData) => ({
+        ...prevData,
+        [name]: value,
+        age: calculateAge(value)
+      }));
+    } else {
+      setFormData((prevData) => ({
+        ...prevData,
+        [name]: value,
+      }));
+    }
   };
 
   const handleFileChange = (e, type) => {
@@ -79,7 +148,9 @@ const CourtInstructions = ({ setOpen }) => {
     try {
       const token = localStorage.getItem("token");
       const formdata = new FormData();
-      formdata.append("prisonerName", formData.prisonerName);
+      
+      // Case information
+    
       formdata.append("courtCaseNumber", formData.courtCaseNumber);
       formdata.append("judgeName", formData.judgeName);
       formdata.append("prisonName", formData.prisonName);
@@ -88,7 +159,34 @@ const CourtInstructions = ({ setOpen }) => {
       formdata.append("hearingDate", formData.hearingDate);
       formdata.append("effectiveDate", formData.effectiveDate);
       formdata.append("sendDate", formData.sendDate);
+      formdata.append("caseType", formData.caseType);
+      formdata.append("sentenceYear", formData.sentenceYear);
       
+      // Personal information
+      formdata.append("firstName", formData.firstName);
+      formdata.append("middleName", formData.middleName);
+      formdata.append("lastName", formData.lastName);
+      formdata.append("age", formData.age);
+      formdata.append("gender", formData.gender);
+      formdata.append("birthdate", formData.birthdate);
+      formdata.append("maritalStatus", formData.maritalStatus);
+      formdata.append("nationality", formData.nationality);
+      formdata.append("educationLevel", formData.educationLevel);
+      formdata.append("occupation", formData.occupation);
+      
+      // Birth address
+      formdata.append("birthRegion", formData.birthRegion);
+      formdata.append("birthZone", formData.birthZone);
+      formdata.append("birthWoreda", formData.birthWoreda);
+      formdata.append("birthKebele", formData.birthKebele);
+      
+      // Current address
+      formdata.append("currentRegion", formData.currentRegion);
+      formdata.append("currentZone", formData.currentZone);
+      formdata.append("currentWoreda", formData.currentWoreda);
+      formdata.append("currentKebele", formData.currentKebele);
+      
+      // Files
       if (signature) formdata.append("signature", signature);
       if (attachment) formdata.append("attachment", attachment);
 
@@ -103,7 +201,8 @@ const CourtInstructions = ({ setOpen }) => {
         toast.success("Instruction sent successfully!");
         setOpen(false);
         setFormData({
-          prisonerName: "",
+          // Case information
+         
           courtCaseNumber: "",
           judgeName: "",
           prisonName: "",
@@ -112,6 +211,32 @@ const CourtInstructions = ({ setOpen }) => {
           hearingDate: new Date().toISOString().substring(0, 10),
           effectiveDate: new Date().toISOString().substring(0, 10),
           sendDate: new Date().toISOString().substring(0, 10),
+          caseType: "",
+          sentenceYear: "",
+          
+          // Personal information
+          firstName: "",
+          middleName: "",
+          lastName: "",
+          age: "",
+          gender: "",
+          birthdate: "",
+          maritalStatus: "",
+          nationality: "Ethiopian",
+          educationLevel: "",
+          occupation: "",
+          
+          // Birth address
+          birthRegion: "",
+          birthZone: "",
+          birthWoreda: "",
+          birthKebele: "",
+          
+          // Current address
+          currentRegion: "",
+          currentZone: "",
+          currentWoreda: "",
+          currentKebele: "",
         });
         setSignature(null);
         setSignaturePreview(null);
@@ -136,6 +261,347 @@ const CourtInstructions = ({ setOpen }) => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Personal Information Section */}
+        <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100 mb-6">
+          <h3 className="text-lg font-semibold text-indigo-800 mb-3 flex items-center">
+            <FiUser className="mr-2" /> Personal Information
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4">
+            {/* First Name */}
+            <div>
+              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
+                First Name
+              </label>
+              <input
+                type="text"
+                id="firstName"
+                name="firstName"
+                placeholder="Enter first name"
+                value={formData.firstName}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                required
+              />
+            </div>
+
+            {/* Middle Name */}
+            <div>
+              <label htmlFor="middleName" className="block text-sm font-medium text-gray-700 mb-1">
+                Middle Name
+              </label>
+              <input
+                type="text"
+                id="middleName"
+                name="middleName"
+                placeholder="Enter middle name"
+                value={formData.middleName}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                required
+              />
+            </div>
+
+            {/* Last Name */}
+            <div>
+              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
+                Last Name
+              </label>
+              <input
+                type="text"
+                id="lastName"
+                name="lastName"
+                placeholder="Enter last name"
+                value={formData.lastName}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                required
+              />
+            </div>
+
+            {/* Age */}
+            <div>
+              <label htmlFor="age" className="block text-sm font-medium text-gray-700 mb-1">
+                Age <span className="text-xs text-gray-500">(Auto-calculated)</span>
+              </label>
+              <input
+                type="number"
+                id="age"
+                name="age"
+                placeholder="Auto-calculated from birthdate"
+                value={formData.age}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50"
+                readOnly
+              />
+            </div>
+
+            {/* Gender */}
+            <div>
+              <label htmlFor="gender" className="block text-sm font-medium text-gray-700 mb-1">
+                Gender
+              </label>
+              <select
+                id="gender"
+                name="gender"
+                value={formData.gender}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                required
+              >
+                <option value="">Select Gender</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </select>
+            </div>
+
+            {/* Birthdate */}
+            <div>
+              <label htmlFor="birthdate" className="block text-sm font-medium text-gray-700 mb-1">
+                Birth Date
+              </label>
+              <input
+                type="date"
+                id="birthdate"
+                name="birthdate"
+                value={formData.birthdate}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                required
+              />
+            </div>
+
+            {/* Marital Status */}
+            <div>
+              <label htmlFor="maritalStatus" className="block text-sm font-medium text-gray-700 mb-1">
+                Marital Status
+              </label>
+              <select
+                id="maritalStatus"
+                name="maritalStatus"
+                value={formData.maritalStatus}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                required
+              >
+                <option value="">Select Marital Status</option>
+                <option value="single">Single</option>
+                <option value="married">Married</option>
+                <option value="divorced">Divorced</option>
+                <option value="widowed">Widowed</option>
+              </select>
+            </div>
+
+            {/* Nationality */}
+            <div>
+              <label htmlFor="nationality" className="block text-sm font-medium text-gray-700 mb-1">
+                Nationality
+              </label>
+              <input
+                type="text"
+                id="nationality"
+                name="nationality"
+                placeholder="Enter nationality"
+                value={formData.nationality}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                required
+              />
+            </div>
+
+            {/* Education Level */}
+            <div>
+              <label htmlFor="educationLevel" className="block text-sm font-medium text-gray-700 mb-1">
+                Education Level
+              </label>
+              <select
+                id="educationLevel"
+                name="educationLevel"
+                value={formData.educationLevel}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                required
+              >
+                <option value="">Select Education Level</option>
+                <option value="none">None</option>
+                <option value="primary">Primary</option>
+                <option value="secondary">Secondary</option>
+                <option value="diploma">Diploma</option>
+                <option value="degree">Bachelor's Degree</option>
+                <option value="masters">Master's Degree</option>
+                <option value="doctorate">Doctorate</option>
+              </select>
+            </div>
+
+            {/* Occupation */}
+            <div>
+              <label htmlFor="occupation" className="block text-sm font-medium text-gray-700 mb-1">
+                Occupation
+              </label>
+              <input
+                type="text"
+                id="occupation"
+                name="occupation"
+                placeholder="Enter occupation"
+                value={formData.occupation}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                required
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Birth Address Section */}
+        <div className="bg-green-50 p-4 rounded-lg border border-green-100 mb-6">
+          <h3 className="text-lg font-semibold text-green-800 mb-3 flex items-center">
+            <FiMapPin className="mr-2" /> Birth Address
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+            {/* Birth Region */}
+            <div>
+              <label htmlFor="birthRegion" className="block text-sm font-medium text-gray-700 mb-1">
+                Region
+              </label>
+              <input
+                type="text"
+                id="birthRegion"
+                name="birthRegion"
+                placeholder="Enter region"
+                value={formData.birthRegion}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                required
+              />
+            </div>
+
+            {/* Birth Zone */}
+            <div>
+              <label htmlFor="birthZone" className="block text-sm font-medium text-gray-700 mb-1">
+                Zone
+              </label>
+              <input
+                type="text"
+                id="birthZone"
+                name="birthZone"
+                placeholder="Enter zone"
+                value={formData.birthZone}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                required
+              />
+            </div>
+
+            {/* Birth Woreda */}
+            <div>
+              <label htmlFor="birthWoreda" className="block text-sm font-medium text-gray-700 mb-1">
+                Woreda
+              </label>
+              <input
+                type="text"
+                id="birthWoreda"
+                name="birthWoreda"
+                placeholder="Enter woreda"
+                value={formData.birthWoreda}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                required
+              />
+            </div>
+
+            {/* Birth Kebele */}
+            <div>
+              <label htmlFor="birthKebele" className="block text-sm font-medium text-gray-700 mb-1">
+                Kebele
+              </label>
+              <input
+                type="text"
+                id="birthKebele"
+                name="birthKebele"
+                placeholder="Enter kebele"
+                value={formData.birthKebele}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                required
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Current Address Section */}
+        <div className="bg-amber-50 p-4 rounded-lg border border-amber-100 mb-6">
+          <h3 className="text-lg font-semibold text-amber-800 mb-3 flex items-center">
+            <FiMapPin className="mr-2" /> Current Address
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+            {/* Current Region */}
+            <div>
+              <label htmlFor="currentRegion" className="block text-sm font-medium text-gray-700 mb-1">
+                Region
+              </label>
+              <input
+                type="text"
+                id="currentRegion"
+                name="currentRegion"
+                placeholder="Enter region"
+                value={formData.currentRegion}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                required
+              />
+            </div>
+
+            {/* Current Zone */}
+            <div>
+              <label htmlFor="currentZone" className="block text-sm font-medium text-gray-700 mb-1">
+                Zone
+              </label>
+              <input
+                type="text"
+                id="currentZone"
+                name="currentZone"
+                placeholder="Enter zone"
+                value={formData.currentZone}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                required
+              />
+            </div>
+
+            {/* Current Woreda */}
+            <div>
+              <label htmlFor="currentWoreda" className="block text-sm font-medium text-gray-700 mb-1">
+                Woreda
+              </label>
+              <input
+                type="text"
+                id="currentWoreda"
+                name="currentWoreda"
+                placeholder="Enter woreda"
+                value={formData.currentWoreda}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                required
+              />
+            </div>
+
+            {/* Current Kebele */}
+            <div>
+              <label htmlFor="currentKebele" className="block text-sm font-medium text-gray-700 mb-1">
+                Kebele
+              </label>
+              <input
+                type="text"
+                id="currentKebele"
+                name="currentKebele"
+                placeholder="Enter kebele"
+                value={formData.currentKebele}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                required
+              />
+            </div>
+          </div>
+        </div>
+
         {/* Case Information Section */}
         <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-6">
           <h3 className="text-lg font-semibold text-blue-800 mb-3 flex items-center">
@@ -167,17 +633,17 @@ const CourtInstructions = ({ setOpen }) => {
               <p className="text-xs text-gray-500 mt-1">Case number is automatically generated</p>
             </div>
 
-            {/* Prisoner Name */}
+            {/* Case Type */}
             <div>
-              <label htmlFor="prisonerName" className="block text-sm font-medium text-gray-700 mb-1">
-                Prisoner Name
+              <label htmlFor="caseType" className="block text-sm font-medium text-gray-700 mb-1">
+                Case Type
               </label>
               <input
                 type="text"
-                id="prisonerName"
-                name="prisonerName"
-                placeholder="Enter prisoner name"
-                value={formData.prisonerName}
+                id="caseType"
+                name="caseType"
+                placeholder="Enter case type"
+                value={formData.caseType}
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
@@ -217,15 +683,26 @@ const CourtInstructions = ({ setOpen }) => {
                 required
               />
             </div>
-          </div>
-        </div>
 
-        {/* Verdict and Dates Section */}
-        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
-          <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
-            <FiCalendar className="mr-2" /> Verdict & Dates
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+            {/* Sentence Year */}
+            <div>
+              <label htmlFor="sentenceYear" className="block text-sm font-medium text-gray-700 mb-1">
+                Sentence Year
+              </label>
+              <input
+                type="number"
+                id="sentenceYear"
+                name="sentenceYear"
+                placeholder="Enter sentence year"
+                value={formData.sentenceYear}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+                min="0"
+                step="0.1"
+              />
+            </div>
+
             {/* Verdict Selection */}
             <div>
               <label htmlFor="verdict" className="block text-sm font-medium text-gray-700 mb-1">
@@ -244,7 +721,15 @@ const CourtInstructions = ({ setOpen }) => {
                 <option value="not_guilty">Not Guilty</option>
               </select>
             </div>
+          </div>
+        </div>
 
+        {/* Verdict and Dates Section */}
+        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-6">
+          <h3 className="text-lg font-semibold text-gray-700 mb-3 flex items-center">
+            <FiCalendar className="mr-2" /> Verdict & Dates
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
             {/* Hearing Date */}
             <div>
               <label htmlFor="hearingDate" className="block text-sm font-medium text-gray-700 mb-1">

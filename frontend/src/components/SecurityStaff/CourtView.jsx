@@ -2,7 +2,38 @@ import React, { useEffect, useState } from "react";
 import axiosInstance from "@/utils/axiosInstance";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { FaCalendarAlt, FaGavel, FaFileAlt, FaCheck, FaBuilding, FaSignature, FaArrowLeft, FaUserPlus } from "react-icons/fa";
+import { FaCalendarAlt, FaGavel, FaFileAlt, FaCheck, FaBuilding, FaSignature, FaArrowLeft, FaUserPlus, FaUser, FaMapMarkerAlt, FaBirthdayCake, FaIdCard } from "react-icons/fa";
+
+// Helper function to calculate age from birthdate
+const calculateAge = (birthdate) => {
+  if (!birthdate) return "N/A";
+  
+  const birthDate = new Date(birthdate);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  
+  // Adjust age if birthday hasn't occurred yet this year
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  
+  return age;
+};
+
+// Format date to localized string
+const formatDate = (dateString) => {
+  if (!dateString) return "N/A";
+  try {
+    return new Date(dateString).toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  } catch (e) {
+    return dateString;
+  }
+};
 
 const CourtView = ({ id }) => {
   const navigate = useNavigate();
@@ -32,7 +63,23 @@ const CourtView = ({ id }) => {
  
   const handleAddToInmate = () => {
     const initialData = {
-      fullName: instruction.inmate, // Assuming inmate name is stored in instruction.inmate
+      fullName: `${instruction.firstName} ${instruction.middleName} ${instruction.lastName}`, 
+      gender: instruction.gender,
+      age: calculateAge(instruction.birthdate),
+      birthdate: instruction.birthdate,
+      nationality: instruction.nationality,
+      maritalStatus: instruction.maritalStatus,
+      educationLevel: instruction.educationLevel,
+      occupation: instruction.occupation,
+      // Address information can also be included
+      birthRegion: instruction.birthRegion,
+      birthZone: instruction.birthZone,
+      birthWoreda: instruction.birthWoreda,
+      birthKebele: instruction.birthKebele,
+      currentRegion: instruction.currentRegion,
+      currentZone: instruction.currentZone,
+      currentWoreda: instruction.currentWoreda,
+      currentKebele: instruction.currentKebele,
     };
     navigate("/securityStaff-dashboard/add-inmate", { state: { initialData } });
     toast.success("Inmate details prepared for adding");
@@ -61,7 +108,7 @@ const CourtView = ({ id }) => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto mt-6 mb-10">
+    <div className="max-w-5xl mx-auto mt-6 mb-10">
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-700 to-blue-500 rounded-t-lg shadow-md">
         <div className="px-6 py-4 flex justify-between items-center">
@@ -92,69 +139,184 @@ const CourtView = ({ id }) => {
 
       {/* Main content */}
       <div className="bg-white rounded-b-lg shadow-md p-6 border border-gray-200">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Information Cards */}
-          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2 flex items-center">
-              <FaBuilding className="mr-2 text-blue-500" /> Prison Name
-            </h3>
-            <p className="text-lg font-medium text-gray-800">{instruction.prisonName}</p>
+        {/* Personal Information Section */}
+        <div className="mb-8">
+          <h3 className="text-lg font-semibold text-indigo-800 mb-4 flex items-center border-b pb-2">
+            <FaUser className="mr-2 text-indigo-600" /> Personal Information
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">Full Name</h4>
+              <p className="text-base font-medium text-gray-800">
+                {instruction.firstName} {instruction.middleName} {instruction.lastName}
+              </p>
+            </div>
+            
+            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1 flex items-center">
+                <FaBirthdayCake className="mr-1 text-indigo-500" size={12} /> Birth Date
+              </h4>
+              <p className="text-base font-medium text-gray-800">
+                {formatDate(instruction.birthdate)}
+              </p>
+            </div>
+            
+            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1 flex items-center">
+                <FaIdCard className="mr-1 text-indigo-500" size={12} /> Age
+              </h4>
+              <p className="text-base font-medium text-gray-800">
+                {calculateAge(instruction.birthdate)}
+              </p>
+            </div>
+            
+            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">Gender</h4>
+              <p className="text-base font-medium text-gray-800">
+                {instruction.gender ? instruction.gender.charAt(0).toUpperCase() + instruction.gender.slice(1) : "N/A"}
+              </p>
+            </div>
+            
+            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">Nationality</h4>
+              <p className="text-base font-medium text-gray-800">
+                {instruction.nationality || "N/A"}
+              </p>
+            </div>
+            
+            <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+              <h4 className="text-xs font-semibold text-gray-500 uppercase mb-1">Marital Status</h4>
+              <p className="text-base font-medium text-gray-800">
+                {instruction.maritalStatus ? instruction.maritalStatus.charAt(0).toUpperCase() + instruction.maritalStatus.slice(1) : "N/A"}
+              </p>
+            </div>
           </div>
+        </div>
 
-          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2 flex items-center">
-              <FaGavel className="mr-2 text-blue-500" /> Judge Name
-            </h3>
-            <p className="text-lg font-medium text-gray-800">{instruction.inmate}</p>
+        {/* Address Information Section */}
+        <div className="mb-8">
+          <h3 className="text-lg font-semibold text-green-800 mb-4 flex items-center border-b pb-2">
+            <FaMapMarkerAlt className="mr-2 text-green-600" /> Address Information
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-green-50 p-4 rounded-lg border border-green-100">
+              <h4 className="text-sm font-semibold text-green-800 mb-2">Birth Address</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs text-gray-500">Region</p>
+                  <p className="font-medium">{instruction.birthRegion || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Zone</p>
+                  <p className="font-medium">{instruction.birthZone || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Woreda</p>
+                  <p className="font-medium">{instruction.birthWoreda || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Kebele</p>
+                  <p className="font-medium">{instruction.birthKebele || "N/A"}</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-amber-50 p-4 rounded-lg border border-amber-100">
+              <h4 className="text-sm font-semibold text-amber-800 mb-2">Current Address</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs text-gray-500">Region</p>
+                  <p className="font-medium">{instruction.currentRegion || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Zone</p>
+                  <p className="font-medium">{instruction.currentZone || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Woreda</p>
+                  <p className="font-medium">{instruction.currentWoreda || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Kebele</p>
+                  <p className="font-medium">{instruction.currentKebele || "N/A"}</p>
+                </div>
+              </div>
+            </div>
           </div>
+        </div>
 
-          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2 flex items-center">
-              <FaCheck className="mr-2 text-blue-500" /> Verdict
-            </h3>
-            <p className={`text-lg font-medium ${
-              instruction.verdict === "guilty" ? "text-red-600" : 
-              instruction.verdict === "not_guilty" ? "text-green-600" : "text-gray-800"
-            }`}>
-              {instruction.verdict === "guilty" ? "Guilty" : 
-              instruction.verdict === "not_guilty" ? "Not Guilty" : instruction.verdict}
-            </p>
-          </div>
+        {/* Case Information Section */}
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-blue-800 mb-4 flex items-center border-b pb-2">
+            <FaFileAlt className="mr-2 text-blue-600" /> Case Information
+          </h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Information Cards */}
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2 flex items-center">
+                <FaBuilding className="mr-2 text-blue-500" /> Prison Name
+              </h3>
+              <p className="text-lg font-medium text-gray-800">{instruction.prisonName}</p>
+            </div>
 
-          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2 flex items-center">
-              <FaCalendarAlt className="mr-2 text-blue-500" /> Hearing Date
-            </h3>
-            <p className="text-lg font-medium text-gray-800">
-              {new Date(instruction.hearingDate).toLocaleDateString()}
-            </p>
-          </div>
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2 flex items-center">
+                <FaGavel className="mr-2 text-blue-500" /> Judge Name
+              </h3>
+              <p className="text-lg font-medium text-gray-800">{instruction.judgeName}</p>
+            </div>
 
-          {/* Full width instruction text */}
-          <div className="md:col-span-2 bg-blue-50 p-5 rounded-lg border border-blue-100">
-            <h3 className="text-sm font-semibold text-blue-800 uppercase mb-3 flex items-center">
-              <FaFileAlt className="mr-2 text-blue-500" /> Instructions
-            </h3>
-            <p className="text-gray-800 whitespace-pre-line">{instruction.instructions}</p>
-          </div>
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2 flex items-center">
+                <FaCheck className="mr-2 text-blue-500" /> Verdict
+              </h3>
+              <p className={`text-lg font-medium ${
+                instruction.verdict === "guilty" ? "text-red-600" : 
+                instruction.verdict === "not_guilty" ? "text-green-600" : "text-gray-800"
+              }`}>
+                {instruction.verdict === "guilty" ? "Guilty" : 
+                instruction.verdict === "not_guilty" ? "Not Guilty" : instruction.verdict}
+              </p>
+            </div>
 
-          {/* Additional dates */}
-          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2 flex items-center">
-              <FaCalendarAlt className="mr-2 text-blue-500" /> Effective Date
-            </h3>
-            <p className="text-lg font-medium text-gray-800">
-              {new Date(instruction.effectiveDate).toLocaleDateString()}
-            </p>
-          </div>
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2 flex items-center">
+                <FaCalendarAlt className="mr-2 text-blue-500" /> Hearing Date
+              </h3>
+              <p className="text-lg font-medium text-gray-800">
+                {formatDate(instruction.hearingDate)}
+              </p>
+            </div>
 
-          <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2 flex items-center">
-              <FaCalendarAlt className="mr-2 text-blue-500" /> Send Date
-            </h3>
-            <p className="text-lg font-medium text-gray-800">
-              {new Date(instruction.sendDate).toLocaleDateString()}
-            </p>
+            {/* Full width instruction text */}
+            <div className="md:col-span-2 bg-blue-50 p-5 rounded-lg border border-blue-100">
+              <h3 className="text-sm font-semibold text-blue-800 uppercase mb-3 flex items-center">
+                <FaFileAlt className="mr-2 text-blue-500" /> Instructions
+              </h3>
+              <p className="text-gray-800 whitespace-pre-line">{instruction.instructions}</p>
+            </div>
+
+            {/* Additional dates */}
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2 flex items-center">
+                <FaCalendarAlt className="mr-2 text-blue-500" /> Effective Date
+              </h3>
+              <p className="text-lg font-medium text-gray-800">
+                {formatDate(instruction.effectiveDate)}
+              </p>
+            </div>
+
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2 flex items-center">
+                <FaCalendarAlt className="mr-2 text-blue-500" /> Send Date
+              </h3>
+              <p className="text-lg font-medium text-gray-800">
+                {formatDate(instruction.sendDate)}
+              </p>
+            </div>
           </div>
         </div>
 

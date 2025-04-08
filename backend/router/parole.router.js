@@ -6,7 +6,8 @@ import {
   deleteParoleRecord,
   getAllParoleRecords,
   paroleRequest,
-  updateResponse
+  updateResponse,
+  updateReport
 } from "../controller/parole.controller.js";
 
 export const paroleRouter = express.Router();
@@ -22,6 +23,7 @@ paroleRouter.get("/", getAllParoleRecords);
 paroleRouter.get("/:inmateId", getParoleRecordById);
 paroleRouter.put("/request/:inmateId", paroleRequest);
 paroleRouter.put("/update/:inmateId", updateResponse);
+paroleRouter.put("/update-report/:inmateId", upload.array('signatures', 5), updateReport);
 paroleRouter.delete("/:inmateId", deleteParoleRecord);
 
 

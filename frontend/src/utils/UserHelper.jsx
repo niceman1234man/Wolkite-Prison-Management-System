@@ -19,14 +19,14 @@ export const columns = [
     name: "FName",
     selector: (row) => row.firstName,
     sortable: true,
-    width: "90px",
+    width: "100px",
     center: true,
   },
   {
     name: "MName",
     selector: (row) => row.middleName,
     sortable: true,
-    width: "90px",
+    width: "100px",
     center: true,
   },
   {

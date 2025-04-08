@@ -3,44 +3,114 @@ import { Instruction } from "../model/instruction.model.js";
 
 export const addInstruction = async (req, res) => {
   try {
-    
     const { 
-        courtCaseNumber,
-        judgeName,
-        prisonName,
-        verdict,
-        instructions,
-        hearingDate,
-        effectiveDate,
-        sendDate } = req.body;
-        const { signature, attachment } = req.files;
-
-const signatureFilename = signature[0].filename; 
-const attachmentFilename = attachment[0].filename;
+      // Case information
+      courtCaseNumber,
+      judgeName,
+      prisonName,
+      verdict,
+      instructions,
+      hearingDate,
+      effectiveDate,
+      sendDate,
+      caseType,
+      sentenceYear,
+      
+      // Personal information
+      firstName,
+      middleName,
+      lastName,
+      age,
+      gender,
+      birthdate,
+      maritalStatus,
+      nationality,
+      educationLevel,
+      occupation,
+      
+      // Birth address
+      birthRegion,
+      birthZone,
+      birthWoreda,
+      birthKebele,
+      
+      // Current address
+      currentRegion,
+      currentZone,
+      currentWoreda,
+      currentKebele
+    } = req.body;
+    
+    // Handle file uploads
+    let signatureFilename = null;
+    let attachmentFilename = null;
+    
+    if (req.files) {
+      if (req.files.signature && req.files.signature.length > 0) {
+        signatureFilename = req.files.signature[0].filename;
+      }
+      
+      if (req.files.attachment && req.files.attachment.length > 0) {
+        attachmentFilename = req.files.attachment[0].filename;
+      } else {
+        return res.status(400).json({ message: "Attachment file is required" });
+      }
+    } else {
+      return res.status(400).json({ message: "Attachment file is required" });
+    }
   
     // Validate required fields
-    if (!prisonName || !instructions || !effectiveDate || !sendDate) {
-      return res.status(400).json({ message: "All fields are required" });
+    if (!firstName || !lastName || !birthdate || !courtCaseNumber || !prisonName || 
+        !instructions || !effectiveDate || !caseType || !sentenceYear) {
+      return res.status(400).json({ message: "All required fields must be provided" });
     }
 
     const newInstruction = new Instruction({
-        prisonerName,
-        courtCaseNumber,
-        judgeName,
-        prisonName,
-        verdict,
-        instructions,
-        hearingDate,
-        effectiveDate,
-        sendDate ,
-        signature:signatureFilename,
-         attachment:attachmentFilename
+      // Case information
+      courtCaseNumber,
+      judgeName,
+      prisonName,
+      verdict,
+      instructions,
+      hearingDate,
+      effectiveDate,
+      sendDate,
+      caseType,
+      sentenceYear: Number(sentenceYear),
+      
+      // Personal information
+      firstName,
+      middleName,
+      lastName,
+      age: Number(age),
+      gender,
+      birthdate,
+      maritalStatus,
+      nationality,
+      educationLevel,
+      occupation,
+      
+      // Birth address
+      birthRegion,
+      birthZone,
+      birthWoreda,
+      birthKebele,
+      
+      // Current address
+      currentRegion,
+      currentZone,
+      currentWoreda,
+      currentKebele,
+      
+      // Document paths
+      signature: signatureFilename,
+      attachment: attachmentFilename
     });
 
     await newInstruction.save();
     res.status(201).json({ success: true, message: "Instruction added successfully" });
   } catch (error) {
-    console.error(error);
+    console.error("Error in addInstruction:", error);
     res.status(500).json({ message: "Failed to add the Instruction", error: error.message });
   }
 };
@@ -63,9 +133,10 @@ export const getAllInstruction = async (req, res) => {
 
 export const updateInstruction = async (req, res) => {
   try {
-    const  {id}  = req.params;
+    const { id } = req.params;
     
     const { 
+      // Case information
       courtCaseNumber,
       judgeName,
       prisonName,
@@ -73,40 +144,108 @@ export const updateInstruction = async (req, res) => {
       instructions,
       hearingDate,
       effectiveDate,
-      sendDate } = req.body;
-      const { signature, attachment } = req.files;
+      sendDate,
+      caseType,
+      sentenceYear,
+      
+      // Personal information
+      firstName,
+      middleName,
+      lastName,
+      age,
+      gender,
+      birthdate,
+      maritalStatus,
+      nationality,
+      educationLevel,
+      occupation,
+      
+      // Birth address
+      birthRegion,
+      birthZone,
+      birthWoreda,
+      birthKebele,
+      
+      // Current address
+      currentRegion,
+      currentZone,
+      currentWoreda,
+      currentKebele
+    } = req.body;
+    
+    // Handle file uploads
+    let updateData = {
+      // Case information
+      courtCaseNumber,
+      judgeName,
+      prisonName,
+      verdict,
+      instructions,
+      hearingDate,
+      effectiveDate,
+      sendDate,
+      caseType,
+      sentenceYear: Number(sentenceYear),
+      
+      // Personal information
+      firstName,
+      middleName,
+      lastName,
+      age: Number(age),
+      gender,
+      birthdate,
+      maritalStatus,
+      nationality,
+      educationLevel,
+      occupation,
+      
+      // Birth address
+      birthRegion,
+      birthZone,
+      birthWoreda,
+      birthKebele,
+      
+      // Current address
+      currentRegion,
+      currentZone,
+      currentWoreda,
+      currentKebele
+    };
 
-const signatureFilename = signature[0].filename; 
-const attachmentFilename = attachment[0].filename;
-
-        if (!courtCaseNumber || !prisonName || !instructions|| !hearingDate) {
-      return res.status(400).json({ message: "All fields are required" });
+    // Handle file uploads if provided
+    if (req.files) {
+      if (req.files.signature && req.files.signature.length > 0) {
+        updateData.signature = req.files.signature[0].filename;
+      }
+      
+      if (req.files.attachment && req.files.attachment.length > 0) {
+        updateData.attachment = req.files.attachment[0].filename;
+      }
     }
 
-    const updatedClearance = await Instruction.findByIdAndUpdate(
+    // Validate required fields
+    if (!firstName || !lastName || !courtCaseNumber || !prisonName || !instructions || !hearingDate) {
+      return res.status(400).json({ message: "All required fields must be provided" });
+    }
+
+    const updatedInstruction = await Instruction.findByIdAndUpdate(
       id,
-      {     
-        courtCaseNumber,
-        judgeName,
-        prisonName,
-        verdict,
-        instructions,
-        hearingDate,
-        effectiveDate,
-        sendDate ,
-        signature:signatureFilename,
-         attachment:attachmentFilename},
-      { new: true} 
+      updateData,
+      { new: true }
     );
 
-    if (!updatedClearance) {
-      return res.status(404).json({ message: "Clearance not found" });
+    if (!updatedInstruction) {
+      return res.status(404).json({ message: "Instruction not found" });
     }
 
-    res.status(200).json({ data: updatedClearance, message: "Clearance updated successfully" });
+    res.status(200).json({ 
+      success: true,
+      data: updatedInstruction, 
+      message: "Instruction updated successfully" 
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Internal Server Error" });
+    console.error("Error updating instruction:", error);
+    res.status(500).json({ message: "Internal Server Error", error: error.message });
   }
 };
 

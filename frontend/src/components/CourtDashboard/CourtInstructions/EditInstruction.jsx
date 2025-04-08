@@ -2,19 +2,68 @@ import React, { useState, useEffect } from "react";
 import axiosInstance from "../../../utils/axiosInstance";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
-import { FiEdit, FiFile, FiFileText, FiCalendar, FiCheckCircle, FiUpload, FiArrowLeft, FiSave } from "react-icons/fi";
+import { FiEdit, FiFile, FiFileText, FiCalendar, FiCheckCircle, FiUpload, FiArrowLeft, FiSave, FiUser, FiMapPin } from "react-icons/fi";
+
+// Helper function to calculate age from birthdate
+const calculateAge = (birthdate) => {
+  if (!birthdate) return "";
+  
+  const birthDate = new Date(birthdate);
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  
+  // Adjust age if birthday hasn't occurred yet this year
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  
+  return age;
+};
 
 const EditInstruction = ({ setOpen, id }) => {
   const navigate = useNavigate();
+  
+  // Get today's date
+  const today = new Date();
+  const todayFormatted = today.toISOString().substring(0, 10);
+  
   const [formData, setFormData] = useState({
+    // Case information
     courtCaseNumber: "",
     judgeName: "",
     prisonName: "",
     verdict: "",
     instructions: "",
-    hearingDate: new Date().toISOString().substring(0, 10),
-    effectiveDate: new Date().toISOString().substring(0, 10),
-    sendDate: new Date().toISOString().substring(0, 10),
+    hearingDate: todayFormatted,
+    effectiveDate: todayFormatted,
+    sendDate: todayFormatted,
+    caseType: "",
+    sentenceYear: "",
+    
+    // Personal information
+    firstName: "",
+    middleName: "",
+    lastName: "",
+    age: "",
+    gender: "",
+    birthdate: "",
+    maritalStatus: "",
+    nationality: "Ethiopian",
+    educationLevel: "",
+    occupation: "",
+    
+    // Birth address
+    birthRegion: "",
+    birthZone: "",
+    birthWoreda: "",
+    birthKebele: "",
+    
+    // Current address
+    currentRegion: "",
+    currentZone: "",
+    currentWoreda: "",
+    currentKebele: ""
   });
 
   const [signature, setSignature] = useState(null);
@@ -35,15 +84,48 @@ const EditInstruction = ({ setOpen, id }) => {
           const instructionData = response.data.instruction;
           setOriginalData(instructionData);
           
+          // Calculate age if birthdate exists
+          let calculatedAge = "";
+          if (instructionData.birthdate) {
+            calculatedAge = calculateAge(instructionData.birthdate);
+          }
+          
           setFormData({
+            // Case information
             courtCaseNumber: instructionData.courtCaseNumber || "",
             judgeName: instructionData.judgeName || "",
             prisonName: instructionData.prisonName || "",
             verdict: instructionData.verdict || "",
             instructions: instructionData.instructions || "",
-            hearingDate: instructionData.hearingDate ? instructionData.hearingDate.substring(0, 10) : new Date().toISOString().substring(0, 10),
-            effectiveDate: instructionData.effectiveDate ? instructionData.effectiveDate.substring(0, 10) : new Date().toISOString().substring(0, 10),
-            sendDate: instructionData.sendDate ? instructionData.sendDate.substring(0, 10) : new Date().toISOString().substring(0, 10),
+            hearingDate: instructionData.hearingDate ? instructionData.hearingDate.substring(0, 10) : todayFormatted,
+            effectiveDate: instructionData.effectiveDate ? instructionData.effectiveDate.substring(0, 10) : todayFormatted,
+            sendDate: instructionData.sendDate ? instructionData.sendDate.substring(0, 10) : todayFormatted,
+            caseType: instructionData.caseType || "",
+            sentenceYear: instructionData.sentenceYear || "",
+            
+            // Personal information
+            firstName: instructionData.firstName || "",
+            middleName: instructionData.middleName || "",
+            lastName: instructionData.lastName || "",
+            age: calculatedAge || instructionData.age || "",
+            gender: instructionData.gender || "",
+            birthdate: instructionData.birthdate ? instructionData.birthdate.substring(0, 10) : "",
+            maritalStatus: instructionData.maritalStatus || "",
+            nationality: instructionData.nationality || "Ethiopian",
+            educationLevel: instructionData.educationLevel || "",
+            occupation: instructionData.occupation || "",
+            
+            // Birth address
+            birthRegion: instructionData.birthRegion || "",
+            birthZone: instructionData.birthZone || "",
+            birthWoreda: instructionData.birthWoreda || "",
+            birthKebele: instructionData.birthKebele || "",
+            
+            // Current address
+            currentRegion: instructionData.currentRegion || "",
+            currentZone: instructionData.currentZone || "",
+            currentWoreda: instructionData.currentWoreda || "",
+            currentKebele: instructionData.currentKebele || ""
           });
           
           // Set previews for existing files
@@ -66,10 +148,20 @@ const EditInstruction = ({ setOpen, id }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prevData) => ({
-      ...prevData,
-      [name]: value,
-    }));
+    
+    // When birthdate changes, calculate age automatically
+    if (name === "birthdate" && value) {
+      setFormData((prevData) => ({
+        ...prevData,
+        [name]: value,
+        age: calculateAge(value)
+      }));
+    } else {
+      setFormData((prevData) => ({
+        ...prevData,
+        [name]: value,
+      }));
+    }
   };
 
   const handleFileChange = (e, type) => {
@@ -147,9 +239,350 @@ const EditInstruction = ({ setOpen, id }) => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Case Information Section */}
+        {/* Personal Information Section */}
         <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-100 mb-6">
           <h3 className="text-lg font-semibold text-indigo-800 mb-3 flex items-center">
+            <FiUser className="mr-2" /> Personal Information
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4">
+            {/* First Name */}
+            <div>
+              <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
+                First Name
+              </label>
+              <input
+                type="text"
+                id="firstName"
+                name="firstName"
+                placeholder="Enter first name"
+                value={formData.firstName}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                required
+              />
+            </div>
+
+            {/* Middle Name */}
+            <div>
+              <label htmlFor="middleName" className="block text-sm font-medium text-gray-700 mb-1">
+                Middle Name
+              </label>
+              <input
+                type="text"
+                id="middleName"
+                name="middleName"
+                placeholder="Enter middle name"
+                value={formData.middleName}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                required
+              />
+            </div>
+
+            {/* Last Name */}
+            <div>
+              <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
+                Last Name
+              </label>
+              <input
+                type="text"
+                id="lastName"
+                name="lastName"
+                placeholder="Enter last name"
+                value={formData.lastName}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                required
+              />
+            </div>
+
+            {/* Age */}
+            <div>
+              <label htmlFor="age" className="block text-sm font-medium text-gray-700 mb-1">
+                Age <span className="text-xs text-gray-500">(Auto-calculated)</span>
+              </label>
+              <input
+                type="number"
+                id="age"
+                name="age"
+                placeholder="Auto-calculated from birthdate"
+                value={formData.age}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-gray-50"
+                readOnly
+              />
+            </div>
+
+            {/* Gender */}
+            <div>
+              <label htmlFor="gender" className="block text-sm font-medium text-gray-700 mb-1">
+                Gender
+              </label>
+              <select
+                id="gender"
+                name="gender"
+                value={formData.gender}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                required
+              >
+                <option value="">Select Gender</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+              </select>
+            </div>
+
+            {/* Birthdate */}
+            <div>
+              <label htmlFor="birthdate" className="block text-sm font-medium text-gray-700 mb-1">
+                Birth Date
+              </label>
+              <input
+                type="date"
+                id="birthdate"
+                name="birthdate"
+                value={formData.birthdate}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                required
+              />
+            </div>
+
+            {/* Marital Status */}
+            <div>
+              <label htmlFor="maritalStatus" className="block text-sm font-medium text-gray-700 mb-1">
+                Marital Status
+              </label>
+              <select
+                id="maritalStatus"
+                name="maritalStatus"
+                value={formData.maritalStatus}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                required
+              >
+                <option value="">Select Marital Status</option>
+                <option value="single">Single</option>
+                <option value="married">Married</option>
+                <option value="divorced">Divorced</option>
+                <option value="widowed">Widowed</option>
+              </select>
+            </div>
+
+            {/* Nationality */}
+            <div>
+              <label htmlFor="nationality" className="block text-sm font-medium text-gray-700 mb-1">
+                Nationality
+              </label>
+              <input
+                type="text"
+                id="nationality"
+                name="nationality"
+                placeholder="Enter nationality"
+                value={formData.nationality}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                required
+              />
+            </div>
+
+            {/* Education Level */}
+            <div>
+              <label htmlFor="educationLevel" className="block text-sm font-medium text-gray-700 mb-1">
+                Education Level
+              </label>
+              <select
+                id="educationLevel"
+                name="educationLevel"
+                value={formData.educationLevel}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                required
+              >
+                <option value="">Select Education Level</option>
+                <option value="none">None</option>
+                <option value="primary">Primary</option>
+                <option value="secondary">Secondary</option>
+                <option value="diploma">Diploma</option>
+                <option value="degree">Bachelor's Degree</option>
+                <option value="masters">Master's Degree</option>
+                <option value="doctorate">Doctorate</option>
+              </select>
+            </div>
+
+            {/* Occupation */}
+            <div>
+              <label htmlFor="occupation" className="block text-sm font-medium text-gray-700 mb-1">
+                Occupation
+              </label>
+              <input
+                type="text"
+                id="occupation"
+                name="occupation"
+                placeholder="Enter occupation"
+                value={formData.occupation}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                required
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Birth Address Section */}
+        <div className="bg-green-50 p-4 rounded-lg border border-green-100 mb-6">
+          <h3 className="text-lg font-semibold text-green-800 mb-3 flex items-center">
+            <FiMapPin className="mr-2" /> Birth Address
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+            {/* Birth Region */}
+            <div>
+              <label htmlFor="birthRegion" className="block text-sm font-medium text-gray-700 mb-1">
+                Region
+              </label>
+              <input
+                type="text"
+                id="birthRegion"
+                name="birthRegion"
+                placeholder="Enter region"
+                value={formData.birthRegion}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                required
+              />
+            </div>
+
+            {/* Birth Zone */}
+            <div>
+              <label htmlFor="birthZone" className="block text-sm font-medium text-gray-700 mb-1">
+                Zone
+              </label>
+              <input
+                type="text"
+                id="birthZone"
+                name="birthZone"
+                placeholder="Enter zone"
+                value={formData.birthZone}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                required
+              />
+            </div>
+
+            {/* Birth Woreda */}
+            <div>
+              <label htmlFor="birthWoreda" className="block text-sm font-medium text-gray-700 mb-1">
+                Woreda
+              </label>
+              <input
+                type="text"
+                id="birthWoreda"
+                name="birthWoreda"
+                placeholder="Enter woreda"
+                value={formData.birthWoreda}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                required
+              />
+            </div>
+
+            {/* Birth Kebele */}
+            <div>
+              <label htmlFor="birthKebele" className="block text-sm font-medium text-gray-700 mb-1">
+                Kebele
+              </label>
+              <input
+                type="text"
+                id="birthKebele"
+                name="birthKebele"
+                placeholder="Enter kebele"
+                value={formData.birthKebele}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                required
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Current Address Section */}
+        <div className="bg-amber-50 p-4 rounded-lg border border-amber-100 mb-6">
+          <h3 className="text-lg font-semibold text-amber-800 mb-3 flex items-center">
+            <FiMapPin className="mr-2" /> Current Address
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+            {/* Current Region */}
+            <div>
+              <label htmlFor="currentRegion" className="block text-sm font-medium text-gray-700 mb-1">
+                Region
+              </label>
+              <input
+                type="text"
+                id="currentRegion"
+                name="currentRegion"
+                placeholder="Enter region"
+                value={formData.currentRegion}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                required
+              />
+            </div>
+
+            {/* Current Zone */}
+            <div>
+              <label htmlFor="currentZone" className="block text-sm font-medium text-gray-700 mb-1">
+                Zone
+              </label>
+              <input
+                type="text"
+                id="currentZone"
+                name="currentZone"
+                placeholder="Enter zone"
+                value={formData.currentZone}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                required
+              />
+            </div>
+
+            {/* Current Woreda */}
+            <div>
+              <label htmlFor="currentWoreda" className="block text-sm font-medium text-gray-700 mb-1">
+                Woreda
+              </label>
+              <input
+                type="text"
+                id="currentWoreda"
+                name="currentWoreda"
+                placeholder="Enter woreda"
+                value={formData.currentWoreda}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                required
+              />
+            </div>
+
+            {/* Current Kebele */}
+            <div>
+              <label htmlFor="currentKebele" className="block text-sm font-medium text-gray-700 mb-1">
+                Kebele
+              </label>
+              <input
+                type="text"
+                id="currentKebele"
+                name="currentKebele"
+                placeholder="Enter kebele"
+                value={formData.currentKebele}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                required
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Case Information Section */}
+        <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-6">
+          <h3 className="text-lg font-semibold text-blue-800 mb-3 flex items-center">
             <FiFileText className="mr-2" /> Case Information
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
@@ -164,7 +597,7 @@ const EditInstruction = ({ setOpen, id }) => {
                 name="courtCaseNumber"
                 value={formData.courtCaseNumber}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
             </div>
@@ -180,7 +613,7 @@ const EditInstruction = ({ setOpen, id }) => {
                 name="judgeName"
                 value={formData.judgeName}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
             </div>
@@ -196,8 +629,44 @@ const EditInstruction = ({ setOpen, id }) => {
                 name="prisonName"
                 value={formData.prisonName}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
+              />
+            </div>
+
+            {/* Case Type */}
+            <div>
+              <label htmlFor="caseType" className="block text-sm font-medium text-gray-700 mb-1">
+                Case Type
+              </label>
+              <input
+                type="text"
+                id="caseType"
+                name="caseType"
+                placeholder="Enter case type"
+                value={formData.caseType}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+
+            {/* Sentence Year */}
+            <div>
+              <label htmlFor="sentenceYear" className="block text-sm font-medium text-gray-700 mb-1">
+                Sentence Year
+              </label>
+              <input
+                type="number"
+                id="sentenceYear"
+                name="sentenceYear"
+                placeholder="Enter sentence year"
+                value={formData.sentenceYear}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+                min="0"
+                step="0.1"
               />
             </div>
 
@@ -206,19 +675,19 @@ const EditInstruction = ({ setOpen, id }) => {
               <label htmlFor="verdict" className="block text-sm font-medium text-gray-700 mb-1">
                 Verdict
               </label>
-            <select
+              <select
                 id="verdict"
-              name="verdict"
-              value={formData.verdict}
-              onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              required
-            >
-              <option value="">Select Verdict</option>
-              <option value="guilty">Guilty</option>
-              <option value="not_guilty">Not Guilty</option>
-            </select>
-          </div>
+                name="verdict"
+                value={formData.verdict}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              >
+                <option value="">Select Verdict</option>
+                <option value="guilty">Guilty</option>
+                <option value="not_guilty">Not Guilty</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -239,7 +708,7 @@ const EditInstruction = ({ setOpen, id }) => {
                 name="hearingDate"
                 value={formData.hearingDate}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
             </div>
@@ -255,7 +724,7 @@ const EditInstruction = ({ setOpen, id }) => {
                 name="effectiveDate"
                 value={formData.effectiveDate}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
             </div>
@@ -271,7 +740,7 @@ const EditInstruction = ({ setOpen, id }) => {
                 name="sendDate"
                 value={formData.sendDate}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
             </div>
@@ -284,15 +753,15 @@ const EditInstruction = ({ setOpen, id }) => {
             <FiCheckCircle className="mr-2" /> Instruction Details
           </h3>
           <div>
-          <textarea
+            <textarea
               id="instructions"
-            name="instructions"
-            value={formData.instructions}
-            onChange={handleChange}
-            rows="4"
+              name="instructions"
+              value={formData.instructions}
+              onChange={handleChange}
+              rows="4"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="Enter details regarding the verdict or instructions to the prison"
-            required
+              required
             ></textarea>
           </div>
         </div>
@@ -387,7 +856,7 @@ const EditInstruction = ({ setOpen, id }) => {
                 <FiSave className="mr-2" /> Save Changes
               </>
             )}
-        </button>
+          </button>
         </div>
       </form>
     </div>

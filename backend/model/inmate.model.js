@@ -62,6 +62,12 @@ const InmateSchema = new mongoose.Schema(
     paroleDate: { type: Date },
     durationToParole: { type: String },
     durationFromParoleToEnd: { type: String },
+    status: {
+      type: String,
+      enum: ["pending","active","paroled"],
+      default: "pending",
+      required: true,
+    },
     // Timestamps for createdAt and updatedAt
   },
   { timestamps: true }

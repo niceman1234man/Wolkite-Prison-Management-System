@@ -79,7 +79,7 @@ const BackeUp = () => {
     setRestoreInProgress(true);
     
     try {
-      const response = await axiosInstance.post('/backup/restore', { backupId });
+      const response = await axiosInstance.post(`/backup/restore/${backupId}`);
       
       if (response.data.success) {
         toast.success("System restored successfully from backup!");
@@ -106,9 +106,9 @@ const BackeUp = () => {
       link.href = url;
       
       // Get backup info for naming
-      const backup = backupHistory.find(b => b.id === backupId);
+      const backup = backupHistory.find(b => b._id === backupId);
       const fileName = backup ? 
-        `prison_backup_${backup.type}_${new Date(backup.timestamp).toISOString().split('T')[0]}.zip` : 
+        `prison_backup_${backup.type}_${new Date(backup.createdAt).toISOString().split('T')[0]}.zip` : 
         `prison_backup_${backupId}.zip`;
       
       link.setAttribute('download', fileName);
@@ -157,6 +157,16 @@ const BackeUp = () => {
       hour: '2-digit',
       minute: '2-digit'
     });
+  };
+
+  // Format size for display
+  const formatSize = (bytes) => {
+    if (!bytes) return 'Unknown';
+    
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    if (bytes === 0) return '0 Byte';
+    const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+    return Math.round(bytes / Math.pow(1024, i), 2) + ' ' + sizes[i];
   };
 
   return (
@@ -337,11 +347,11 @@ const BackeUp = () => {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {backupHistory.map((backup) => (
-                      <tr key={backup.id} className="hover:bg-gray-50">
+                      <tr key={backup._id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <div className="font-medium">{formatDate(backup.timestamp)}</div>
+                          <div className="font-medium">{formatDate(backup.createdAt)}</div>
                           <div className="text-gray-500 text-xs flex items-center mt-1">
-                            <FaClock className="mr-1" /> {backup.duration}
+                            <FaClock className="mr-1" /> {new Date(backup.createdAt).toLocaleTimeString()}
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -354,7 +364,7 @@ const BackeUp = () => {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {backup.size}
+                          {formatSize(backup.size)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -378,14 +388,14 @@ const BackeUp = () => {
                             {backup.status === 'completed' && (
                               <>
                                 <button
-                                  onClick={() => handleDownload(backup.id)}
+                                  onClick={() => handleDownload(backup._id)}
                                   className="text-blue-600 hover:text-blue-900"
                                   title="Download Backup"
                                 >
                                   <FaDownload />
                                 </button>
                                 <button
-                                  onClick={() => handleRestore(backup.id)}
+                                  onClick={() => handleRestore(backup._id)}
                                   disabled={restoreInProgress}
                                   className={`${
                                     restoreInProgress 

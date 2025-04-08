@@ -27,6 +27,10 @@ const ParoleTrackingSchema = new mongoose.Schema(
       type: Date,
       required: true,
     },
+    isReported:{
+     type:Boolean,
+     default:false,
+    },
     request:{
       isRequested:Boolean,
       number:String,
@@ -50,7 +54,7 @@ const ParoleTrackingSchema = new mongoose.Schema(
     },
     paroleDate: {
       type: Date,
-      required: true,
+      required: false,
     },
     durationToParole: {
       type: String,
@@ -100,6 +104,24 @@ const ParoleTrackingSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    committeeData: [{
+      name: {
+        type: String,
+        required: true
+      },
+      position: {
+        type: String,
+        required: true
+      },
+      signature: {
+        type: String,
+        required: false
+      },
+      signatureType: {
+        type: String,
+        required: false
+      }
+    }],
   },
   { timestamps: true } // Automatically add createdAt and updatedAt fields
 );
