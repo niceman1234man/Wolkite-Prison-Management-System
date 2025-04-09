@@ -197,8 +197,11 @@ const InspectorSummary = () => {
       const last6Months = Array.from({ length: 6 }, (_, i) => {
         const date = new Date();
         date.setMonth(date.getMonth() - i);
+        const monthName = date.toLocaleString('default', { month: 'short' });
+        const year = date.getFullYear();
+        
         return {
-          name: date.toLocaleString('default', { month: 'short' }),
+          name: `${monthName} ${year}`,
           notices: notices.filter(n => {
             const noticeDate = new Date(n.date);
             return noticeDate.getMonth() === date.getMonth() && 
