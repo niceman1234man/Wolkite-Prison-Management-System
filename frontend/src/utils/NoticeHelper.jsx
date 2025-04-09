@@ -1,3 +1,10 @@
+export const priorityColors = {
+  Urgent: "bg-red-600",
+  High: "bg-orange-500",
+  Normal: "bg-blue-500",
+  Low: "bg-gray-400"
+};
+
 export const columns = [
   {
     name: "Title",
