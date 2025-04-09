@@ -2,7 +2,18 @@ import React, { useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { toggleSidebar, setSidebarState } from "../../redux/sidebarSlice";
-import { FaBars, FaBuilding, FaCogs, FaTachometerAlt, FaUsers } from "react-icons/fa";
+import { 
+  FaBars, 
+  FaBuilding, 
+  FaCogs, 
+  FaTachometerAlt, 
+  FaUsers, 
+  FaChartBar, 
+  FaFileAlt, 
+  FaClipboardList, 
+  FaExchangeAlt, 
+  FaUserShield 
+} from "react-icons/fa";
 
 const InspectorSidebar = () => {
   const dispatch = useDispatch();
@@ -80,19 +91,29 @@ const InspectorSidebar = () => {
             {!isCollapsed && <span className="ml-3">Manage Notices</span>}
           </NavLink>
 
+          <NavLink
+            to="/inspector-dashboard/reports"
+            className={({ isActive }) =>
+              `flex items-center p-2 rounded-lg hover:bg-teal-600 transition-colors ${
+                isActive ? "bg-teal-600" : ""
+              } ${isCollapsed ? "justify-center" : "justify-start"}`
+            }
+          >
+            <FaChartBar className="h-6 w-6" />
+            {!isCollapsed && <span className="ml-3">Reports</span>}
+          </NavLink>
           
           <NavLink
-  to="/inspector-dashboard/homepage-settings"
-  className={({ isActive }) =>
-    `flex items-center p-2 rounded-lg hover:bg-teal-600 transition-colors ${
-      isActive ? "bg-teal-600" : ""
-    }`
-  }
->
-  <FaCogs className="h-6 w-6" />
-  {!isCollapsed && <span className="ml-3">Homepage Settings</span>}
-</NavLink>
-
+            to="/inspector-dashboard/homepage-settings"
+            className={({ isActive }) =>
+              `flex items-center p-2 rounded-lg hover:bg-teal-600 transition-colors ${
+                isActive ? "bg-teal-600" : ""
+              } ${isCollapsed ? "justify-center" : "justify-start"}`
+            }
+          >
+            <FaCogs className="h-6 w-6" />
+            {!isCollapsed && <span className="ml-3">Homepage Settings</span>}
+          </NavLink>
         </nav>
       </div>
     </>

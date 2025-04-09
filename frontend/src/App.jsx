@@ -98,6 +98,7 @@ import WoredaNotifications from "./components/Woreda/Notifications";
 import AddWoredaInmate from "./components/Woreda/AddWoredaInmate";
 import ViewWoredaInmate from "./components/Woreda/ViewWoredaInmate";
 import ViewPrisoner from "./components/Woreda/ViewPrisoner";
+import Reports from "./components/InspectorDashboard/Reports.jsx";
 import TransferRequests from "./components/SecurityStaff/TransferRequests";
 import ScheduleVisit from "./components/visitorDashboaard/ScheduleVisit";
 import VisitHistory from "./components/visitorDashboaard/VisitHistory";
@@ -170,23 +171,12 @@ function App() {
           </Route>
 
           {/* Inspector Dashboard Routes */}
-          <Route path="/Inspector-dashboard" element={<InspectorDashboard />}>
+          <Route path="/inspector-dashboard" element={<InspectorDashboard />}>
             <Route index element={<InspectorSummary />} />
             <Route path="prisons" element={<PrisonsList />} />
-            <Route path="prisons/edit/:id" element={<EditPrison />} />
-            <Route path="edit/:id" element={<EditPrison />} />
             <Route path="notices" element={<NoticesList />} />
-            <Route path="add-notice" element={<Notices />} />
-            <Route path="update-notice/:id" element={<UpdateNotice />} />
-            <Route path="view-notice/:id" element={<ViewNotice />} />
-            <Route path="update-profile" element={<UpdateProfile />} />
-            <Route path="help" element={<HelpPage />} />
-            <Route path="settingsPage" element={<SettingPage />} />
-            <Route path="add-prison" element={<AddPrison />} />
-            <Route
-              path="homepage-settings"
-              element={<InspectorHomepageSettings />}
-            />
+            <Route path="reports" element={<Reports />} />
+            <Route path="homepage-settings" element={<InspectorHomepageSettings />} />
           </Route>
 
           {/*court Dashboard Routes */}
