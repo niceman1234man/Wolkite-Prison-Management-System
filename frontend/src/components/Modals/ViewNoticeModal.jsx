@@ -26,6 +26,7 @@ const ViewNoticeModal = ({ open, setOpen, notice, onReload }) => {
       console.log(`Attempting to change notice status to: ${!notice.isPosted}`);
       console.log("Notice data:", notice);
       
+      // Make sure we're using the correct API endpoint
       const response = await axiosInstance.put(`/notice/post-notice/${notice._id}`, {
         isPosted: !notice.isPosted
       });
@@ -58,6 +59,7 @@ const ViewNoticeModal = ({ open, setOpen, notice, onReload }) => {
       console.log(`Attempting to delete notice with ID: ${notice._id}`);
       console.log("Notice data:", notice);
       
+      // Make sure we're using the correct API endpoint
       const response = await axiosInstance.delete(`/notice/delete-notice/${notice._id}`);
       
       console.log("Delete API Response:", response.data);
@@ -191,30 +193,47 @@ const ViewNoticeModal = ({ open, setOpen, notice, onReload }) => {
               notice?.isPosted
                 ? "bg-orange-500 hover:bg-orange-600 text-white"
                 : "bg-green-500 hover:bg-green-600 text-white"
-            }`}
-            onClick={() => {
-              console.log("Publish/Unpublish button clicked");
-              handleToggleAction();
-            }}
+            } ${loading ? "opacity-70 cursor-not-allowed" : ""}`}
+            onClick={handleToggleAction}
             disabled={loading}
           >
-            {loading ? "Processing..." : notice?.isPosted ? "Unpublish" : "Publish"}
+            {loading ? (
+              <span className="flex items-center justify-center">
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                {notice?.isPosted ? "Unpublishing..." : "Publishing..."}
+              </span>
+            ) : (
+              notice?.isPosted ? "Unpublish" : "Publish"
+            )}
           </button>
 
           <button
-            className="w-1/2 bg-red-600 hover:bg-red-700 text-white py-2 px-3 rounded font-medium transition duration-300 disabled:bg-gray-400"
-            onClick={() => {
-              console.log("Delete button clicked");
-              handleDeleteAction();
-            }}
+            className={`w-1/2 bg-red-600 hover:bg-red-700 text-white py-2 px-3 rounded font-medium transition duration-300 ${
+              loading ? "opacity-70 cursor-not-allowed" : ""
+            }`}
+            onClick={handleDeleteAction}
             disabled={loading}
           >
-            {loading ? "Processing..." : "Delete"}
+            {loading ? (
+              <span className="flex items-center justify-center">
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Deleting...
+              </span>
+            ) : (
+              "Delete"
+            )}
           </button>
         </div>
         
         {showConfirm && (
           <ConfirmModal 
+            open={true}
             message={confirmMessage}
             onConfirm={() => {
               console.log("Confirm action in modal");
