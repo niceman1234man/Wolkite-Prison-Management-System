@@ -464,7 +464,7 @@ const RequestParole = () => {
                         {new Date(inmate.paroleDate).toLocaleDateString()}
                       </p>
                     </div>
-                    <div>
+        <div>
                       <p className="text-xs text-gray-500 mb-1 flex items-center">
                         <FaClipboardCheck className="mr-1" size={12} />
                         Parole Points

@@ -4,7 +4,7 @@ import { CSVLink } from "react-csv";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import axiosInstance from "../../utils/axiosInstance";
-import { useSelector } from "react-redux"; // To access the sidebar state
+import { useSelector } from "react-redux";
 
 const PoliceOfficerReports = () => {
   const [visitors, setVisitors] = useState([]);
@@ -13,34 +13,43 @@ const PoliceOfficerReports = () => {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [filteredData, setFilteredData] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const isCollapsed = useSelector((state) => state.sidebar.isCollapsed); // Get sidebar state
+  const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
 
   useEffect(() => {
-    axiosInstance.get("/visitor/allVisitors").then((res) => setVisitors(res.data.visitors));
-    axiosInstance.get("/incidents/allIncidents").then((res) => setIncidents(res.data.incidents));
+    setIsLoading(true);
+    Promise.all([
+      axiosInstance.get("/visitor/allVisitors"),
+      axiosInstance.get("/incidents/allIncidents")
+    ]).then(([visitorRes, incidentRes]) => {
+      setVisitors(visitorRes.data.visitors);
+      setIncidents(incidentRes.data.incidents);
+      setIsLoading(false);
+    }).catch(error => {
+      console.error("Error fetching data:", error);
+      setIsLoading(false);
+    });
   }, []);
 
   useEffect(() => {
-    // Trigger filter when the selected report or date range changes
-    if (selectedReport === "visitors") {
-      filterVisitors();
-    } else if (selectedReport === "incidents") {
-      filterIncidents();
+    if (startDate && endDate) {
+      if (selectedReport === "visitors") {
+        filterVisitors();
+      } else if (selectedReport === "incidents") {
+        filterIncidents();
+      }
     }
   }, [selectedReport, startDate, endDate]);
 
   const filterVisitors = () => {
     if (!startDate || !endDate) return;
-    let vn0 = 1;
+    let vn0 = 0;
     const filtered = visitors
-      .map((visitor) => {
-        vn0++;
-        return {
-          vn0,
-          ...visitor,
-        };
-      })
+      .map((visitor) => ({
+        vn0: ++vn0,
+        ...visitor,
+      }))
       .filter((visitor) => {
         const visitDate = new Date(visitor.date);
         return visitDate >= new Date(startDate) && visitDate <= new Date(endDate);
@@ -49,11 +58,11 @@ const PoliceOfficerReports = () => {
   };
 
   const filterIncidents = (status = null) => {
-    let In0 = 1;
     if (!startDate || !endDate) return;
+    let In0 = 0;
     const filtered = incidents
       .map((incident) => ({
-        I_No: In0++,
+        I_No: ++In0,
         ...incident,
       }))
       .filter((incident) => {
@@ -70,24 +79,49 @@ const PoliceOfficerReports = () => {
   const generatePDF = () => {
     const doc = new jsPDF();
     doc.text(`Police Officer ${selectedReport === "visitors" ? "Visitor" : "Incident"} Report`, 14, 10);
+    doc.text(`From: ${new Date(startDate).toLocaleDateString()} - To: ${new Date(endDate).toLocaleDateString()}`, 14, 20);
 
     const tableColumn =
       selectedReport === "visitors"
-        ? ["First Name", "Last Name", "Phone", "Relation", "Date"]
-        : ["Reporter", "Type", "Status", "Date"];
-    let vn0 = 1;
-    const tableRows = filteredData.map((item) =>
+        ? ["No", "First Name", "Last Name", "Phone", "Inmate", "Relation", "Date"]
+        : ["No", "Inmate", "Reporter", "Type", "Status", "Date", "Description"];
+    
+    const tableRows = filteredData.map((item, index) =>
       selectedReport === "visitors"
-        ? [vn0++, item.firstName, item.lastName, item.phone, item.relation, new Date(item.date).toLocaleDateString()]
-        : [vn0++, item.reporter, item.incidentType, item.status, new Date(item.incidentDate).toLocaleDateString()]
+        ? [
+            index + 1, 
+            item.firstName, 
+            item.lastName, 
+            item.phone, 
+            item.inmate, 
+            item.relation, 
+            new Date(item.date).toLocaleDateString()
+          ]
+        : [
+            index + 1, 
+            item.inmate, 
+            item.reporter, 
+            item.incidentType, 
+            item.status, 
+            new Date(item.incidentDate).toLocaleDateString(),
+            item.description?.substring(0, 30) + (item.description?.length > 30 ? "..." : "")
+          ]
     );
 
-    doc.autoTable({ head: [tableColumn], body: tableRows });
-    doc.save(`${selectedReport}-report.pdf`);
+    doc.autoTable({ 
+      head: [tableColumn], 
+      body: tableRows,
+      startY: 25,
+      margin: { top: 25 },
+      styles: { overflow: 'linebreak' },
+      headStyles: { fillColor: [41, 128, 185], textColor: 255 }
+    });
+    
+    doc.save(`${selectedReport}-report-${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const visitorColumns = [
-    { name: "V_No", selector: (row) => row.vn0, sortable: true },
+    { name: "No", selector: (row) => row.vn0, sortable: true, width: "60px" },
     { name: "First Name", selector: (row) => row.firstName, sortable: true },
     { name: "Last Name", selector: (row) => row.lastName, sortable: true },
     { name: "Phone", selector: (row) => row.phone, sortable: true },
@@ -101,7 +135,7 @@ const PoliceOfficerReports = () => {
   ];
 
   const incidentColumns = [
-    { name: "I_NO", selector: (row) => row.I_No, sortable: true },
+    { name: "No", selector: (row) => row.I_No, sortable: true, width: "60px" },
     { name: "Inmate", selector: (row) => row.inmate, sortable: true },
     { name: "Reporter", selector: (row) => row.reporter, sortable: true },
     { name: "Type", selector: (row) => row.incidentType, sortable: true },
@@ -111,67 +145,156 @@ const PoliceOfficerReports = () => {
       selector: (row) => new Date(row.incidentDate).toLocaleDateString(),
       sortable: true,
     },
-    { name: "Description", selector: (row) => row.description, sortable: true },
+    { 
+      name: "Description", 
+      selector: (row) => row.description,
+      sortable: true,
+      wrap: true,
+      cell: row => <div className="truncate max-w-xs" title={row.description}>{row.description}</div> 
+    },
   ];
+
+  const handleReset = () => {
+    setStartDate("");
+    setEndDate("");
+    setFilteredData([]);
+  };
 
   return (
     <div className={`p-6 bg-white shadow-md rounded-md mt-12 ${isCollapsed ? "ml-16" : "ml-64"}`}>
+      {/* Fixed Header */}
       <div className={`bg-white shadow-md p-4 fixed top-14 z-20 flex justify-center items-center transition-all duration-300 ml-2 ${isCollapsed ? "left-16 w-[calc(100%-5rem)]" : "left-64 w-[calc(100%-17rem)]"}`}>
         <h3 className="text-2xl font-bold text-gray-800 text-center">Police Officer Reports</h3>
       </div>
 
-      {/* Report Selection */}
-      <div className="flex flex-wrap justify-center sm:justify-start space-x-4 mt-20 mb-4">
-        <button
-          className={`px-4 py-2 rounded-md ${selectedReport === "visitors" ? "bg-blue-600 text-white" : "bg-gray-300"}`}
-          onClick={() => setSelectedReport("visitors")}
-        >
-          Visitor Reports
-        </button>
-        <button
-          className={`px-4 py-2 rounded-md ${selectedReport === "incidents" ? "bg-blue-600 text-white" : "bg-gray-300"}`}
-          onClick={() => setSelectedReport("incidents")}
-        >
-          Incident Reports
-        </button>
+      <div className="mt-20 mb-6">
+        {/* Card for Report Options */}
+        <div className="bg-white shadow-sm rounded-lg p-5 border border-gray-200 mb-6">
+          <h4 className="text-lg font-semibold text-gray-700 mb-4">Report Type</h4>
+          <div className="flex flex-wrap gap-3">
+            <button
+              className={`px-4 py-2 rounded-md transition-colors ${selectedReport === "visitors" 
+                ? "bg-blue-600 text-white" 
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}
+              onClick={() => setSelectedReport("visitors")}
+            >
+              Visitor Reports
+            </button>
+            <button
+              className={`px-4 py-2 rounded-md transition-colors ${selectedReport === "incidents" 
+                ? "bg-blue-600 text-white" 
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}
+              onClick={() => setSelectedReport("incidents")}
+            >
+              Incident Reports
+            </button>
+          </div>
+        </div>
+
+        {/* Card for Date Range */}
+        <div className="bg-white shadow-sm rounded-lg p-5 border border-gray-200 mb-6">
+          <h4 className="text-lg font-semibold text-gray-700 mb-4">Date Range</h4>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex space-x-4 items-end">
+              <div className="flex flex-col">
+                <label className="text-sm text-gray-600 mb-1">Start Date</label>
+                <input 
+                  type="date" 
+                  value={startDate}
+                  className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                  onChange={(e) => setStartDate(e.target.value)} 
+                />
+              </div>
+              <div className="flex flex-col">
+                <label className="text-sm text-gray-600 mb-1">End Date</label>
+                <input 
+                  type="date" 
+                  value={endDate}
+                  className="px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                  onChange={(e) => setEndDate(e.target.value)} 
+                />
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center"
+                  onClick={selectedReport === "visitors" ? filterVisitors : () => filterIncidents()}
+                  disabled={!startDate || !endDate}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                  Generate Report
+                </button>
+                <button
+                  className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
+                  onClick={handleReset}
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Date Filters */}
-      <div className="flex flex-wrap items-center justify-center sm:justify-start space-x-3 mb-4">
-        <input type="date" className="px-4 py-2 border rounded-md" onChange={(e) => setStartDate(e.target.value)} />
-        <input type="date" className="px-4 py-2 border rounded-md" onChange={(e) => setEndDate(e.target.value)} />
-
-        <button
-          className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-          onClick={selectedReport === "visitors" ? filterVisitors : () => filterIncidents()}
-        >
-          Generate {selectedReport === "visitors" ? "Visitor" : "Incident"} Report
-        </button>
-      </div>
-
-      {/* Export Buttons */}
+      {/* Export Options */}
       {filteredData.length > 0 && (
-        <div className="flex flex-wrap justify-center sm:justify-start space-x-4 mb-4">
-          <CSVLink data={filteredData} filename={`${selectedReport}-report.csv`} className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700">
-            Export as CSV
+        <div className="bg-gray-50 p-4 rounded-md mb-6 flex flex-wrap gap-3 items-center">
+          <span className="text-gray-700 font-medium">Export:</span>
+          <CSVLink 
+            data={filteredData} 
+            filename={`${selectedReport}-report-${new Date().toISOString().split('T')[0]}.csv`} 
+            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            CSV
           </CSVLink>
-          <button className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700" onClick={generatePDF}>
-            Export as PDF
+          <button 
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center" 
+            onClick={generatePDF}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            PDF
           </button>
         </div>
       )}
 
-      {/* Data Table */}
-      {filteredData.length === 0 ? (
-        <p className="text-center text-gray-500">No data available for the selected criteria.</p>
-      ) : (
-        <DataTable
-          columns={selectedReport === "visitors" ? visitorColumns : incidentColumns}
-          data={filteredData}
-          pagination
-          responsive
-        />
-      )}
+      {/* Data Results */}
+      <div className="bg-white shadow-sm rounded-lg border border-gray-200">
+        <div className="p-4 border-b border-gray-200">
+          <h4 className="text-lg font-semibold text-gray-700">
+            {selectedReport === "visitors" ? "Visitor Records" : "Incident Records"}
+            {filteredData.length > 0 && <span className="text-sm font-normal text-gray-500 ml-2">({filteredData.length} records)</span>}
+          </h4>
+        </div>
+        
+        {isLoading ? (
+          <div className="flex justify-center items-center p-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+        ) : filteredData.length === 0 ? (
+          <div className="text-center p-8 text-gray-500">
+            {startDate && endDate ? "No data available for the selected date range." : "Select a date range to generate a report."}
+          </div>
+        ) : (
+          <DataTable
+            columns={selectedReport === "visitors" ? visitorColumns : incidentColumns}
+            data={filteredData}
+            pagination
+            responsive
+            highlightOnHover
+            pointerOnHover
+            defaultSortFieldId={1}
+            defaultSortAsc={true}
+            paginationPerPage={10}
+            paginationRowsPerPageOptions={[10, 20, 30, 50]}
+          />
+        )}
+      </div>
     </div>
   );
 };
