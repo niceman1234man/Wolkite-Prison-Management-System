@@ -121,6 +121,7 @@ const Navbar = ({ toggleSidebar }) => {
         <button
           onClick={() => setShowMessaging(true)}
           className="relative p-2 text-gray-700 hover:text-gray-900 transition-colors"
+          title="Open messages"
         >
           <FiMessageSquare size={24} />
           {unreadCount > 0 && (
@@ -142,7 +143,7 @@ const Navbar = ({ toggleSidebar }) => {
             <div className="relative">
             {user?.photo ? (
               <img
-                  src={`http://localhost:5001/uploads/${user.photo}`}
+                src={`http://localhost:5001/uploads/${user.photo}`}
                 className="w-10 h-10 rounded-full border border-gray-300"
                 alt="User"
               />
@@ -214,8 +215,10 @@ const Navbar = ({ toggleSidebar }) => {
         </div>
       </div>
 
-      {/* Messaging System Modal */}
-      <MessagingSystem isOpen={showMessaging} onClose={() => setShowMessaging(false)} />
+      {/* Always render MessagingSystem when requested */}
+      {showMessaging && (
+        <MessagingSystem isOpen={showMessaging} onClose={() => setShowMessaging(false)} />
+      )}
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { FiUser, FiSearch, FiUsers, FiX } from 'react-icons/fi';
+import { FiUser, FiSearch, FiUsers, FiX, FiRefreshCw } from 'react-icons/fi';
 
 const MessageList = ({ 
   users = [], // Add default empty array to prevent null/undefined issues
@@ -7,12 +7,18 @@ const MessageList = ({
   onSelectUser, 
   searchQuery = "", // Add default empty string
   setSearchQuery,
-  unreadCounts = {} // Add default empty object
+  unreadCounts = {}, // Add default empty object
+  isLoading = false // Add loading state
 }) => {
-  console.log("MessageList users count:", users.length, users);
+  // Add defensive check for users array
+  const validUsers = Array.isArray(users) ? users : [];
+  console.log("MessageList users count:", validUsers.length, validUsers);
 
   // Sort users by unread count (descending) and then by name
-  const sortedUsers = [...(Array.isArray(users) ? users : [])].sort((a, b) => {
+  const sortedUsers = [...validUsers].sort((a, b) => {
+    // Skip nullish values
+    if (!a || !b) return 0;
+    
     // First by unread count (descending)
     const aUnread = unreadCounts[a?._id] || 0;
     const bUnread = unreadCounts[b?._id] || 0;
@@ -173,9 +179,14 @@ const MessageList = ({
         </div>
       </div>
       
-      {/* User list - Now with Telegram-like styling */}
+      {/* User list */}
       <div className="flex-1 overflow-y-auto custom-scrollbar">
-        {!Array.isArray(users) || users.length === 0 || displayUsers.length === 0 ? (
+        {isLoading ? (
+          <div className="text-center p-6 empty-state">
+            <FiRefreshCw size={36} className="mx-auto mb-3 text-gray-300 animate-spin" />
+            <p className="font-medium text-gray-500">Loading users...</p>
+          </div>
+        ) : !validUsers.length || !displayUsers.length ? (
           <div className="text-center p-6 empty-state">
             <FiUsers size={36} className="mx-auto mb-3 text-gray-300" />
             <p className="font-medium text-gray-500 mb-1">
@@ -272,7 +283,7 @@ const MessageList = ({
                   </div>
                 );
               } catch (error) {
-                console.error("Error rendering user:", user, error);
+                console.error('Error rendering user item:', error);
                 return null;
               }
             })}

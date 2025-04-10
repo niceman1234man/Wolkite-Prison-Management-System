@@ -85,10 +85,8 @@ import ViewTransfer from "./components/Woreda/ViewTransfer";
 import EditTransfer from "./components/Woreda/EditTransfer";
 import UpdateClearance from "./components/Clearance/UpdateClearance";
 import ViewClearance from "./components/Clearance/ViewClearance";
-// import Woreda from "./components/SecurityStaff/Woreda";
 import Court from "./components/SecurityStaff/Court";
 import ParoleSend from "./components/SecurityStaff/ParoleSend";
-// import WoredaView from "./components/SecurityStaff/WoredaView";
 import CourtView from "./components/SecurityStaff/CourtView";
 import InspectorHomepageSettings from "./page/InspectorHomepageSettings";
 import Dashboard from "./page/Dashboard";
@@ -110,157 +108,158 @@ import NoticeView from "./components/Notices/NoticeView";
 import RequestParole from "./parole/RequestParole";
 import SecurityStaffDashboardSidebar from "./components/SecurityStaff/SecurityStaffDashboardSidebar";
 import SecurityStaffReport from "./components/SecurityStaff/SecurityStaffReport";
+import { Toaster } from 'react-hot-toast';
+import { SocketProvider } from './context/SocketContext';
+import AuthContext from './context/authContext';
 
 function App() {
   return (
     <>
-      <Routes>
-        <Route path="/" element={<Welcome />} />
-        <Route path="/block" element={<Block />} />
-        <Route path="/login" element={<Login isVisitor={false} />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/reset-password/:id/:token" element={<ResetPassword />} />
-        {/* <Route path='/admin' element={<Admin />} /> */}
-        <Route path="/visitor" element={<Visitor />} />
-        <Route path="/register" element={<VisitorRegister />} />
-        <Route path="/forgot-password" element={<ForegotPassword />} />
-        <Route path="/visitor-dash" element={<VisitorDashboard />} />
-        {/* <Route path='/inspector' element={<Inspector />} /> */}
-        <Route path="/security" element={<SecurityStaff />} />
-        <Route element={<PrivateRoute />}>
-          {/* Police Officer Dashboard Routes */}
-          <Route
-            path="/policeOfficer-dashboard"
-            element={<PoliceOfficerDashboard />}
-          >
-            <Route index element={<PoliceOfficerSummary />} />
-            <Route path="visitors" element={<VisitorList />} />
-            <Route path="add" element={<RegisterVisitor />} />
-            <Route path="edit/:id" element={<EditVisitor />} />
-            <Route path="view/:id" element={<ViewVisitor />} />
-            <Route path="parole" element={<Parole />} />
-            <Route path="parole-request" element={<RequestParole />} />
-            <Route path="ParoleList/:inmateId" element={<ParoleList />} />
-            <Route path="incident" element={<Insident />} />
-            <Route path="reports" element={<PoliceOfficerReports />} />
-            <Route path="add-incident" element={<Add />} />
-            <Route path="incident-details/:id" element={<ViewIncident />} />
-            <Route path="edit-incident/:id" element={<UpdateIncident />} />
-            <Route path="status/:_id" element={<InmateBehaviorGraph />} />
-            <Route path="update-profile" element={<UpdateProfile />} />
-            <Route path="help" element={<HelpPage />} />
-            <Route path="settingsPage" element={<SettingPage />} />
-            <Route path="notices" element={<DashboardNoticeList dashboardType="police" />} />
-            <Route path="notices/view/:id" element={<NoticeView />} />
-          </Route>
+      <AuthContext>
+        <SocketProvider>
+          <Toaster position="top-right" />
+          <Routes>
+            <Route path="/" element={<Welcome />} />
+            <Route path="/block" element={<Block />} />
+            <Route path="/login" element={<Login isVisitor={false} />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/reset-password/:id/:token" element={<ResetPassword />} />
+            <Route path="/visitor" element={<Visitor />} />
+            <Route path="/register" element={<VisitorRegister />} />
+            <Route path="/forgot-password" element={<ForegotPassword />} />
+            <Route path="/visitor-dash" element={<VisitorDashboard />} />
+            <Route path="/security" element={<SecurityStaff />} />
+            <Route element={<PrivateRoute />}>
+              {/* Police Officer Dashboard Routes */}
+              <Route
+                path="/policeOfficer-dashboard"
+                element={<PoliceOfficerDashboard />}
+              >
+                <Route index element={<PoliceOfficerSummary />} />
+                <Route path="visitors" element={<VisitorList />} />
+                <Route path="add" element={<RegisterVisitor />} />
+                <Route path="edit/:id" element={<EditVisitor />} />
+                <Route path="view/:id" element={<ViewVisitor />} />
+                <Route path="parole" element={<Parole />} />
+                <Route path="parole-request" element={<RequestParole />} />
+                <Route path="ParoleList/:inmateId" element={<ParoleList />} />
+                <Route path="incident" element={<Insident />} />
+                <Route path="reports" element={<PoliceOfficerReports />} />
+                <Route path="add-incident" element={<Add />} />
+                <Route path="incident-details/:id" element={<ViewIncident />} />
+                <Route path="edit-incident/:id" element={<UpdateIncident />} />
+                <Route path="status/:_id" element={<InmateBehaviorGraph />} />
+                <Route path="update-profile" element={<UpdateProfile />} />
+                <Route path="help" element={<HelpPage />} />
+                <Route path="settingsPage" element={<SettingPage />} />
+                <Route path="notices" element={<DashboardNoticeList dashboardType="police" />} />
+                <Route path="notices/view/:id" element={<NoticeView />} />
+              </Route>
 
-          {/* Admin Dashboard Routes */}
-          <Route path="/admin-dashboard" element={<AdminDashboard />}>
-            <Route index element={<AdminSummary />} />
-            <Route path="CreateAccount" element={<CreateUserAccount />} />
-            <Route path="system-setting" element={<BackeUp />} />
-            <Route path="users" element={<ListofUsers />} />
-            <Route path="edit/:id" element={<EditUser />} />
-            <Route path="users/:id" element={<ViewUser />} />
-            <Route path="update-profile" element={<UpdateProfile />} />
-            <Route path="help" element={<HelpPage />} />
-            <Route path="settingsPage" element={<SettingPage />} />
-            <Route path="reports" element={<AccountReport />} />
-            <Route path="notices" element={<DashboardNoticeList dashboardType="admin" />} />
-            <Route path="notices/view/:id" element={<NoticeView />} />
-          </Route>
+              {/* Admin Dashboard Routes */}
+              <Route path="/admin-dashboard" element={<AdminDashboard />}>
+                <Route index element={<AdminSummary />} />
+                <Route path="CreateAccount" element={<CreateUserAccount />} />
+                <Route path="system-setting" element={<BackeUp />} />
+                <Route path="users" element={<ListofUsers />} />
+                <Route path="edit/:id" element={<EditUser />} />
+                <Route path="users/:id" element={<ViewUser />} />
+                <Route path="update-profile" element={<UpdateProfile />} />
+                <Route path="help" element={<HelpPage />} />
+                <Route path="settingsPage" element={<SettingPage />} />
+                <Route path="reports" element={<AccountReport />} />
+                <Route path="notices" element={<DashboardNoticeList dashboardType="admin" />} />
+                <Route path="notices/view/:id" element={<NoticeView />} />
+              </Route>
 
-          {/* Inspector Dashboard Routes */}
-          <Route path="/inspector-dashboard" element={<InspectorDashboard />}>
-            <Route index element={<InspectorSummary />} />
-            <Route path="prisons" element={<PrisonsList />} />
-            <Route path="notices" element={<NoticesList />} />
-            <Route path="reports" element={<Reports />} />
-            <Route path="homepage-settings" element={<InspectorHomepageSettings />} />
-          </Route>
+              {/* Inspector Dashboard Routes */}
+              <Route path="/inspector-dashboard" element={<InspectorDashboard />}>
+                <Route index element={<InspectorSummary />} />
+                <Route path="prisons" element={<PrisonsList />} />
+                <Route path="notices" element={<NoticesList />} />
+                <Route path="reports" element={<Reports />} />
+                <Route path="homepage-settings" element={<InspectorHomepageSettings />} />
+              </Route>
 
-          {/*court Dashboard Routes */}
-          <Route path="/court-dashboard" element={<CourtDashboard />}>
-            <Route index element={<CourtSummary />} />
-            <Route path="parole" element={<ParoleRequest />} />
-            <Route path="list" element={<InstructionList />} />
-            <Route path="view/:id" element={<ViewInstruction />} />
-            <Route path="view-request/:id" element={<ViewParole />} />
-            <Route path="edit/:id" element={<EditInstruction />} />
-            <Route path="courtInstructions" element={<CourtInstructions />} />
-            <Route path="update-profile" element={<UpdateProfile />} />
-            <Route path="help" element={<HelpPage />} />
-            <Route path="settingsPage" element={<SettingPage />} />
-            <Route path="notices" element={<DashboardNoticeList dashboardType="court" />} />
-            <Route path="notices/view/:id" element={<NoticeView />} />
-          </Route>
-          {/*Woreda Dashboard Routes */}
-          <Route path="/woreda-dashboard" element={<WoredaDashboard />}>
-            <Route index element={<Dashboard />} />
-            <Route path="transfers" element={<PrisonerList />} />
-            <Route path="reports" element={<WoredaReports />} />
-            <Route path="notifications" element={<WoredaNotifications />} />
-            <Route path="prisoners" element={<PrisonerList />} />
-            <Route path="add" element={<InmateTransferForm />} />
-            <Route path="inmates" element={<AddWoredaInmate />} />
-            <Route path="inmates/:id" element={<ViewWoredaInmate />} />
-            <Route path="edit/:id" element={<EditTransfer />} />
-            <Route path="view/:id" element={<ViewTransfer />} />
-            <Route path="update-profile" element={<UpdateProfile />} />
-            <Route path="help" element={<HelpPage />} />
-            <Route path="settingsPage" element={<SettingPage />} />
-            <Route path="prisoner-list" element={<PrisonerList />} />
-            <Route path="prisoner/:id" element={<ViewPrisoner />} />
-            <Route path="notices" element={<DashboardNoticeList dashboardType="woreda" />} />
-            <Route path="notices/view/:id" element={<NoticeView />} />
-          </Route>
-          {/*visitor Dashboard Routes */}
-          <Route path="/visitor-dashboard" element={<VisitDashboard />}>
-            <Route index element={<VisitorSummaryCard />} />
-            <Route path="schedules" element={<ScheduleVisit />} />
-            <Route path="visit-history" element={<VisitHistory />} />
-            <Route path="setting" element={<VisitorProfile />} />
-            <Route path="schedule-visit" element={<VisitSchedules />} />
-            <Route path="update-profile" element={<UpdateProfile />} />
-            <Route path="help" element={<HelpPage />} />
-            {/* <Route path="setting" element={<SettingPage />} /> */}
-            <Route path="notices" element={<DashboardNoticeList dashboardType="visitor" />} />
-            <Route path="notices/view/:id" element={<NoticeView />} />
-          </Route>
+              {/* Court Dashboard Routes */}
+              <Route path="/court-dashboard" element={<CourtDashboard />}>
+                <Route index element={<CourtSummary />} />
+                <Route path="parole" element={<ParoleRequest />} />
+                <Route path="list" element={<InstructionList />} />
+                <Route path="view/:id" element={<ViewInstruction />} />
+                <Route path="view-request/:id" element={<ViewParole />} />
+                <Route path="edit/:id" element={<EditInstruction />} />
+                <Route path="courtInstructions" element={<CourtInstructions />} />
+                <Route path="update-profile" element={<UpdateProfile />} />
+                <Route path="help" element={<HelpPage />} />
+                <Route path="settingsPage" element={<SettingPage />} />
+                <Route path="notices" element={<DashboardNoticeList dashboardType="court" />} />
+                <Route path="notices/view/:id" element={<NoticeView />} />
+              </Route>
 
-          {/*securityStaff Dashboard Routes */}
-          <Route
-            path="/securityStaff-dashboard"
-            element={<SecurityStaffDashboard />}
-          >
-            <Route index element={<SecurityStaffSummary />} />
-            <Route path="inmates" element={<InmateList />} />
-            {/* <Route path="woreda" element={<Woreda />} /> */}
-            {/* <Route path="woreda-view/:id" element={<WoredaView />} /> */}
-            <Route path="court" element={<Court />} />
-            <Route path="court-view/:id" element={<CourtView />} />
-            <Route path="parole" element={<ParoleSend />} />
-            <Route path="transfer-requests" element={<TransferRequests />} />
+              {/* Woreda Dashboard Routes */}
+              <Route path="/woreda-dashboard" element={<WoredaDashboard />}>
+                <Route index element={<Dashboard />} />
+                <Route path="transfers" element={<PrisonerList />} />
+                <Route path="reports" element={<WoredaReports />} />
+                <Route path="notifications" element={<WoredaNotifications />} />
+                <Route path="prisoners" element={<PrisonerList />} />
+                <Route path="add" element={<InmateTransferForm />} />
+                <Route path="inmates" element={<AddWoredaInmate />} />
+                <Route path="inmates/:id" element={<ViewWoredaInmate />} />
+                <Route path="edit/:id" element={<EditTransfer />} />
+                <Route path="view/:id" element={<ViewTransfer />} />
+                <Route path="update-profile" element={<UpdateProfile />} />
+                <Route path="help" element={<HelpPage />} />
+                <Route path="settingsPage" element={<SettingPage />} />
+                <Route path="prisoner-list" element={<PrisonerList />} />
+                <Route path="prisoner/:id" element={<ViewPrisoner />} />
+                <Route path="notices" element={<DashboardNoticeList dashboardType="woreda" />} />
+                <Route path="notices/view/:id" element={<NoticeView />} />
+              </Route>
 
+              {/* Visitor Dashboard Routes */}
+              <Route path="/visitor-dashboard" element={<VisitDashboard />}>
+                <Route index element={<VisitorSummaryCard />} />
+                <Route path="schedules" element={<ScheduleVisit />} />
+                <Route path="visit-history" element={<VisitHistory />} />
+                <Route path="setting" element={<VisitorProfile />} />
+                <Route path="schedule-visit" element={<VisitSchedules />} />
+                <Route path="update-profile" element={<UpdateProfile />} />
+                <Route path="help" element={<HelpPage />} />
+                <Route path="notices" element={<DashboardNoticeList dashboardType="visitor" />} />
+                <Route path="notices/view/:id" element={<NoticeView />} />
+              </Route>
 
-            <Route path="add-inmate" element={<AddInmate />} />
-            <Route path="update-inmate/:id" element={<UpdateInmate />} />
-            <Route path="view-inmate/:id" element={<ViewInmate />} />
-            <Route path="reports" element={<SecurityStaffReport />} />
-            <Route path="clearance" element={<ClearancesList />} />
-            <Route path="add-clearance" element={<InmateClearance />} />
-            <Route path="update-profile" element={<UpdateProfile />} />
-            <Route path="help" element={<HelpPage />} />
-            <Route path="settingsPage" element={<SettingPage />} />
-            <Route path="edit-clearance/:id" element={<UpdateClearance />} />
-            <Route path="view-clearance/:id" element={<ViewClearance />} />
-            {/* <Route path="edit-clearance" element={<editClearance />} /> */}
-            {/* <Route path='clearance' element={<clearanceLogic />} />  */}
-            <Route path="notices" element={<DashboardNoticeList dashboardType="security" />} />
-            <Route path="notices/view/:id" element={<NoticeView />} />
-          </Route>
-        </Route>
-      </Routes>
+              {/* Security Staff Dashboard Routes */}
+              <Route
+                path="/securityStaff-dashboard"
+                element={<SecurityStaffDashboard />}
+              >
+                <Route index element={<SecurityStaffSummary />} />
+                <Route path="inmates" element={<InmateList />} />
+                <Route path="court" element={<Court />} />
+                <Route path="court-view/:id" element={<CourtView />} />
+                <Route path="parole" element={<ParoleSend />} />
+                <Route path="transfer-requests" element={<TransferRequests />} />
+                <Route path="add-inmate" element={<AddInmate />} />
+                <Route path="update-inmate/:id" element={<UpdateInmate />} />
+                <Route path="view-inmate/:id" element={<ViewInmate />} />
+                <Route path="reports" element={<SecurityStaffReport />} />
+                <Route path="clearance" element={<ClearancesList />} />
+                <Route path="add-clearance" element={<InmateClearance />} />
+                <Route path="update-profile" element={<UpdateProfile />} />
+                <Route path="help" element={<HelpPage />} />
+                <Route path="settingsPage" element={<SettingPage />} />
+                <Route path="edit-clearance/:id" element={<UpdateClearance />} />
+                <Route path="view-clearance/:id" element={<ViewClearance />} />
+                <Route path="notices" element={<DashboardNoticeList dashboardType="security" />} />
+                <Route path="notices/view/:id" element={<NoticeView />} />
+              </Route>
+            </Route>
+          </Routes>
+        </SocketProvider>
+      </AuthContext>
       <ToastContainer
         position="top-center"
         autoClose={3000}

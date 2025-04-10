@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
+import { useSocket } from '../../context/SocketContext';
 import { 
   FiMoreVertical, 
   FiMenu, 
@@ -24,7 +25,8 @@ import {
   FiBellOff,
   FiRefreshCw,
   FiPhone,
-  FiVideo
+  FiVideo,
+  FiInfo
 } from 'react-icons/fi';
 import axiosInstance from '../../utils/axiosInstance';
 import { toast } from 'react-hot-toast';
@@ -45,9 +47,49 @@ const API_ENDPOINTS = {
 const messageUtils = {
   fetchUsers: async (userId) => {
     try {
-      const response = await axiosInstance.get(API_ENDPOINTS.USERS);
+      setIsLoading(true);
+      
+      // Add a default admin user to ensure the list is never empty
+      const defaultUsers = [{
+        _id: 'system-admin',
+        name: 'System Admin',
+        role: 'admin',
+        isAdmin: true,
+        isOnline: true
+      }];
+      
+      // Get the user ID from localStorage
+      let userId = null;
+      try {
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          const userData = JSON.parse(userStr);
+          userId = userData.id || userData._id;
+        }
+      } catch (err) {
+        console.error('Error getting userId from localStorage:', err);
+        setUsers(defaultUsers);
+        setFilteredUsers(defaultUsers);
+        setIsLoading(false);
+        return;
+      }
+      
+      if (!userId) {
+        console.log('No user ID available for fetching users');
+        setUsers(defaultUsers);
+        setFilteredUsers(defaultUsers);
+        setIsLoading(false);
+        return;
+      }
+      
+      try {
+        // Use API_ENDPOINTS.USERS from messageUtils
+        const response = await axiosInstance.get('/user/getAlluser');
+        console.log("User API response:", response.data);
       
       let usersList = [];
+        
+        // Handle different response formats
       if (Array.isArray(response.data)) {
         usersList = response.data;
       } else if (response.data.users && Array.isArray(response.data.users)) {
@@ -61,11 +103,55 @@ const messageUtils = {
         usersList = [];
       }
       
-      return usersList.filter(u => u._id !== userId);
+        // Filter out any users with role 'visitor' and the current user
+        const filteredUsersList = usersList.filter(user => 
+          user && user._id && user._id !== userId
+        );
+        
+        console.log(`Found ${filteredUsersList.length} users after filtering`);
+        
+        // Always include the default admin
+        const combinedUsers = [...defaultUsers];
+        
+        // Process and add each filtered user
+        if (filteredUsersList.length > 0) {
+          // Process users to add name and status
+          filteredUsersList.forEach(user => {
+            // Ensure user has a name field
+            if (!user.name && (user.firstName || user.lastName)) {
+              user.name = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+            }
+            
+            // Set default online status for demo
+            user.isOnline = user.isOnline || Math.random() > 0.5;
+            
+            combinedUsers.push(user);
+          });
+        }
+        
+        // Set users in state
+        setUsers(combinedUsers);
+        setFilteredUsers(combinedUsers);
     } catch (error) {
-      console.error('Error fetching users:', error);
-      toast.error('Failed to load users');
-      return [];
+        console.error('Error fetching users from API:', error);
+        // Use default users as fallback
+        setUsers(defaultUsers);
+        setFilteredUsers(defaultUsers);
+      }
+    } catch (error) {
+      console.error('Unexpected error in fetchUsers:', error);
+      // Set default users as fallback for any error
+      const defaultUsers = [{
+        _id: 'system-admin',
+        name: 'System Admin',
+        role: 'admin',
+        isAdmin: true,
+        isOnline: true
+      }];
+      setUsers(defaultUsers);
+      setFilteredUsers(defaultUsers);
+    } finally {
+      setIsLoading(false);
     }
   },
   
@@ -169,14 +255,65 @@ const messageUtils = {
       
       console.log('Sending message with formData:', Array.from(formData.entries()));
       
+      // Send via API
+      try {
+        console.log('Sending via API with formData:', {
+          content: formData.get('content'),
+          receiverId: formData.get('receiverId'),
+          senderId: formData.get('senderId'),
+          hasFile: !!formData.get('file')
+        });
+      
       const response = await axiosInstance.post(API_ENDPOINTS.SEND_MESSAGE, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-          'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        
+        console.log('API message response:', response.data);
+        
+        if (response.data) {
+          // Add the sent message to the conversation
+          const apiMessage = {
+            ...newMessage,
+            _id: response.data._id || response.data.data?._id || `temp-${Date.now()}`,
+            createdAt: response.data.createdAt || response.data.data?.createdAt || new Date().toISOString()
+          };
+          
+          setMessages(prev => [...prev, apiMessage]);
+          setNewMessage('');
+          
+          // Scroll to bottom
+          setTimeout(() => {
+            if (messagesEndRef.current) {
+              messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+            }
+          }, 100);
         }
-      });
-      
-      console.log('Message API response:', response.data);
+      } catch (apiError) {
+        console.error('API send error:', apiError);
+        
+        // Handle ObjectId casting errors
+        if (apiError.response?.data?.error?.includes('Cast to ObjectId failed')) {
+          toast.error('Invalid recipient ID format');
+          console.error('MongoDB ObjectId casting error with receiverId:', receiverId);
+        } else {
+          // Generic error fallback
+          toast.error(apiError.message || 'Failed to send message via API');
+        }
+        
+        // Still update UI with a temporary message to improve UX
+        const tempMessage = {
+          ...newMessage,
+          _id: `temp-${Date.now()}`,
+          createdAt: new Date().toISOString(),
+          status: 'failed'
+        };
+        
+        setMessages(prev => [...prev, tempMessage]);
+        setNewMessage('');
+      }
       
       if (response.data && response.data._id) {
         return { ...response.data, status: 'sent' };
@@ -229,10 +366,77 @@ const messageUtils = {
 };
 
 const MessagingSystem = ({ isOpen, onClose }) => {
+  // Get redux and socket state
+  const user = useSelector(state => state.user.user);
+  const socketContext = useSocket();
+  const socket = socketContext?.socket;
+  const isConnected = socketContext?.isConnected || false;
+  
+  // State to show warning about socket connection
+  const [showSocketWarning, setShowSocketWarning] = useState(!isConnected);
+  
+  // Log socket state for debugging
+  useEffect(() => {
+    console.log("Socket connection status:", isConnected ? "connected" : "not available");
+    if (!isConnected) {
+      console.log("Socket connection not available. Messages will be sent using API fallback.");
+    }
+    setShowSocketWarning(!isConnected);
+    
+    // If socket is not available after 10 seconds, set it as permanently unavailable
+    // This prevents infinite loading
+    let socketTimeout;
+    if (!isConnected && !socket) {
+      socketTimeout = setTimeout(() => {
+        console.log("Socket connection timeout - proceeding with API-only mode");
+        setShowSocketWarning(false); // Hide the warning after timeout
+        
+        // Force initial data load even without socket
+        if (isOpen && user?._id) {
+          console.log("Loading initial data in API-only mode");
+          loadInitialData();
+        }
+      }, 5000); // Reduced timeout to 5 seconds for better UX
+    }
+    
+    // When socket becomes available, clear timeout and load data
+    if (isConnected && socket) {
+      console.log("Socket connected successfully");
+      if (socketTimeout) {
+        clearTimeout(socketTimeout);
+      }
+      
+      // Emit user online status
+      if (user?._id) {
+        try {
+          socket.emit('userStatus', {
+            userId: user._id,
+            status: 'online'
+          });
+          console.log('Emitted online status for user:', user._id);
+        } catch (err) {
+          console.error('Error emitting user status:', err);
+        }
+      }
+      
+      // Load data now that socket is connected
+      if (isOpen && user?._id) {
+        loadInitialData();
+      }
+    }
+    
+    return () => {
+      if (socketTimeout) clearTimeout(socketTimeout);
+    };
+  }, [isConnected, socket, isOpen, user]);
+  
+  // Initialize state variables
   const [messages, setMessages] = useState([]);
   const [users, setUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [unreadCounts, setUnreadCounts] = useState({});
   const [isTyping, setIsTyping] = useState(false);
@@ -240,6 +444,13 @@ const MessagingSystem = ({ isOpen, onClose }) => {
   const [showUserList, setShowUserList] = useState(true);
   const [lastCheckedTime, setLastCheckedTime] = useState(Date.now());
   const [userStatus, setUserStatus] = useState('Online');
+
+  // Add socket availability check
+  useEffect(() => {
+    if (!socket) {
+      console.warn('Socket connection not available. Some real-time features may be limited.');
+    }
+  }, [socket]);
 
   // State variables for UI enhancements
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -269,14 +480,10 @@ const MessagingSystem = ({ isOpen, onClose }) => {
   const [darkMode, setDarkMode] = useState(false);
   const [fontSize, setFontSize] = useState('medium');
   
-  // Add filteredUsers state after the other state variables
-  const [filteredUsers, setFilteredUsers] = useState([]);
-  
   // Add state for call handling
   const [currentCall, setCurrentCall] = useState(null);
   
   const pollIntervalRef = useRef(null);
-  const user = useSelector((state) => state.user.user);
 
   // Additional refs
   const containerRef = useRef(null);
@@ -304,12 +511,13 @@ const MessagingSystem = ({ isOpen, onClose }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, [selectedUser, containerSize.width, isMobileView]);
 
-  // Start polling for new messages when the component mounts
+  // Start polling for new messages when the component mounts - this will run regardless of socket state
   useEffect(() => {
     if (isOpen && user?._id) {
-      loadInitialData();
+      // If we already have a socket connection, data will be loaded in the socket effect
+      // Otherwise, we'll load data after timeout in API-only mode
       
-      // Start polling for new messages every 5 seconds
+      // Start polling for new messages every 5 seconds for backup
       pollIntervalRef.current = setInterval(() => {
         checkForNewMessages();
       }, 5000);
@@ -434,16 +642,135 @@ const MessagingSystem = ({ isOpen, onClose }) => {
 
   // Initial data loading function
   const loadInitialData = async () => {
-    await fetchUsers();
+    try {
+      setIsLoading(true);
+      
+      // Add a default admin user to ensure the list is never empty
+      const defaultUsers = [{
+        _id: 'system-admin',
+        name: 'System Admin',
+        role: 'admin',
+        isAdmin: true,
+        isOnline: true
+      }];
+      
+      // Get the user ID from localStorage
+      let userId = null;
+      try {
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          const userData = JSON.parse(userStr);
+          userId = userData.id || userData._id;
+        }
+      } catch (err) {
+        console.error('Error getting userId from localStorage:', err);
+        setUsers(defaultUsers);
+        setFilteredUsers(defaultUsers);
+        setIsLoading(false);
+        return;
+      }
+      
+      if (!userId) {
+        console.log('No user ID available for fetching users');
+        setUsers(defaultUsers);
+        setFilteredUsers(defaultUsers);
+        setIsLoading(false);
+        return;
+      }
+      
+      let usersFetched = false;
+      
+      try {
+        // Use API_ENDPOINTS.USERS 
+        const response = await axiosInstance.get('/user/getAlluser');
+        console.log("User API response:", response.data);
+      
+        let usersList = [];
+        
+        // Handle different response formats
+        if (Array.isArray(response.data)) {
+          usersList = response.data;
+        } else if (response.data.users && Array.isArray(response.data.users)) {
+          usersList = response.data.users;
+        } else if (response.data.user && Array.isArray(response.data.user)) {
+          usersList = response.data.user;
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          usersList = response.data.data;
+        } else {
+          console.error('Unexpected response format:', response.data);
+          usersList = [];
+        }
+        
+        // Filter out any users with role 'visitor' and the current user
+        const filteredUsersList = usersList.filter(user => 
+          user && user._id && user._id !== userId
+        );
+        
+        console.log(`Found ${filteredUsersList.length} users after filtering`);
+        
+        // Always include the default admin
+        const combinedUsers = [...defaultUsers];
+        
+        // Process and add each filtered user
+        if (filteredUsersList.length > 0) {
+          // Process users to add name and status
+          filteredUsersList.forEach(user => {
+            // Ensure user has a name field
+            if (!user.name && (user.firstName || user.lastName)) {
+              user.name = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+            }
+            
+            // Set default online status for demo
+            user.isOnline = user.isOnline || Math.random() > 0.5;
+            
+            combinedUsers.push(user);
+          });
+        }
+        
+        // Set users in state
+        setUsers(combinedUsers);
+        setFilteredUsers(combinedUsers);
+        usersFetched = true;
+      } catch (error) {
+        console.error('Error fetching users from API:', error);
+        // Use default users as fallback
+        setUsers(defaultUsers);
+        setFilteredUsers(defaultUsers);
+      }
+
+      // Only proceed with other data loading if users were fetched successfully
+      if (usersFetched) {
+        try {
     await fetchUnreadCounts();
     
     // If we have a selected user, fetch messages immediately
     if (selectedUser) {
       await fetchMessages(selectedUser);
+          }
+        } catch (countError) {
+          console.error('Error fetching additional data:', countError);
+          // Non-critical error, continue with the users we have
+        }
+      }
+    } catch (error) {
+      console.error('Unexpected error loading data:', error);
+      // Set default users as fallback for any error
+      const defaultUsers = [{
+        _id: 'system-admin',
+        name: 'System Admin',
+        role: 'admin',
+        isAdmin: true,
+        isOnline: true
+      }];
+      setUsers(defaultUsers);
+      setFilteredUsers(defaultUsers);
+    } finally {
+      // Always set loading to false to avoid infinite loading state
+      setIsLoading(false);
     }
   };
   
-  // Update the checkForNewMessages function to handle real admin messages
+  // Update the checkForNewMessages function to avoid infinite loops
   const checkForNewMessages = async () => {
     if (!user?._id) return;
     
@@ -458,13 +785,22 @@ const MessagingSystem = ({ isOpen, onClose }) => {
           return;
         }
         
-        const newMessages = await messageUtils.checkForNewMessages(
+        // Add a timeout to prevent hanging requests
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Message fetch timeout')), 5000)
+        );
+        
+        try {
+          const messagePromise = messageUtils.checkForNewMessages(
           selectedUser, 
           user._id, 
           lastCheckedTime
         );
         
-        if (newMessages.length > 0) {
+          // Race between the fetch and the timeout
+          const newMessages = await Promise.race([messagePromise, timeoutPromise]);
+          
+          if (newMessages && newMessages.length > 0) {
         // Filter messages we don't already have based on ID
           const uniqueNewMessages = newMessages.filter(msg => 
           !messages.some(existingMsg => existingMsg._id === msg._id)
@@ -495,6 +831,10 @@ const MessagingSystem = ({ isOpen, onClose }) => {
             // Mark as read if we're currently viewing this conversation
             markMessagesAsRead(selectedUser);
           }
+          }
+        } catch (messageError) {
+          console.error('Error or timeout checking for new messages:', messageError);
+          // Just continue - this is a polling function so it will try again
         }
         
         // Update last checked time regardless of whether we found new messages
@@ -526,161 +866,6 @@ const MessagingSystem = ({ isOpen, onClose }) => {
       } catch (error) {
         console.error('Error setting up notification sound:', error);
       }
-    }
-  };
-
-  // Function to fetch users
-  const fetchUsers = async () => {
-    try {
-      setIsLoading(true);
-      
-      // Get the user ID from localStorage
-      let userId = null;
-      try {
-        const userStr = localStorage.getItem('user');
-        if (userStr) {
-          const userData = JSON.parse(userStr);
-          userId = userData.id || userData._id;
-        }
-      } catch (err) {
-        console.error('Error getting userId from localStorage:', err);
-      }
-      
-      if (!userId) {
-        console.log('No user ID available for fetching users');
-        // Add a default admin user to ensure the list is never empty
-        setUsers([{
-          _id: 'system-admin',
-          name: 'System Admin',
-          role: 'admin',
-          isAdmin: true
-        }]);
-        setIsLoading(false);
-        return;
-      }
-      
-      try {
-        // Use API_ENDPOINTS.USERS from messageUtils
-      const response = await axiosInstance.get('/user/getAlluser');
-        console.log("User API response:", response.data);
-      
-      let usersList = [];
-        
-        // Handle different response formats
-      if (Array.isArray(response.data)) {
-        usersList = response.data;
-      } else if (response.data.users && Array.isArray(response.data.users)) {
-        usersList = response.data.users;
-      } else if (response.data.user && Array.isArray(response.data.user)) {
-          usersList = response.data.user;
-      } else if (response.data.data && Array.isArray(response.data.data)) {
-        usersList = response.data.data;
-      } else {
-        console.error('Unexpected response format:', response.data);
-          // If we can't parse the response, use a fallback admin
-          usersList = [{
-            _id: 'system-admin',
-            name: 'System Admin',
-            role: 'admin',
-            isAdmin: true
-          }];
-        }
-        
-        // Filter out any users with role 'visitor' and the current user
-        const filteredUsers = usersList.filter(user => 
-          user && user._id && user._id !== userId && user.id !== userId
-        );
-        
-        console.log(`Found ${filteredUsers.length} users after filtering`);
-        
-        // Ensure there's always at least one user (system admin) if the list is empty
-        if (filteredUsers.length === 0) {
-          console.log("No users found, adding fallback admin user");
-          setUsers([{
-            _id: 'system-admin',
-            name: 'System Admin',
-            role: 'admin',
-            isAdmin: true
-          }]);
-        } else {
-          // Process users to add name and role if missing
-          const processedUsers = filteredUsers.map(user => {
-            // Construct a name if we only have firstName/middleName/lastName
-            if (!user.name && (user.firstName || user.middleName || user.lastName)) {
-              user.name = [user.firstName, user.middleName, user.lastName].filter(Boolean).join(' ');
-            }
-            
-            // Process photo URLs to ensure they are absolute
-            if (user.photo || user.profileImg || user.image || user.avatar) {
-              // Use the first available photo field
-              const photoUrl = user.photo || user.profileImg || user.image || user.avatar;
-              
-              // Check if the URL is relative or absolute
-              if (photoUrl && typeof photoUrl === 'string') {
-                if (photoUrl.startsWith('http')) {
-                  // Absolute URL, use as is
-                  user.photo = photoUrl;
-                } else if (photoUrl.startsWith('/')) {
-                  // Relative URL, prepend API base URL
-                  // Get base URL from axios instance or environment
-                  const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-                  user.photo = `${baseUrl}${photoUrl}`;
-                } else {
-                  // Handle other cases, might be a base64 string
-                  user.photo = photoUrl;
-                }
-              }
-            }
-            
-            // Set random online status for demo purposes
-            user.isOnline = Math.random() > 0.5;
-            
-            // Set a role if missing
-            if (!user.role) {
-              user.role = user.isAdmin ? 'admin' : 'staff';
-            }
-            
-            return user;
-          });
-          
-          // Always add system admin if we have other users
-          const systemAdmin = {
-            _id: 'system-admin',
-            name: 'System Admin',
-            role: 'admin',
-            isAdmin: true,
-            isOnline: true
-          };
-          
-          // Set the users in state
-          setUsers([...processedUsers, systemAdmin]);
-        }
-        
-      } catch (error) {
-        console.error('Error in fetchUsers API call:', error);
-        // If the API call fails, use a fallback admin
-        setUsers([{
-          _id: 'system-admin',
-          name: 'System Admin',
-          role: 'admin',
-          isAdmin: true
-        }]);
-      }
-      
-      // Dispatch event for other components to update
-      window.dispatchEvent(new CustomEvent('messagingUsersLoaded'));
-      
-      } catch (error) {
-      console.error('Failed to fetch users:', error);
-      // Add a fallback admin when API fails
-      setUsers([{
-        _id: 'system-admin',
-        name: 'System Admin',
-        role: 'admin',
-        isAdmin: true
-      }]);
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -741,11 +926,29 @@ const MessagingSystem = ({ isOpen, onClose }) => {
     // For normal users and real admins, proceed with the API call
     setIsLoading(true);
     try {
-      const fetchedMessages = await messageUtils.fetchMessages(userId, user._id);
-      console.log(`Fetched ${fetchedMessages.length} messages for conversation with ${userId}`);
+      // Create a timeout promise to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Message fetch timeout')), 8000)
+      );
+      
+      // Create the fetch promise
+      const fetchPromise = messageUtils.fetchMessages(userId, user._id);
+      
+      let messagesData = [];
+      
+      try {
+        // Race between the fetch and the timeout
+        messagesData = await Promise.race([fetchPromise, timeoutPromise]);
+      } catch (error) {
+        console.error('Error or timeout fetching messages:', error);
+        // Return empty array on error
+        messagesData = [];
+      }
+      
+      console.log(`Fetched ${messagesData.length} messages for conversation with ${userId}`);
       
       // Check if this is a conversation with a fallback admin
-      if (userId === 'fallback-admin' && fetchedMessages.length === 0) {
+      if (userId === 'fallback-admin' && messagesData.length === 0) {
         // Add welcome message for fallback admin
         const welcomeMessage = {
           _id: `fallback-msg-${Date.now()}`,
@@ -757,11 +960,11 @@ const MessagingSystem = ({ isOpen, onClose }) => {
         };
         setMessages([welcomeMessage]);
       } else {
-        setMessages(fetchedMessages);
+        setMessages(messagesData);
       }
       
       // Mark messages as read
-      markMessagesAsRead(userId);
+      await markMessagesAsRead(userId);
       
       // Update last checked time
       setLastCheckedTime(Date.now());
@@ -772,190 +975,163 @@ const MessagingSystem = ({ isOpen, onClose }) => {
       // If there's an error loading messages, provide a fallback empty state
       setMessages([]);
     } finally {
+      // Always set loading to false, even in case of errors
       setIsLoading(false);
     }
   };
 
-  // Handle sending a message with optional attachment
-  const handleSendMessage = async (content, attachment) => {
+  // Replace one of the duplicate handleSendMessage functions with improved error handling
+  const handleSendMessage = async (content, attachment = null) => {
+    if (!content || content.trim() === '') {
+      toast.error('Please enter a message');
+      return;
+    }
+
+    if (!selectedUser) {
+      toast.error('Please select a user to message');
+        return;
+      }
+      
     try {
-      // Get current user ID
-      let currentUserId = user?._id || user?.id;
-      
-      // Fallback to localStorage if Redux store doesn't have user ID
-      if (!currentUserId) {
-        try {
-          const userStr = localStorage.getItem('user');
-          if (userStr) {
-            const userData = JSON.parse(userStr);
-            currentUserId = userData._id || userData.id;
-          }
-        } catch (err) {
-          console.error('Error getting userId from localStorage:', err);
-        }
-      }
-      
-      if (!currentUserId) {
-        console.error("Cannot send message - no current user ID");
-        toast.error("Cannot send message - please log in again");
-        return;
-      }
-      
-      // Validate we have a recipient
-      if (!selectedUser) {
-        console.error("Cannot send message - no recipient selected");
-        toast.error("Please select a recipient");
+      setIsSending(true);
+
+      // Get current user info
+      const userStr = localStorage.getItem('user');
+      if (!userStr) {
+        toast.error('User authentication required');
         return;
       }
 
-      // Strict check to ensure attachment is explicitly provided or null
-      const shouldSendAttachment = attachment && (
-        attachment instanceof File || 
-        (attachment.type && attachment.name && attachment.size)
-      );
-
-      // Ensure we have either content or a valid attachment (or both)
-      if ((!content || !content.trim()) && !shouldSendAttachment) {
-        console.log("Nothing to send - empty message and no valid attachment");
+      const currentUser = JSON.parse(userStr);
+      const senderId = currentUser.id || currentUser._id;
+      
+      if (!senderId) {
+        toast.error('User ID not found');
         return;
       }
 
-      // Only process attachment if it's explicitly provided
-      let attachmentToSend = shouldSendAttachment ? attachment : null;
+      console.log('Selected user for message:', selectedUser);
       
-      // Generate temporary message ID for optimistic update
-      const tempId = `temp-${Date.now()}`;
-
-      // Create preview URL if it's an image
-      let previewUrl = null;
-      if (attachmentToSend && attachmentToSend.type && attachmentToSend.type.startsWith('image/')) {
-        try {
-          previewUrl = URL.createObjectURL(attachmentToSend);
-          console.log("Created preview URL:", previewUrl);
-        } catch (err) {
-          console.error("Error creating preview URL:", err);
-        }
+      // Determine the correct receiverId format
+      const receiverId = typeof selectedUser === 'object' ? selectedUser._id : selectedUser;
+      console.log('Formatted receiverId:', receiverId);
+      
+      if (!receiverId) {
+        toast.error('Recipient ID is invalid');
+        console.error('Invalid receiverId:', selectedUser);
+        return;
       }
-      
-      // Add message to UI immediately (optimistic update)
-      const tempMessage = {
-        _id: tempId,
-        content: content || '',
-        senderId: currentUserId,
-        receiverId: selectedUser,
-        createdAt: new Date().toISOString(),
-        status: 'sending',
-        attachment: attachmentToSend ? {
-          fileName: attachmentToSend.name,
-          type: attachmentToSend.type,
-          size: attachmentToSend.size,
-          preview: previewUrl,
-          file: attachmentToSend // Store the actual file for local operations
-        } : null
+
+      // Prepare message object
+      const newMessage = {
+        senderId,
+        senderName: currentUser.name || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim(),
+        receiverId,
+        content,
+        timestamp: new Date().toISOString(),
+        attachment
       };
+
+      console.log('Sending message:', newMessage);
       
-      // Add message to UI for immediate feedback
-      setMessages(prev => [...prev, tempMessage]);
-      
-      // Log the attachment details for debugging
-      if (attachmentToSend) {
-        console.log("File attachment details:", {
-          name: attachmentToSend.name,
-          type: attachmentToSend.type,
-          size: attachmentToSend.size
-        });
+      // First try socket if available
+      if (socket && socket.connected) {
+        console.log('Emitting message via socket');
+        socket.emit('sendMessage', newMessage);
+        
+        // Add message to conversation immediately for real-time feedback
+        const updatedConversation = [...messages, newMessage];
+        setMessages(updatedConversation);
+        setNewMessage('');
+        
+        // Scroll to bottom
+        setTimeout(() => {
+          if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 100);
       } else {
-        console.log("Sending text message without attachment");
-      }
-      
-      // Prepare FormData for the API call
+        // Fallback to API if socket not available
+        console.log('Socket not available, using API fallback');
+        toast('Using standard messaging mode');
+        
+        // Create form data for API call
       const formData = new FormData();
       formData.append('content', content || '');
-      formData.append('receiverId', selectedUser);
-      formData.append('senderId', currentUserId);
-      
-      if (attachmentToSend) {
-        // Use 'file' field name to match backend expectation (not 'attachment')
-        formData.append('file', attachmentToSend);
         
-        // Log all form data entries to ensure file is included
-        console.log("FormData entries:");
-        for (let pair of formData.entries()) {
-          console.log(pair[0], pair[1] instanceof File ? `File: ${pair[1].name}` : pair[1]);
+        // Use the validated receiverId from above
+        formData.append('receiverId', receiverId);
+        formData.append('senderId', senderId);
+        
+        if (attachment) {
+          formData.append('file', attachment);
         }
-      } else {
-        console.log("No file attached to FormData");
-      }
-      
-      // Simulate network delay for better UX
-        setTimeout(() => {
-        setMessages(prev => 
-          prev.map(msg => msg._id === tempId ? { ...msg, status: 'sent' } : msg)
-        );
-      }, 500);
-      
-      // Make API call to send the message - use try/catch to handle potential errors separately
-      try {
-        console.log("Sending API request to /messages/send");
         
-        // Try the correct endpoint for message sending
-        const response = await axiosInstance.post('/messages/send', formData, {
+        // Send via API
+        try {
+          console.log('Sending via API with formData:', {
+            content: formData.get('content'),
+            receiverId: formData.get('receiverId'),
+            senderId: formData.get('senderId'),
+            hasFile: !!formData.get('file')
+          });
+          
+          const response = await axiosInstance.post(API_ENDPOINTS.SEND_MESSAGE, formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }
         });
         
-        console.log("Message sent response:", response.data);
-        
-        // Update message with server data if successful
-        if (response.data && (response.data._id || (response.data.data && response.data.data._id))) {
-          const serverMessage = response.data._id ? response.data : response.data.data;
+          console.log('API message response:', response.data);
           
-          // Ensure the attachment has proper paths
-          if (serverMessage.attachment) {
-            // If the server message has attachment but no preview and we have one locally, add it
-            if (!serverMessage.attachment.preview && previewUrl) {
-              serverMessage.attachment.preview = previewUrl;
-            }
+          if (response.data) {
+            // Add the sent message to the conversation
+            const apiMessage = {
+              ...newMessage,
+              _id: response.data._id || response.data.data?._id || `temp-${Date.now()}`,
+              createdAt: response.data.createdAt || response.data.data?.createdAt || new Date().toISOString()
+            };
             
-            // Make sure file paths are complete
-            if (serverMessage.attachment.path && !serverMessage.attachment.path.startsWith('http')) {
-              // Convert relative path to absolute
-              const baseUrl = process.env.REACT_APP_API_URL || window.location.origin;
-              serverMessage.attachment.url = `${baseUrl}${serverMessage.attachment.path}`;
-            }
+            setMessages(prev => [...prev, apiMessage]);
+            setNewMessage('');
             
-            // Save the actual file reference from the temp message for local operations
-            if (tempMessage.attachment && tempMessage.attachment.file) {
-              serverMessage.attachment.file = tempMessage.attachment.file;
-            }
+            // Scroll to bottom
+            setTimeout(() => {
+              if (messagesEndRef.current) {
+                messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+              }
+            }, 100);
+          }
+        } catch (apiError) {
+          console.error('API send error:', apiError);
+          
+          // Handle ObjectId casting errors
+          if (apiError.response?.data?.error?.includes('Cast to ObjectId failed')) {
+            toast.error('Invalid recipient ID format');
+            console.error('MongoDB ObjectId casting error with receiverId:', receiverId);
+        } else {
+            // Generic error fallback
+            toast.error(apiError.message || 'Failed to send message via API');
           }
           
-          // Update message in state
-          setMessages(prev => prev.map(msg => 
-            msg._id === tempId ? { ...serverMessage, status: 'sent' } : msg
-          ));
+          // Still update UI with a temporary message to improve UX
+          const tempMessage = {
+            ...newMessage,
+            _id: `temp-${Date.now()}`,
+            createdAt: new Date().toISOString(),
+            status: 'failed'
+          };
           
-          toast.success('Message sent');
-        } else {
-          // Handle unexpected response format
-          console.warn("API returned success but with unexpected format:", response.data);
-          // Keep the optimistic update as is, with 'sent' status
+          setMessages(prev => [...prev, tempMessage]);
+          setNewMessage('');
         }
-      } catch (apiError) {
-        console.error("API error sending message:", apiError);
-        
-        // Keep the message in UI but mark as failed
-        setMessages(prev => prev.map(msg => 
-          msg._id === tempId ? { ...msg, status: 'failed' } : msg
-        ));
-        
-        toast.error(`Failed to send message: ${apiError.message || 'Server error'}`);
       }
     } catch (error) {
-      console.error("Error in handleSendMessage:", error);
-      toast.error(`Error sending message: ${error.message || 'Unknown error'}`);
+      console.error('Error sending message:', error);
+      toast.error('Failed to send message');
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -966,7 +1142,9 @@ const MessagingSystem = ({ isOpen, onClose }) => {
     // If we're already viewing this user, don't do anything
     if (selectedUser === userId) return;
     
-    // Select the user and fetch their messages
+    console.log('Selecting user:', userId);
+    
+    // Ensure we're storing just the ID string, not the full user object
     setSelectedUser(userId);
     fetchMessages(userId);
     
@@ -1016,12 +1194,12 @@ const MessagingSystem = ({ isOpen, onClose }) => {
     });
     
     // Show notification
-    toast.success(`Calling ${targetUser.name || targetUser.username || 'User'}...`);
+    toast(`Calling ${targetUser.name || targetUser.username || 'User'}...`);
     
     // For demo purposes, we'll simulate the call being accepted after 3 seconds
     setTimeout(() => {
       setCurrentCall(prev => prev ? { ...prev, status: 'connected' } : null);
-      toast.success(`Call connected with ${targetUser.name || targetUser.username || 'User'}`);
+      toast(`Call connected with ${targetUser.name || targetUser.username || 'User'}`);
     }, 3000);
   };
 
@@ -1043,12 +1221,12 @@ const MessagingSystem = ({ isOpen, onClose }) => {
     });
     
     // Show notification
-    toast.success(`Video calling ${targetUser.name || targetUser.username || 'User'}...`);
+    toast(`Video calling ${targetUser.name || targetUser.username || 'User'}...`);
     
     // For demo purposes, we'll simulate the call being accepted after 3 seconds
       setTimeout(() => {
       setCurrentCall(prev => prev ? { ...prev, status: 'connected' } : null);
-      toast.success(`Video call connected with ${targetUser.name || targetUser.username || 'User'}`);
+      toast(`Video call connected with ${targetUser.name || targetUser.username || 'User'}`);
     }, 3000);
   };
 
@@ -1057,7 +1235,7 @@ const MessagingSystem = ({ isOpen, onClose }) => {
     
     const { userName, isVideo } = currentCall;
     setCurrentCall(null);
-    toast.success(`${isVideo ? 'Video call' : 'Call'} with ${userName} ended`);
+    toast(`${isVideo ? 'Video call' : 'Call'} with ${userName} ended`);
   };
 
   // Modify the getSelectedUserData function to include groups
@@ -1250,7 +1428,7 @@ const MessagingSystem = ({ isOpen, onClose }) => {
     setSelectedUsers([]);
     setIsMenuOpen(false);
     
-    toast.success(`Group "${groupName}" created with ${selectedUsers.length} members`);
+    toast(`Group "${groupName}" created with ${selectedUsers.length} members`);
   };
 
   // Star message functionality
@@ -1261,11 +1439,11 @@ const MessagingSystem = ({ isOpen, onClose }) => {
     if (isAlreadyStarred) {
       // Remove from starred
       setStarredMessages(prev => prev.filter(id => id !== messageId));
-      toast.success('Message unstarred');
+      toast('Message unstarred');
     } else {
       // Add to starred
       setStarredMessages(prev => [...prev, messageId]);
-      toast.success('Message starred');
+      toast('Message starred');
     }
     
     // Save to localStorage for persistence
@@ -1289,7 +1467,7 @@ const MessagingSystem = ({ isOpen, onClose }) => {
     
     setIsViewingStarred(true);
     setIsMenuOpen(false);
-    toast.success(`Showing ${starredMessages.length} starred messages`);
+    toast(`Showing ${starredMessages.length} starred messages`);
   };
 
   // Exit starred messages view
@@ -1342,7 +1520,7 @@ const MessagingSystem = ({ isOpen, onClose }) => {
   // Toggle notifications mute
   const toggleNotifications = () => {
     setNotificationsMuted(!notificationsMuted);
-    toast.success(notificationsMuted ? 'Notifications enabled' : 'Notifications muted');
+    toast(notificationsMuted ? 'Notifications enabled' : 'Notifications muted');
   };
 
   // Update menu content to include settings button
@@ -1747,18 +1925,12 @@ const MessagingSystem = ({ isOpen, onClose }) => {
 
   // Add a refresh function to load fresh data
   const handleRefresh = async () => {
-    toast.success("Refreshing messages and contacts...");
+    toast("Refreshing messages and contacts...");
     
     try {
-      await fetchUsers();
-      await fetchUnreadCounts();
-      
-      // If we have a selected user, refresh their messages too
-      if (selectedUser) {
-        await fetchMessages(selectedUser);
-      }
-      
-      toast.success("Refresh complete!");
+      // Call the loadInitialData function which now properly fetches users
+      await loadInitialData();
+      toast("Refresh complete!");
     } catch (error) {
       console.error("Error refreshing data:", error);
       toast.error("Failed to refresh. Please try again.");
@@ -1893,19 +2065,72 @@ const MessagingSystem = ({ isOpen, onClose }) => {
     );
   };
 
+  // Add WebSocket event listeners
+  useEffect(() => {
+    if (!socket || !isConnected) return;
+
+    // Listen for new messages
+    socket.on('newMessage', (message) => {
+      if (message.senderId === selectedUser || message.receiverId === selectedUser) {
+        setMessages(prev => {
+          // Check if message already exists
+          if (prev.some(msg => msg._id === message._id)) return prev;
+          
+          // Add new message and sort by timestamp
+          return [...prev, message].sort((a, b) => 
+            new Date(a.createdAt) - new Date(b.createdAt)
+          );
+        });
+
+        // Play notification sound if appropriate
+        if (message.senderId !== user?._id) {
+          playNotificationSound([message]);
+        }
+      }
+    });
+
+    // Listen for typing indicators
+    socket.on('typing', ({ userId, isTyping }) => {
+      if (userId === selectedUser) {
+        setIsTyping(isTyping);
+      }
+    });
+
+    // Listen for user status updates
+    socket.on('userStatus', ({ userId, status }) => {
+      setUsers(prev => prev.map(u => 
+        u._id === userId ? { ...u, isOnline: status === 'online' } : u
+      ));
+    });
+
+    // Clean up event listeners
+    return () => {
+      socket.off('newMessage');
+      socket.off('typing');
+      socket.off('userStatus');
+    };
+  }, [socket, isConnected, selectedUser, user?._id]);
+
+  // Add typing indicator handler
+  const handleTyping = (isTyping) => {
+    if (socket && isConnected && selectedUser) {
+      socket.emit('typing', {
+        receiverId: selectedUser,
+        isTyping
+      });
+    }
+  };
+
   // Render component
   return (
-    <>
-      {/* Main messaging container */}
-      <div
-        ref={containerRef}
+    <div className={`messaging-app ${isOpen ? 'open' : ''} ${darkMode ? 'dark-mode' : ''} ${fontSize}`}
         style={{
-          position: 'fixed',
-          top: `${Math.max(-100, containerPos.y)}px`, // Allow negative position but limit to -100px to ensure it's still visible
           left: `${containerPos.x}px`,
+        top: `${containerPos.y}px`,
           width: `${containerSize.width}px`,
           height: `${containerSize.height}px`,
-          zIndex: 2147483647, // Maximum possible z-index value in browsers
+        position: 'fixed',
+        zIndex: 2147483647,
           maxWidth: 'none',
           maxHeight: 'none',
           boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.15), 0 10px 20px -5px rgba(0, 0, 0, 0.1)',
@@ -1917,11 +2142,12 @@ const MessagingSystem = ({ isOpen, onClose }) => {
           resize: 'both',
           minWidth: '200px',
           minHeight: '150px',
-          transform: 'translateZ(0)', // Force hardware acceleration
-          willChange: 'transform', // Optimize for animations
+        transform: 'translateZ(0)',
+        willChange: 'transform',
+        transition: 'all 0.3s ease'
         }}
-        className={`messaging-container transition-all duration-300 ${isOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'} ${darkMode ? 'dark-mode' : ''}`}
-      >
+      ref={containerRef}>
+      
         {/* Phone status bar */}
         <div className="h-5 w-full bg-[#111827] flex items-center justify-between px-6">
           <div className="text-white text-xs font-medium">
@@ -1982,6 +2208,23 @@ const MessagingSystem = ({ isOpen, onClose }) => {
                   </div>
                     </div>
           
+        {/* Socket warning banner */}
+        {!socket && showSocketWarning ? (
+          <div className="p-2 bg-yellow-50 text-yellow-700 text-sm border-b border-yellow-200">
+            <p className="flex items-center justify-center gap-2">
+              <FiRefreshCw className="animate-spin" size={14} />
+              Real-time messaging is initializing. Messages will still be delivered but may be delayed.
+            </p>
+          </div>
+        ) : (!socket && !showSocketWarning) ? (
+          <div className="p-2 bg-blue-50 text-blue-700 text-sm border-b border-blue-200">
+            <p className="flex items-center justify-center gap-2">
+              <FiInfo size={14} />
+              Using standard messaging mode. Real-time features are limited.
+            </p>
+          </div>
+        ) : null}
+        
           {/* Main content container */}
           <div className="flex flex-1 overflow-hidden bg-gray-50">
             {/* User list column - full width when no user selected or forced full width on mobile */}
@@ -1991,12 +2234,13 @@ const MessagingSystem = ({ isOpen, onClose }) => {
               h-full bg-white border-r
             `}>
               <MessageList 
-                users={users}
+              users={isViewingStarred ? starredMessages : filteredUsers || users}
                 selectedUserId={selectedUser}
+              onSelectUser={handleSelectUser}
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
-                onSelectUser={handleSelectUser}
                 unreadCounts={unreadCounts}
+              isLoading={isLoading}
               />
                                       </div>
             
@@ -2035,13 +2279,14 @@ const MessagingSystem = ({ isOpen, onClose }) => {
                     messages={getDisplayedMessages()}
                     currentUserId={user?._id}
                     isTyping={isTyping}
-                    userStatus={selectedUserData?.isAdmin ? 'online' : userStatus}
+                  userStatus={selectedUserData?.isOnline ? 'online' : 'offline'}
                     isMobile={isMobileView || containerSize.width < 768}
                     onBackClick={goBackToUserList}
                     onPhoneClick={() => handlePhoneCall(selectedUser)}
                     onVideoClick={() => handleVideoCall(selectedUser)}
                     onMenuClick={toggleMenu}
                     onSendMessage={handleSendMessage}
+                  onTyping={handleTyping}
                     isLoading={isLoading}
                     onStarMessage={handleStarMessage}
                     starredMessages={starredMessages}
@@ -2071,52 +2316,38 @@ const MessagingSystem = ({ isOpen, onClose }) => {
                 
         {/* Add resize handles for all sides and corners */}
         <div
-          className={`resize-handle absolute bottom-4 right-4 w-4 h-4 cursor-se-resize ${isResizing ? 'bg-blue-400/30' : ''}`}
+        className={`resize-handle absolute bottom-4 right-4 w-4 h-4 cursor-se-resize ${isResizing.active ? 'bg-blue-400/30' : ''}`}
           onMouseDown={(e) => handleResizeStart(e, 'bottom-right')}
         />
         <div
-          className={`resize-handle absolute bottom-4 w-full h-1 cursor-s-resize ${isResizing ? 'bg-blue-400/30' : ''}`}
+        className={`resize-handle absolute bottom-4 w-full h-1 cursor-s-resize ${isResizing.active ? 'bg-blue-400/30' : ''}`}
           onMouseDown={(e) => handleResizeStart(e, 'bottom')}
         />
         <div
-          className={`resize-handle absolute right-4 h-full w-1 cursor-e-resize ${isResizing ? 'bg-blue-400/30' : ''}`}
+        className={`resize-handle absolute right-4 h-full w-1 cursor-e-resize ${isResizing.active ? 'bg-blue-400/30' : ''}`}
           onMouseDown={(e) => handleResizeStart(e, 'right')}
         />
         <div
-          className={`resize-handle absolute top-4 w-full h-1 cursor-n-resize ${isResizing ? 'bg-blue-400/30' : ''}`}
+        className={`resize-handle absolute top-4 w-full h-1 cursor-n-resize ${isResizing.active ? 'bg-blue-400/30' : ''}`}
           onMouseDown={(e) => handleResizeStart(e, 'top')}
         />
         <div
-          className={`resize-handle absolute left-4 h-full w-1 cursor-w-resize ${isResizing ? 'bg-blue-400/30' : ''}`}
+        className={`resize-handle absolute left-4 h-full w-1 cursor-w-resize ${isResizing.active ? 'bg-blue-400/30' : ''}`}
           onMouseDown={(e) => handleResizeStart(e, 'left')}
         />
         <div
-          className={`resize-handle absolute top-4 left-4 w-4 h-4 cursor-nw-resize ${isResizing ? 'bg-blue-400/30' : ''}`}
+        className={`resize-handle absolute top-4 left-4 w-4 h-4 cursor-nw-resize ${isResizing.active ? 'bg-blue-400/30' : ''}`}
           onMouseDown={(e) => handleResizeStart(e, 'top-left')}
         />
         <div
-          className={`resize-handle absolute top-4 right-4 w-4 h-4 cursor-ne-resize ${isResizing ? 'bg-blue-400/30' : ''}`}
+        className={`resize-handle absolute top-4 right-4 w-4 h-4 cursor-ne-resize ${isResizing.active ? 'bg-blue-400/30' : ''}`}
           onMouseDown={(e) => handleResizeStart(e, 'top-right')}
         />
         <div
-          className={`resize-handle absolute bottom-4 left-4 w-4 h-4 cursor-sw-resize ${isResizing ? 'bg-blue-400/30' : ''}`}
+        className={`resize-handle absolute bottom-4 left-4 w-4 h-4 cursor-sw-resize ${isResizing.active ? 'bg-blue-400/30' : ''}`}
           onMouseDown={(e) => handleResizeStart(e, 'bottom-left')}
         />
       </div>
-      
-      {/* Context menu */}
-      {isMenuOpen && renderMenuContent()}
-      
-      {/* Group chat creation modal */}
-      {groupChatModalOpen && renderGroupChatModal()}
-      
-      {/* Settings Panel */}
-      {isSettingsOpen && renderSettingsPanel()}
-      
-      {/* Add audio elements for sounds */}
-      <audio id="message-notification-sound" preload="auto" src="/message-notification.mp3" />
-      <audio id="call-ringtone-sound" preload="auto" src="/call-ringtone.mp3" loop />
-    </>
   );
 };
 
