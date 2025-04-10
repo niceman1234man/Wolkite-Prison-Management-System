@@ -281,17 +281,12 @@ axiosInstance.interceptors.response.use(
           return Promise.reject(error);
         } else {
           // For other requests, it means the token has expired or is invalid
-          console.error("Token expired or invalid, logging out user");
+          console.error("Token expired or invalid");
           localStorage.removeItem("token");
           localStorage.removeItem("user");
           
-          // Check if we're in the visitor area
-          if (window.location.pathname.includes('visitor-dashboard')) {
-            window.location.href = "/";
-          } else {
-            window.location.href = "/login?session_expired=true";
-          }
-          return Promise.reject(error);
+          // Return a custom error without redirecting
+          return Promise.reject(new Error("Session expired. Please log in again."));
         }
       }
 

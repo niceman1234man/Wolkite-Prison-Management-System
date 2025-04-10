@@ -18,7 +18,9 @@ import {
   FaChartBar,
   FaExclamationTriangle,
   FaExchangeAlt,
-  FaInfoCircle
+  FaInfoCircle,
+  FaThLarge,
+  FaTable
 } from "react-icons/fa";
 import { columns as defaultColumns } from "../../utils/VisitorHelper.jsx";
 import UpdateVisitorModal from "./partials/UpdateVisitorModal";
@@ -26,6 +28,8 @@ import AddModal from "../Modals/AddModal.jsx";
 import RegisterVisitor from './RegisterVisitor.jsx';
 import Register from '../welcome/Register.jsx'
 import { toast } from "react-hot-toast";
+import '../../styles/table.css';
+import '../../styles/responsive.css';
 
 // Import custom components and hooks
 import StatusFilter from "./partials/StatusFilter";
@@ -244,7 +248,6 @@ const VisitorList = () => {
   
   const {
     viewVisitor,
-    showDetailModal,
     showPostponeModal,
     handleApproveClick,
     handleRejectClick,
@@ -284,6 +287,28 @@ const VisitorList = () => {
   // Update the state management to include the new update modal states
   const [showUpdateVisitorModal, setShowUpdateVisitorModal] = useState(false);
   const [showUpdateScheduleModal, setShowUpdateScheduleModal] = useState(false);
+
+  // Add display mode state
+  const [displayMode, setDisplayMode] = useState('card');
+  const [showDetailModalState, setShowDetailModalState] = useState(false);
+
+  // Memoize filtered visitors
+  const filteredVisitorsMemo = useMemo(() => {
+    if (!visitors || visitors.length === 0) return [];
+    
+    return visitors.filter(visitor => {
+      if (!visitor) return false;
+      
+      const matchesSearch = !searchQuery || searchQuery.trim() === '' || (
+        (visitor.firstName && visitor.firstName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (visitor.lastName && visitor.lastName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (visitor.phone && visitor.phone.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (visitor.purpose && visitor.purpose.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+
+      return matchesSearch;
+    });
+  }, [visitors, searchQuery]);
 
   // Function to format date
   const formatDate = (dateString) => {
@@ -402,7 +427,7 @@ const VisitorList = () => {
       cell: (row) => (
         <div className="flex flex-wrap gap-2 justify-center">
           <button
-            onClick={() => handleViewDetails(row)}
+            onClick={() => handleViewDetailsLocal(row)}
             className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm flex items-center"
           >
             <FaEye className="mr-1" /> View
@@ -525,91 +550,30 @@ const VisitorList = () => {
 
   return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-6 max-w-md w-full shadow-xl">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-gray-800">
-              Manage Visitor Capacity
-            </h2>
-          <button
-              onClick={() => setShowCapacityModal(false)}
-              className="text-gray-500 hover:text-gray-700"
-          >
-              <FaTimes size={20} />
-          </button>
-          </div>
-          
-          <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <FaInfoCircle className="h-5 w-5 text-blue-500" />
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-blue-700">
-                  Setting the visitor capacity helps manage the number of visitors allowed per day.
-                </p>
-              </div>
-            </div>
-          </div>
-          
+        <div className="bg-white rounded-lg p-6 w-full max-w-md">
+          <h2 className="text-xl font-bold mb-4">Manage Visitor Capacity</h2>
           <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-medium mb-2">
-              Current visitor statistics:
-            </label>
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                <p className="text-xs text-gray-500">Current Capacity</p>
-                <p className="text-lg font-semibold">{visitorCapacity.maxCapacity}</p>
-              </div>
-              <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                <p className="text-xs text-gray-500">Approved Visitors</p>
-                <p className="text-lg font-semibold">{visitorCapacity.approvedCount}</p>
-              </div>
-              <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                <p className="text-xs text-gray-500">Pending Requests</p>
-                <p className="text-lg font-semibold">{visitorCapacity.pendingCount}</p>
-              </div>
-              <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
-                <p className="text-xs text-gray-500">Available Slots</p>
-                <p className="text-lg font-semibold">
-                  {Math.max(0, visitorCapacity.maxCapacity - visitorCapacity.approvedCount)}
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="mb-6">
-            <label htmlFor="capacity" className="block text-gray-700 text-sm font-medium mb-2">
-              New Maximum Capacity:
-            </label>
+            <label className="block text-gray-700 mb-2">Maximum Capacity</label>
             <input
               type="number"
-              id="capacity"
               value={newCapacity}
-              onChange={(e) => setNewCapacity(Math.max(1, parseInt(e.target.value) || 1))}
-              className="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 border"
+              onChange={(e) => setNewCapacity(parseInt(e.target.value) || 0)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
               min="1"
             />
-            {newCapacity < visitorCapacity.approvedCount && (
-              <p className="mt-2 text-sm text-red-600">
-                Warning: New capacity is less than current approved visitors.
-              </p>
-            )}
           </div>
-          
-          <div className="flex justify-end gap-3">
+          <div className="flex justify-end gap-2">
             <button
-              type="button"
-              className="bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500"
               onClick={() => setShowCapacityModal(false)}
+              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
             >
               Cancel
             </button>
             <button
-              type="button"
-              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
               onClick={handleSubmit}
+              className="px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700"
             >
-              Save Changes
+              Save
             </button>
           </div>
         </div>
@@ -676,198 +640,172 @@ const VisitorList = () => {
     </ErrorBoundary>
   ), [pendingSchedulesData, loadingPendingSchedules]);
 
+  // Update the handleViewDetails function to use the local state
+  const handleViewDetailsLocal = (visitor) => {
+    setSelectedVisitor(visitor);
+    setShowDetailModalState(true);
+  };
+
+  // Update any other references to setShowDetailModal
+  const handleCloseDetailModal = () => {
+    setShowDetailModalState(false);
+  };
+
   return (
-    <div className={`p-6 mt-10 transition-all duration-300 ease-in-out ${
-      isCollapsed ? "ml-16" : "ml-64"
-    }`}>
-      {/* Visitor List Content */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-800 flex items-center">
-            <FaUsers className="mr-2 text-blue-600" />
-            Visitor Management
-          </h1>
-          
-          <div className="flex flex-wrap gap-3 mt-4 md:mt-0">
-            {/* Toggle between Visitor List and Visit Schedules */}
-            <button
-              onClick={toggleVisitSchedules}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md flex items-center"
-            >
-              <FaExchangeAlt className="mr-2" />
-              {showVisitSchedules ? "Show Visitor List" : "Show Visit Schedules"}
-            </button>
-          
-            {/* Capacity Management (for admin/police) */}
-            {(userData?.role === 'police-officer' || userData?.role === 'admin') && (
+    <div className="flex-1 transition-all duration-300 ease-in-out">
+      <div className="p-4 md:p-6 lg:p-8 ml-0 md:ml-16 lg:ml-64 mb-6 mt-8">
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+            <div className="flex items-center gap-4">
+              <h1 className="text-2xl font-bold text-gray-800">Visitor List</h1>
+              <div className="flex items-center gap-2">
               <button
-                onClick={() => setShowCapacityModal(true)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center"
+                  onClick={() => setDisplayMode('card')}
+                  className={`p-2 rounded-lg ${displayMode === 'card' ? 'bg-teal-100 text-teal-600' : 'text-gray-500 hover:bg-gray-100'}`}
               >
-                <FaChartBar className="mr-2" />
-                Manage Capacity
+                  <FaThLarge />
               </button>
-            )}
-            
-            {/* Refresh Button */}
             <button
-              onClick={() => {
-                fetchVisitors();
-                refreshCapacity();
-              }}
-              className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md flex items-center"
-            >
-              <FaSync className="mr-2" />
-              Refresh List
+                  onClick={() => setDisplayMode('table')}
+                  className={`p-2 rounded-lg ${displayMode === 'table' ? 'bg-teal-100 text-teal-600' : 'text-gray-500 hover:bg-gray-100'}`}
+                >
+                  <FaTable />
             </button>
           </div>
         </div>
-
-        {/* Show capacity warning for both visitor list and schedules */}
-        <CapacityWarning />
-        
-        {/* Search and Filter (only show for visitor list) */}
-        {!showVisitSchedules && (
-          <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-            <div className="w-full md:w-1/2 relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <FaSearch className="h-5 w-5 text-gray-400" />
-              </div>
+            <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+              <div className="relative flex-grow sm:flex-grow-0">
               <input
                 type="text"
-                placeholder="Search visitors by name, purpose, or status..."
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-md w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Search visitors..."
                 value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  handleSearch(e.target.value);
-                }}
-              />
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full sm:w-64 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                />
+                <FaSearch className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              </div>
+              <button
+                onClick={() => setOpen(true)}
+                className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 whitespace-nowrap"
+              >
+                <FaUserPlus /> Add Visitor
+              </button>
+            </div>
             </div>
             
-            <div className="w-full md:w-auto flex flex-wrap gap-3">
-              <div className="flex items-center bg-gray-100 p-2 rounded-md">
-                <FaFilter className="text-gray-500 mr-2" />
-                <select
-                  value={filter}
-                  onChange={(e) => handleFilterChange(e.target.value)}
-                  className="bg-transparent border-none focus:outline-none text-gray-700"
-                >
-                  <option value="all">All Visitors</option>
-                  <option value="pending">Pending</option>
-                  <option value="approved">Approved</option>
-                  <option value="rejected">Rejected</option>
-                  <option value="postponed">Postponed</option>
-                  <option value="completed">Completed</option>
-                </select>
+          {loading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
+            </div>
+          ) : displayMode === 'card' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredVisitorsMemo.map((visitor) => (
+                <div key={visitor._id} className="bg-white rounded-lg shadow-md p-4 border border-gray-200 hover:shadow-lg transition-shadow">
+                  <div className="flex justify-between items-start mb-4">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-800">
+                        {`${visitor.firstName || ''} ${visitor.middleName || ''} ${visitor.lastName || ''}`}
+                      </h3>
+                      <p className="text-gray-600">{visitor.phone || 'N/A'}</p>
+                    </div>
+                    <StatusBadge status={visitor.status || 'Pending'} />
+                  </div>
+                  <div className="space-y-2 mb-4">
+                    <p className="text-gray-700">
+                      <span className="font-medium">Purpose:</span> {visitor.purpose || 'N/A'}
+                    </p>
+                    <p className="text-gray-700">
+                      <span className="font-medium">Visit Date:</span> {formatDate(visitor.date)}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => handleViewDetailsLocal(visitor)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm flex items-center"
+                    >
+                      <FaEye className="mr-1" /> View
+                    </button>
+                    <button
+                      onClick={() => handleUpdate(visitor)}
+                      className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-md text-sm flex items-center"
+                    >
+                      <FaEdit className="mr-1" /> Update
+                    </button>
               </div>
             </div>
+              ))}
           </div>
-        )}
-        
-        {/* Conditional rendering based on toggle state */}
-        {showVisitSchedules ? (
-          // Use memoized component to prevent re-creation
-          memoizedSchedulesComponent
-        ) : (
-          // Show the regular visitor list table
-          <div className="overflow-hidden border border-gray-200 rounded-lg">
-              <DataTable
-              columns={policeOfficerColumns}
-                data={filteredVisitors}
-                pagination
-              paginationPerPage={10}
-              paginationRowsPerPageOptions={[10, 20, 30, 50]}
-              highlightOnHover
-              pointerOnHover
-              responsive
-              progressPending={loading}
-              progressComponent={
-                <div className="flex justify-center items-center p-10">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Purpose</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Visit Date</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredVisitorsMemo.map((visitor) => (
+                    <tr key={visitor._id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {`${visitor.firstName || ''} ${visitor.middleName || ''} ${visitor.lastName || ''}`}
                 </div>
-              }
-                customStyles={customStyles}
-              noDataComponent={
-                <div className="flex flex-col items-center justify-center p-10">
-                  <FaUsers className="text-gray-300 text-5xl mb-4" />
-                  <p className="text-gray-500 text-lg">No visitors found</p>
-                  <p className="text-gray-400 text-sm mt-2">
-                    {filter !== 'all' 
-                      ? `Try changing the filter from "${filter}" to see more results` 
-                      : "No visitors have been registered in the system yet"}
-                  </p>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-500">{visitor.phone || 'N/A'}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-500">{visitor.purpose || 'N/A'}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-500">{formatDate(visitor.date)}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <StatusBadge status={visitor.status || 'Pending'} />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <div className="flex justify-center gap-2">
+                          <button
+                            onClick={() => handleViewDetailsLocal(visitor)}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm flex items-center"
+                          >
+                            <FaEye className="mr-1" /> View
+                          </button>
+                          <button
+                            onClick={() => handleUpdate(visitor)}
+                            className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-md text-sm flex items-center"
+                          >
+                            <FaEdit className="mr-1" /> Update
+                          </button>
                 </div>
-              }
-              />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
+        </div>
 
-      {/* Modals - keep these unchanged */}
-      {open && selectedVisitor && (
+      {/* Modals */}
+      <AddModal open={open} setOpen={setOpen} fetchVisitors={fetchVisitors} />
         <UpdateVisitorModal
-          isOpen={open}
-          onClose={() => setOpen(false)}
+        open={showUpdateVisitorModal}
+        setOpen={setShowUpdateVisitorModal}
           visitor={selectedVisitor}
-          onUpdate={() => {
-            setOpen(false);
-            fetchVisitors();
-            refreshCapacity();
-          }}
-        />
-      )}
-
-      {showDetailModal && viewVisitor && (
+        fetchVisitors={fetchVisitors}
+      />
         <VisitorDetailModal
-          isOpen={showDetailModal}
-          onClose={closeDetailModal}
-          visitor={viewVisitor}
-          capacityReached={isCapacityReached}
-          onApprove={handleApproveWithCheck}
-          onReject={handleRejectClick}
-          onPostpone={handlePostponeClick}
-          onUpdate={handleUpdate}
-          userRole={userData?.role}
-        />
-      )}
-
-      {showPostponeModal && (
-        <PostponeModal
-          isOpen={showPostponeModal}
-          onClose={closePostponeModal}
-          onSubmit={handlePostponeSubmit}
-        />
-      )}
-
-      {showCapacityModal && <CapacityManagementModal />}
-
-      {showUpdateVisitorModal && selectedVisitor && (
-        <UpdateVisitorModal
-          isOpen={showUpdateVisitorModal}
-          onClose={() => setShowUpdateVisitorModal(false)}
+        open={showDetailModalState}
+        setOpen={setShowDetailModalState}
           visitor={selectedVisitor}
-          onSuccess={() => {
-            setShowUpdateVisitorModal(false);
-            fetchVisitors();
-            refreshCapacity();
-            toast.success("Visitor updated successfully");
-          }}
-        />
-      )}
-
-      {showUpdateScheduleModal && selectedSchedule && (
-        <UpdateScheduleModal
-          isOpen={showUpdateScheduleModal}
-          onClose={() => setShowUpdateScheduleModal(false)}
-          schedule={selectedSchedule}
-          onSuccess={() => {
-            setShowUpdateScheduleModal(false);
-            refreshData && refreshData();
-            toast.success("Schedule updated successfully");
-          }}
-        />
-      )}
+      />
     </div>
   );
 };
@@ -875,10 +813,10 @@ const VisitorList = () => {
 // Create a simplified table component specifically for pending schedules
 const PendingSchedulesTable = ({ scheduleData, isLoading, refreshData }) => {
   const [selectedSchedule, setSelectedSchedule] = useState(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
   const [showPostponeModal, setShowPostponeModal] = useState(false);
   const [scheduleToPostpone, setScheduleToPostpone] = useState(null);
   const [userData, setUserData] = useState(null);
+  const [showDetailModalState, setShowDetailModalState] = useState(false);
   
   // Add state for update modal
   const [showUpdateModal, setShowUpdateModal] = useState(false);
@@ -910,7 +848,7 @@ const PendingSchedulesTable = ({ scheduleData, isLoading, refreshData }) => {
   // View schedule details
   const viewScheduleDetails = useCallback((schedule) => {
     setSelectedSchedule(schedule);
-    setShowDetailModal(true);
+    setShowDetailModalState(true);
   }, []);
   
   // Handle update schedule
@@ -1166,14 +1104,14 @@ const PendingSchedulesTable = ({ scheduleData, isLoading, refreshData }) => {
       </div>
       
       {/* Schedule Detail Modal */}
-      {showDetailModal && selectedSchedule && (
+      {showDetailModalState && selectedSchedule && (
         <ScheduleDetailModal
-          isOpen={showDetailModal}
-          onClose={() => setShowDetailModal(false)}
+          isOpen={showDetailModalState}
+          onClose={() => setShowDetailModalState(false)}
           schedule={selectedSchedule}
           onCancel={cancelSchedule}
           onUpdate={(schedule) => {
-            setShowDetailModal(false);
+            setShowDetailModalState(false);
             // Add logic here to handle schedule updates if needed
             toast.success("Schedule update feature will be implemented soon");
           }}
@@ -1211,11 +1149,12 @@ const PendingSchedulesTable = ({ scheduleData, isLoading, refreshData }) => {
   );
 };
 
-// Export the wrapped component with context provider
-export default function VisitorListWithCapacity() {
+const VisitorListWithCapacity = () => {
   return (
     <VisitorCapacityProvider>
       <VisitorList />
     </VisitorCapacityProvider>
   );
-}
+};
+
+export default VisitorListWithCapacity;
