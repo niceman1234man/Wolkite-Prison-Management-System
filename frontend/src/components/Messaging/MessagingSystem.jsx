@@ -390,39 +390,11 @@ const MessagingSystem = ({ isOpen, onClose }) => {
       socketTimeout = setTimeout(() => {
         console.log("Socket connection timeout - proceeding with API-only mode");
         setShowSocketWarning(false); // Hide the warning after timeout
-        
-        // Force initial data load even without socket
+        // Load initial data even if socket is not available
         if (isOpen && user?._id) {
-          console.log("Loading initial data in API-only mode");
           loadInitialData();
         }
-      }, 5000); // Reduced timeout to 5 seconds for better UX
-    }
-    
-    // When socket becomes available, clear timeout and load data
-    if (isConnected && socket) {
-      console.log("Socket connected successfully");
-      if (socketTimeout) {
-        clearTimeout(socketTimeout);
-      }
-      
-      // Emit user online status
-      if (user?._id) {
-        try {
-          socket.emit('userStatus', {
-            userId: user._id,
-            status: 'online'
-          });
-          console.log('Emitted online status for user:', user._id);
-        } catch (err) {
-          console.error('Error emitting user status:', err);
-        }
-      }
-      
-      // Load data now that socket is connected
-      if (isOpen && user?._id) {
-        loadInitialData();
-      }
+      }, 10000);
     }
     
     return () => {
@@ -511,13 +483,13 @@ const MessagingSystem = ({ isOpen, onClose }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, [selectedUser, containerSize.width, isMobileView]);
 
-  // Start polling for new messages when the component mounts - this will run regardless of socket state
+  // Start polling for new messages when the component mounts
   useEffect(() => {
     if (isOpen && user?._id) {
-      // If we already have a socket connection, data will be loaded in the socket effect
-      // Otherwise, we'll load data after timeout in API-only mode
+      // Load initial data regardless of socket state
+      loadInitialData();
       
-      // Start polling for new messages every 5 seconds for backup
+      // Start polling for new messages every 5 seconds
       pollIntervalRef.current = setInterval(() => {
         checkForNewMessages();
       }, 5000);
@@ -2224,7 +2196,7 @@ const MessagingSystem = ({ isOpen, onClose }) => {
             </p>
           </div>
         ) : null}
-        
+          
           {/* Main content container */}
           <div className="flex flex-1 overflow-hidden bg-gray-50">
             {/* User list column - full width when no user selected or forced full width on mobile */}

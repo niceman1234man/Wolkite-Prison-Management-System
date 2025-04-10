@@ -31,8 +31,8 @@ export const SocketProvider = ({ children }) => {
         if (user) {
             console.log('Initializing socket connection with user:', user.id || user._id);
             
-            // Determine server URL - prefer secure connection
-            const serverUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+            // Explicitly set the server URL to ensure correct connection
+            const serverUrl = 'http://localhost:5001'; // Make sure this matches your backend
             console.log('Connecting to socket server at:', serverUrl);
             
             try {
@@ -50,9 +50,15 @@ export const SocketProvider = ({ children }) => {
                 });
 
                 newSocket.on('connect', () => {
-                    console.log('Connected to WebSocket server successfully');
+                    console.log('Connected to WebSocket server successfully', newSocket.id);
                     setIsConnected(true);
                     setConnectionErrors(0);
+                    
+                    // Authenticate with the socket server
+                    newSocket.emit('auth', {
+                        userId: user.id || user._id,
+                        userName: user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim()
+                    });
                     
                     // Join prison-specific room if user is a warden
                     if (user.role === 'warden' && user.prisonId) {
@@ -68,7 +74,7 @@ export const SocketProvider = ({ children }) => {
                     if (connectionErrors >= 2) {
                         console.log('Maximum socket connection attempts reached, stopping reconnect');
                         newSocket.disconnect();
-                        // Let the user know we're falling back to standard mode
+                        // Let the user know we're falling back to API-only mode
                         console.log('Falling back to API-only mode');
                     }
                 });
