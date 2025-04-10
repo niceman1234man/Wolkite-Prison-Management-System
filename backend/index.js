@@ -4,6 +4,8 @@ import path from "path";
 import dotenv from "dotenv";
 import { fileURLToPath } from "url";
 import mongoose from "mongoose";
+import http from "http"; // Add http server
+import { Server } from "socket.io"; // Add Socket.io
 
 // Import database connection
 import { connectDb } from "./config/db.js";
@@ -47,6 +49,18 @@ const __dirname = path.dirname(__filename);
 // Initialize express app
 const app = express();
 
+// Create HTTP server
+const server = http.createServer(app);
+
+// Initialize Socket.io
+const io = new Server(server, {
+  cors: {
+    origin: ["http://localhost:5173", "http://localhost:5174"],
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
+
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -60,8 +74,7 @@ app.use(
 // Serve static files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
-// Routesre
-
+// Routes
 app.use('/api/backup', backupRouter);
 app.use("/api/user", userRouter);
 app.use("/api/visitor", visitorRouter);
@@ -85,6 +98,68 @@ app.use("/api/auth", visitorAccountRouter);
 app.use("/api/visitor/schedule", visitorScheduleRouter);
 app.use("/api/messages", messageRoutes);
 
+// Socket.io event handlers
+io.on('connection', (socket) => {
+  console.log('New client connected:', socket.id);
+
+  // Handle authentication - store user info in socket object
+  socket.on('auth', (userData) => {
+    console.log('User authenticated:', userData);
+    if (userData && userData.userId) {
+      socket.userId = userData.userId;
+      socket.join(userData.userId);
+      io.emit('userStatus', {
+        userId: userData.userId,
+        status: 'online'
+      });
+    }
+  });
+
+  // Handle sending messages
+  socket.on('sendMessage', (message) => {
+    console.log('Message received:', message);
+    if (message && message.receiverId) {
+      io.to(message.receiverId).emit('newMessage', {
+        ...message,
+        _id: `temp-${Date.now()}`,
+        createdAt: new Date().toISOString()
+      });
+    }
+  });
+
+  // Handle typing indicators
+  socket.on('typing', (data) => {
+    if (data && data.receiverId) {
+      io.to(data.receiverId).emit('typing', {
+        userId: socket.userId,
+        isTyping: data.isTyping
+      });
+    }
+  });
+
+  // Handle user status updates
+  socket.on('userStatus', (status) => {
+    if (socket.userId) {
+      io.emit('userStatus', {
+        userId: socket.userId,
+        status: status
+      });
+    }
+  });
+
+  // Handle disconnection
+  socket.on('disconnect', () => {
+    console.log('Client disconnected:', socket.id);
+    if (socket.userId) {
+      // Emit offline status
+      io.emit('userStatus', {
+        userId: socket.userId,
+        status: 'offline'
+      });
+    }
+  });
+});
+
 // Connect to database 
 mongoose
 .connect(process.env.MONGO_URI)
@@ -101,6 +176,7 @@ mongoose
 
 // Start server
 const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
+  console.log(`Socket.io server initialized on the same port`);
 });
