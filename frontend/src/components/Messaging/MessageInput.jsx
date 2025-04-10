@@ -3,16 +3,17 @@ import { FiSend, FiPaperclip, FiX, FiFile, FiImage, FiSmile } from 'react-icons/
 
 const MessageInput = ({ onSendMessage, disabled, isAdmin = false, isFullscreen = false }) => {
   const [message, setMessage] = useState('');
-  const [attachment, setAttachment] = useState(null);
   const [showEmojis, setShowEmojis] = useState(false);
-  const fileInputRef = useRef(null);
+  
+  // File attachment variables removed for testing
+  
   const textareaRef = useRef(null);
 
   // Common emojis
   const emojis = ['😊', '😂', '❤️', '👍', '🙏', '🎉', '🔥', '👋', '😎', '🤔', '👏', '😢', '🥰', '😍', '🤣', '😁', '😘', '🤗', '🤩', '😇'];
 
   useEffect(() => {
-    // Make sure we can see what we're typing
+    // Auto-resize the textarea
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       const newHeight = Math.min(textareaRef.current.scrollHeight, 120);
@@ -31,42 +32,6 @@ const MessageInput = ({ onSendMessage, disabled, isAdmin = false, isFullscreen =
     }
   };
 
-  const handleAttachmentClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        alert('File size exceeds 5MB limit');
-        return;
-      }
-      
-      setAttachment({
-        file,
-        type: file.type,
-        name: file.name,
-        size: file.size,
-        preview: file.type.startsWith('image/') ? URL.createObjectURL(file) : null
-      });
-    }
-    // Clear the input value so the same file can be selected again
-    e.target.value = '';
-  };
-
-  const removeAttachment = () => {
-    if (attachment?.preview) {
-      URL.revokeObjectURL(attachment.preview);
-    }
-    setAttachment(null);
-    
-    // Make sure file input is cleared
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
   const addEmoji = (emoji) => {
     setMessage(prev => prev + emoji);
     setShowEmojis(false);
@@ -74,36 +39,16 @@ const MessageInput = ({ onSendMessage, disabled, isAdmin = false, isFullscreen =
   };
 
   const handleSend = () => {
-    if ((!message.trim() && !attachment) || disabled) return;
+    // Don't send if disabled or no content
+    if (disabled || !message.trim()) return;
     
     try {
-      // Send file attachment only if there's no message text
-      if (attachment && !message.trim()) {
-        onSendMessage("", attachment.file);
-      } 
-      // Send message with attachment if both are present
-      else if (attachment && message.trim()) {
-        onSendMessage(message, attachment.file);
-      }
-      // Send text message only
-      else {
-        onSendMessage(message, null);
-      }
+      // Send message without attachment
+      onSendMessage(message);
       
+      // Reset state
       setMessage('');
       
-      // Make sure attachment is properly cleared after sending
-      if (attachment?.preview) {
-        URL.revokeObjectURL(attachment.preview);
-      }
-      setAttachment(null);
-      
-      // Clear file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-      
-      // Reset textarea height
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
       }
@@ -112,48 +57,9 @@ const MessageInput = ({ onSendMessage, disabled, isAdmin = false, isFullscreen =
     }
   };
 
-  const formatFileSize = (bytes) => {
-    if (!bytes) return '';
-    
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-    if (bytes === 0) return '0 Byte';
-    const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
-    return Math.round(bytes / Math.pow(1024, i), 2) + ' ' + sizes[i];
-  };
-
   return (
     <div className={`input-section relative ${isFullscreen ? 'px-4' : ''}`}>
-      {attachment && (
-        <div className={`attachment-preview ${isFullscreen ? 'mx-auto max-w-xl' : ''}`}>
-          {attachment.type.startsWith('image/') ? (
-            <div className="relative">
-              <img 
-                src={attachment.preview} 
-                alt="Attachment preview" 
-                className="max-h-40 max-w-full rounded-md object-contain" 
-              />
-              <div className="absolute text-xs text-white bg-black/50 px-2 py-1 rounded-md bottom-2 left-2">
-                {attachment.name}
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center p-2 bg-gray-100 rounded-md">
-              <FiFile size={24} className="text-blue-500 mr-2" />
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium truncate">{attachment.name}</div>
-                <div className="text-xs text-gray-500">{formatFileSize(attachment.size)}</div>
-              </div>
-            </div>
-          )}
-          <button 
-            onClick={removeAttachment}
-            className="absolute top-1 right-1 bg-gray-800/50 text-white p-1 rounded-full hover:bg-gray-900/50"
-            aria-label="Remove attachment"
-          >
-            <FiX size={12} />
-          </button>
-        </div>
-      )}
+      {/* File attachment preview removed for testing */}
       
       <div className={`flex items-end border-t pt-3 ${isFullscreen ? 'max-w-3xl mx-auto' : ''}`}>
         <div className="flex items-center space-x-2 mr-2">
@@ -166,12 +72,12 @@ const MessageInput = ({ onSendMessage, disabled, isAdmin = false, isFullscreen =
             <FiSmile size={isFullscreen ? 22 : 20} />
           </button>
           
+          {/* Attachment button disabled for testing */}
           <button
-            onClick={handleAttachmentClick}
-            className={`p-2 rounded-full hover:bg-gray-100 text-gray-500 ${isFullscreen ? 'text-lg' : ''}`}
+            className={`p-2 rounded-full text-gray-300 ${isFullscreen ? 'text-lg' : ''}`}
             type="button"
-            aria-label="Attach file"
-            disabled={isAdmin && !message.trim()}
+            aria-label="Attach file (disabled)"
+            disabled={true}
           >
             <FiPaperclip size={isFullscreen ? 22 : 20} />
           </button>
@@ -195,26 +101,20 @@ const MessageInput = ({ onSendMessage, disabled, isAdmin = false, isFullscreen =
           rows={1}
         />
         
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleFileChange}
-          className="hidden"
-          accept="image/*,application/pdf,application/msword,application/vnd.ms-excel,text/plain"
-        />
+        {/* File input removed for testing */}
         
         <button
           onClick={handleSend}
           className={`p-2 ml-2 rounded-full ${
             isFullscreen ? 'p-3' : ''
           } ${
-            (!message.trim() && !attachment) || disabled 
+            !message.trim() || disabled 
               ? 'bg-gray-300 text-gray-500' 
               : isAdmin
                 ? 'bg-red-500 text-white hover:bg-red-600'
                 : 'bg-blue-500 text-white hover:bg-blue-600'
           }`}
-          disabled={(!message.trim() && !attachment) || disabled}
+          disabled={!message.trim() || disabled}
           aria-label="Send message"
           type="button"
         >

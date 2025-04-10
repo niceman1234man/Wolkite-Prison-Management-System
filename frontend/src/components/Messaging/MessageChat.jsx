@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { formatDistanceToNow } from 'date-fns';
 import { 
   FiArrowLeft, 
   FiPhone, 
@@ -16,7 +17,10 @@ import {
   FiX,
   FiVolume2,
   FiVolumeX,
-  FiMessageSquare
+  FiMessageSquare,
+  FiCamera,
+  FiCameraOff,
+  FiPhoneOff
 } from 'react-icons/fi';
 import { toast } from 'react-hot-toast';
 import ChatHeader from './ChatHeader';
@@ -39,17 +43,16 @@ const MessageChat = ({
   onStarMessage,
   starredMessages,
   isAdmin = false,
+  disabled = false,
   containerWidth = 800 // Default width if not provided
 }) => {
-  const [newMessage, setNewMessage] = useState('');
+  const [message, setMessage] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
-  const [fileType, setFileType] = useState(null);
   const [filePreview, setFilePreview] = useState(null);
   const [isCallActive, setIsCallActive] = useState(false);
   const [isVideoCall, setIsVideoCall] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
-  const [ringSound, setRingSound] = useState(null);
   const [callDuration, setCallDuration] = useState(0);
   const [callTimer, setCallTimer] = useState(null);
   const [audioNodes, setAudioNodes] = useState(null);
@@ -70,7 +73,6 @@ const MessageChat = ({
     // Create audio element for call sounds
     const audio = new Audio('/message-notification.mp3'); // Replace with actual ring sound
     audio.loop = true;
-    setRingSound(audio);
     
     return () => {
       if (audio) {
@@ -107,98 +109,78 @@ const MessageChat = ({
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
   
-  // Update handleFileChange to properly handle files and create previews
+  // Handle file selection
   const handleFileChange = (e) => {
+    // First clear any existing file references
+    clearSelectedFile();
+    
     const file = e.target.files[0];
     if (!file) return;
     
-    console.log("File selected:", file.name, file.type, file.size);
+    console.log("File selected in MessageChat:", file.name, file.type, file.size);
     
+    // Validate the file has actual content
+    if (file.size === 0) {
+      alert('Cannot attach an empty file');
+      e.target.value = '';
+      return;
+    }
+    
+    // Validate file size - max 5MB
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File is too large. Please select a file smaller than 5MB.");
+      e.target.value = '';
+      return;
+    }
+    
+    // Store the file directly without wrapping
     setSelectedFile(file);
     
-    // Process image files for preview
+    // Create preview for images
     if (file.type.startsWith('image/')) {
-      setFileType('image');
-      
       try {
-        // Create a blob URL for immediate preview
         const objectUrl = URL.createObjectURL(file);
-        console.log("Created preview URL:", objectUrl);
         setFilePreview(objectUrl);
-        
-        // Store cleanup function to prevent memory leaks
-        return () => {
-          URL.revokeObjectURL(objectUrl);
-          console.log("Revoked preview URL");
-        };
       } catch (err) {
         console.error("Error creating preview:", err);
         setFilePreview(null);
       }
-    } else {
-      // For non-image files
-      setFileType('document');
-      setFilePreview(null);
     }
-  };
-  
-  // Handle message submission with enhanced file handling
-  const handleSubmit = (e) => {
-    e.preventDefault();
     
-    // Don't send empty message unless there's an explicitly selected file
-    if ((!newMessage || !newMessage.trim()) && !selectedFile) return;
-    
-    try {
-      // Only proceed with file if it was explicitly selected
-      if (selectedFile) {
-        console.log("Sending file attachment:", {
-          name: selectedFile.name,
-          type: selectedFile.type,
-          size: selectedFile.size,
-          preview: filePreview ? "Available" : "None"
-        });
-        
-        // Only send the file without the text message if it's empty
-        if (!newMessage || !newMessage.trim()) {
-          onSendMessage("", selectedFile);
-        } else {
-          // Send the message with file
-          onSendMessage(newMessage, selectedFile);
-        }
-      } else {
-        // Send text message only with null file parameter to ensure no file is attached
-        onSendMessage(newMessage, null);
-      }
-      
-      // Reset the form
-      setNewMessage('');
-      setSelectedFile(null);
-      setFilePreview('');
-      
-      // Clear file input by resetting its value
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    } catch (error) {
-      console.error("Error in handleSubmit:", error);
-    }
+    // Reset the file input
+    e.target.value = '';
   };
   
   // Clear the selected file
   const clearSelectedFile = () => {
-    if (filePreview && filePreview.startsWith('blob:')) {
-      // Clean up blob URL to prevent memory leaks
+    if (filePreview) {
       URL.revokeObjectURL(filePreview);
     }
     
     setSelectedFile(null);
-    setFilePreview('');
-    setFileType(null); // Also clear file type state
+    setFilePreview(null);
     
-    // Also clear the file input element
+    // Reset the file input
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
+    }
+  };
+  
+  // Message submission handler
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!message.trim()) return;
+    
+    console.log("Submitting message:", message);
+    
+    // Only sending text, no file attachment
+    try {
+      onSendMessage(message);
+      
+      // Reset form
+      setMessage('');
+    } catch (error) {
+      console.error("Error in handleSubmit:", error);
     }
   };
   
@@ -812,14 +794,14 @@ const MessageChat = ({
     );
   };
   
-  // Update the section that renders file attachment UI
+  // Render file attachment preview
   const renderFileAttachment = () => {
     if (!selectedFile) return null;
     
     return (
       <div className="selected-file-preview p-2 bg-gray-100 rounded-md mb-2 flex items-center justify-between">
         <div className="flex items-center">
-          {fileType === 'image' && filePreview ? (
+          {filePreview ? (
             <div className="w-12 h-12 mr-3 bg-white rounded overflow-hidden">
               <img src={filePreview} alt="Preview" className="w-full h-full object-cover" />
             </div>
@@ -848,120 +830,6 @@ const MessageChat = ({
     );
   };
   
-  // Update the function to get initials from both first and last names
-  const getInitials = (user) => {
-    if (!user) return 'U';
-    
-    let initials = '';
-    
-    // If we have a full name, get first letters of first and last name
-    if (user.name) {
-      const nameParts = user.name.split(' ');
-      if (nameParts.length >= 2) {
-        // Get first letter of first name and first letter of last name
-        initials = `${nameParts[0].charAt(0)}${nameParts[nameParts.length - 1].charAt(0)}`;
-      } else {
-        // If only one name part, get first letter
-        initials = nameParts[0].charAt(0);
-      }
-    } 
-    // If we have firstName and lastName fields
-    else if (user.firstName || user.lastName) {
-      if (user.firstName) initials += user.firstName.charAt(0);
-      if (user.lastName) initials += user.lastName.charAt(0);
-      // If we still don't have initials, try middleName
-      if (!initials && user.middleName) initials = user.middleName.charAt(0);
-    }
-    // Fallback to username
-    else if (user.username) {
-      initials = user.username.charAt(0);
-    }
-    
-    return initials.toUpperCase() || 'U';
-  };
-  
-  // Update the renderUserAvatar function with the new getInitials function
-  const renderUserAvatar = (user) => {
-    if (!user) return null;
-    
-    const displayName = user.name || user.username || 'User';
-    const initials = getInitials(user);
-    
-    // Generate a color based on user ID
-    const generateColor = (userId) => {
-      const colors = [
-        { bg: '#f87171', text: '#7f1d1d' }, // Red
-        { bg: '#fb923c', text: '#7c2d12' }, // Orange
-        { bg: '#facc15', text: '#713f12' }, // Yellow
-        { bg: '#a3e635', text: '#365314' }, // Lime
-        { bg: '#4ade80', text: '#14532d' }, // Green
-        { bg: '#34d399', text: '#064e3b' }, // Emerald
-        { bg: '#2dd4bf', text: '#134e4a' }, // Teal
-        { bg: '#22d3ee', text: '#155e75' }, // Cyan
-        { bg: '#38bdf8', text: '#075985' }, // Light Blue
-        { bg: '#60a5fa', text: '#1e40af' }, // Blue
-        { bg: '#818cf8', text: '#3730a3' }, // Indigo
-        { bg: '#a78bfa', text: '#4c1d95' }, // Violet
-        { bg: '#c084fc', text: '#581c87' }, // Purple
-        { bg: '#e879f9', text: '#701a75' }, // Fuchsia
-        { bg: '#f472b6', text: '#831843' }, // Pink
-        { bg: '#fb7185', text: '#881337' }  // Rose
-      ];
-      
-      try {
-        // Create a more consistent hash from the userID
-        let hash = 0;
-        const id = String(userId || '0');
-        
-        // Use all characters of the ID to generate a hash
-        for (let i = 0; i < id.length; i++) {
-          hash = ((hash << 5) - hash) + id.charCodeAt(i);
-          hash = hash & hash; // Convert to 32bit integer
-        }
-        
-        // Ensure hash is positive and get a modulo for the colors array
-        const colorIndex = Math.abs(hash) % colors.length;
-        return colors[colorIndex];
-      } catch (err) {
-        return colors[0];
-      }
-    };
-    
-    const avatarColor = generateColor(user._id);
-    
-    return (
-      <div className="chat-header-avatar mr-2 relative">
-        {user.photo ? (
-          <img 
-            src={user.photo} 
-            alt={displayName}
-            className="w-10 h-10 rounded-full border-2 border-white shadow-sm object-cover"
-            onError={(e) => {
-              // If image fails to load, fall back to initial
-              e.target.onerror = null;
-              e.target.style.display = 'none';
-              e.target.parentNode.style.backgroundColor = avatarColor.bg;
-              e.target.parentNode.innerHTML += `<span class="text-lg font-semibold" style="color: ${avatarColor.text};">${initials}</span>`;
-            }}
-          />
-        ) : (
-          <div 
-            className="w-10 h-10 rounded-full flex items-center justify-center"
-            style={{
-              backgroundColor: avatarColor.bg,
-              color: avatarColor.text
-            }}
-          >
-            <span className="text-lg font-semibold">{initials}</span>
-          </div>
-        )}
-        {user.isOnline && (
-          <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white"></div>
-        )}
-      </div>
-    );
-  };
-  
   return (
     <div className="flex flex-col h-full relative">
       {/* Message list with back button for mobile */}
@@ -977,7 +845,19 @@ const MessageChat = ({
                 <FiArrowLeft size={20} className="text-gray-700" />
               </button>
               <div className="flex items-center">
-                {renderUserAvatar(selectedUser)}
+                <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center mr-2 overflow-hidden">
+                  {selectedUser?.photo ? (
+                    <img 
+                      src={selectedUser.photo} 
+                      alt={selectedUser?.name || 'User'} 
+                      className="w-full h-full object-cover" 
+                    />
+                  ) : (
+                    <span className="text-xl text-white font-bold">
+                      {(selectedUser?.name || 'U').charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                </div>
                 <div>
                   <div className="font-medium leading-tight">
                     {selectedUser?.name || selectedUser?.username || 'User'}
@@ -1016,61 +896,51 @@ const MessageChat = ({
         </div>
       </div>
       
-      {/* File preview */}
-      {selectedFile && (
-        <div className="p-3 bg-gray-100 border-t border-gray-200">
-          {renderFileAttachment()}
-        </div>
-      )}
-      
       {/* Message input */}
-      <form onSubmit={handleSubmit} className="input-section border-t">
+      <div className="message-input-container border-t">
         {/* File preview */}
         {renderFileAttachment()}
         
-        <div className="flex items-end p-3">
+        <form onSubmit={handleSubmit} className="message-form p-3 flex items-end">
           {/* File attachment button */}
-          <div className="relative mr-2">
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
-              title="Attach file"
-            />
-            <button
-              type="button"
-              className="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-colors"
-              title="Attach file"
-            >
-              <FiPaperclip size={20} />
-            </button>
-          </div>
+          <button
+            type="button"
+            className="p-2 rounded-full text-gray-500 hover:bg-gray-100 mr-2"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={disabled}
+          >
+            <FiPaperclip size={20} />
+          </button>
+          
+          {/* Hidden file input */}
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            className="hidden"
+            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+          />
           
           {/* Text input */}
           <input
             type="text"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
             placeholder="Type a message..."
-            className="flex-1 p-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-gray-900"
-            style={{ color: '#1e293b', backgroundColor: 'white' }}
+            className="flex-1 p-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            disabled={disabled}
           />
           
           {/* Send button */}
-          <button
-            type="submit"
-            disabled={!newMessage && !selectedFile}
-            className={`ml-2 p-2 rounded-full ${
-              !newMessage && !selectedFile
-                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                : 'bg-indigo-600 text-white hover:bg-indigo-700'
-            }`}
+          <button 
+            type="submit" 
+            className="send-button ml-2 p-2 rounded-full bg-indigo-600 text-white"
+            disabled={(!message.trim() && !selectedFile) || disabled}
           >
             <FiSend size={20} />
           </button>
-        </div>
-      </form>
+        </form>
+      </div>
       
       {/* Call overlay */}
       {isCallActive && (

@@ -1,24 +1,5 @@
 import Message from '../model/Message.js';
-import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
 import mongoose from 'mongoose';
-
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadDir = 'uploads/messages';
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + '-' + file.originalname);
-  }
-});
-
-export const upload = multer({ storage: storage });
 
 // Get all messages between two users
 export const getMessages = async (req, res) => {
@@ -94,21 +75,21 @@ export const getMessages = async (req, res) => {
   }
 };
 
-// Send a new message
+// Send a new message - text only, no file attachments
 export const sendMessage = async (req, res) => {
   try {
+    // Extract request data
     const { receiverId, content, senderId: bodySenderId } = req.body;
-    // Use req.user._id if available, otherwise use the senderId from request body or query
     const senderId = req.user?._id || bodySenderId || req.query.currentUserId;
     
-    console.log('Send message request:', {
-      body: req.body,
-      query: req.query,
-      authUser: req.user?._id
+    // Debug logging
+    console.log('Text message request received:', {
+      senderId,
+      receiverId,
+      contentLength: content ? content.length : 0
     });
     
-    console.log('Sending message from', senderId, 'to', receiverId, 'content:', content?.substring(0, 30));
-    
+    // Validation checks
     if (!senderId) {
       return res.status(400).json({ message: 'Sender ID is required' });
     }
@@ -117,30 +98,25 @@ export const sendMessage = async (req, res) => {
       return res.status(400).json({ message: 'Receiver ID is required' });
     }
     
-    if (!content && !req.file) {
-      return res.status(400).json({ message: 'Message content or file is required' });
-    }
+    // Validate content
+    const hasValidContent = content && content.trim().length > 0;
     
-    let fileUrl = null;
-
-    // Handle file upload if present
-    if (req.file) {
-      fileUrl = `/uploads/messages/${req.file.filename}`;
-      console.log('File uploaded to:', fileUrl);
+    if (!hasValidContent) {
+      return res.status(400).json({ message: 'Message must contain text content' });
     }
 
+    // Create the message document - text only, no file
     const message = new Message({
       senderId,
       receiverId,
-      content: content || '(attachment)',
-      file: fileUrl,
-      status: 'sent'  // Initial status is 'sent'
+      content,
+      status: 'sent'
     });
 
+    // Save to database
     await message.save();
-    console.log('Message saved with ID:', message._id);
-
-    // Populate sender and receiver details
+    
+    // Return populated message
     const populatedMessage = await Message.findById(message._id)
       .populate('senderId', 'firstName middleName photo')
       .populate('receiverId', 'firstName middleName photo');

@@ -278,7 +278,8 @@ const messageUtils = {
           const apiMessage = {
             ...newMessage,
             _id: response.data._id || response.data.data?._id || `temp-${Date.now()}`,
-            createdAt: response.data.createdAt || response.data.data?.createdAt || new Date().toISOString()
+            createdAt: response.data.createdAt || response.data.data?.createdAt || new Date().toISOString(),
+            status: 'sent'
           };
           
           setMessages(prev => [...prev, apiMessage]);
@@ -363,6 +364,55 @@ const messageUtils = {
       return [];
     }
   }
+};
+
+// After the API_ENDPOINTS definition at the top, add this utility function
+const getUserFromStorage = () => {
+  // 1. Try localStorage.getItem('user') - most common
+  try {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      const userData = JSON.parse(userStr);
+      if (userData && (userData._id || userData.id)) {
+        console.log('Found user data in localStorage.user');
+        return userData;
+      }
+    }
+  } catch (e) {
+    console.log('Error parsing user from localStorage:', e);
+  }
+  
+  // 2. Check other common keys in localStorage
+  const possibleKeys = ['userData', 'currentUser', 'authUser', 'loggedInUser'];
+  for (const key of possibleKeys) {
+    try {
+      const userStr = localStorage.getItem(key);
+      if (userStr) {
+        const userData = JSON.parse(userStr);
+        if (userData && (userData._id || userData.id)) {
+          console.log(`Found user data in localStorage.${key}`);
+          return userData;
+        }
+      }
+    } catch (e) {
+      console.log(`Error parsing ${key}:`, e);
+    }
+  }
+  
+  // 3. Try from global window object (sometimes apps store user data there)
+  if (window.currentUser && (window.currentUser._id || window.currentUser.id)) {
+    console.log('Found user data in window.currentUser');
+    return window.currentUser;
+  }
+  
+  // 4. If all else fails, look for any redux state in window.__REDUX_STATE__
+  if (window.__REDUX_STATE__ && window.__REDUX_STATE__.auth?.user) {
+    console.log('Found user data in Redux state');
+    return window.__REDUX_STATE__.auth.user;
+  }
+  
+  // No user data found
+  return null;
 };
 
 const MessagingSystem = ({ isOpen, onClose }) => {
@@ -952,152 +1002,190 @@ const MessagingSystem = ({ isOpen, onClose }) => {
     }
   };
 
-  // Replace one of the duplicate handleSendMessage functions with improved error handling
-  const handleSendMessage = async (content, attachment = null) => {
-    if (!content || content.trim() === '') {
-      toast.error('Please enter a message');
+  // Add this debugging function at the top level of the component
+  const logLocalStorageKeys = () => {
+    console.log('Available localStorage keys:');
+    for (let i = 0; i < localStorage.length; i++) {
+      console.log(`- ${localStorage.key(i)}`);
+    }
+  };
+
+  // Update the function to get current user data from all possible sources
+  const getCurrentUserData = () => {
+    let currentUser = null;
+    
+    // 1. Try from component state first
+    if (user && user._id) {
+      console.log('Using user data from component state');
+      return user;
+    }
+    
+    // 2. Try from localStorage
+    const possibleKeys = ['userData', 'user', 'currentUser', 'userInfo', 'auth-user'];
+    for (const key of possibleKeys) {
+      try {
+        const data = localStorage.getItem(key);
+        if (data) {
+          currentUser = JSON.parse(data);
+          console.log(`Found user data in localStorage key: ${key}`);
+          if (currentUser && (currentUser._id || currentUser.id)) {
+            // Normalize the ID field
+            if (!currentUser._id && currentUser.id) {
+              currentUser._id = currentUser.id;
+            }
+            return currentUser;
+          }
+        }
+      } catch (e) {
+        console.log(`Error parsing ${key}:`, e);
+      }
+    }
+    
+    // 3. Try from global window object (sometimes apps store user data there)
+    if (window.currentUser && (window.currentUser._id || window.currentUser.id)) {
+      console.log('Found user data in window.currentUser');
+      return window.currentUser;
+    }
+    
+    // 4. If all else fails, look for any redux state in window.__REDUX_STATE__
+    if (window.__REDUX_STATE__ && window.__REDUX_STATE__.auth?.user) {
+      console.log('Found user data in Redux state');
+      return window.__REDUX_STATE__.auth.user;
+    }
+    
+    // No user data found
+    return null;
+  };
+
+  // This implementation of handleSendMessage uses the getUserFromStorage helper for more robust user data retrieval
+  const handleSendMessage = async (content) => {
+    // Basic validation
+    if (!selectedUser || !content.trim() || isSending) {
+      console.log('Cannot send message: missing data or already sending');
       return;
     }
-
-    if (!selectedUser) {
-      toast.error('Please select a user to message');
-        return;
-      }
-      
+    
+    setIsSending(true);
+    
     try {
-      setIsSending(true);
-
-      // Get current user info
-      const userStr = localStorage.getItem('user');
-      if (!userStr) {
-        toast.error('User authentication required');
+      // Get user data from component state or localStorage
+      let currentUser = user || getUserFromStorage();
+      
+      if (!currentUser || (!currentUser._id && !currentUser.id)) {
+        console.error('Failed to get user data');
+        toast.error('Unable to send message - user session error');
+        setIsSending(false);
         return;
       }
-
-      const currentUser = JSON.parse(userStr);
-      const senderId = currentUser.id || currentUser._id;
       
-      if (!senderId) {
-        toast.error('User ID not found');
-        return;
-      }
-
-      console.log('Selected user for message:', selectedUser);
+      const senderId = currentUser._id || currentUser.id;
+      const receiverId = selectedUser;
       
-      // Determine the correct receiverId format
-      const receiverId = typeof selectedUser === 'object' ? selectedUser._id : selectedUser;
-      console.log('Formatted receiverId:', receiverId);
+      // Enhanced logging for user data
+      console.log('User data retrieved:', { 
+        source: user ? 'component state' : 'localStorage', 
+        id: senderId,
+        hasToken: !!localStorage.getItem('token')
+      });
       
-      if (!receiverId) {
-        toast.error('Recipient ID is invalid');
-        console.error('Invalid receiverId:', selectedUser);
-        return;
-      }
-
-      // Prepare message object
+      // Create the message object - text only
       const newMessage = {
         senderId,
-        senderName: currentUser.name || `${currentUser.firstName || ''} ${currentUser.lastName || ''}`.trim(),
+        senderName: currentUser.firstName || currentUser.name || currentUser.username || 'You',
         receiverId,
-        content,
-        timestamp: new Date().toISOString(),
-        attachment
+        content: content,
+        createdAt: new Date().toISOString(),
+        status: 'sending'
       };
-
-      console.log('Sending message:', newMessage);
       
-      // First try socket if available
-      if (socket && socket.connected) {
-        console.log('Emitting message via socket');
-        socket.emit('sendMessage', newMessage);
-        
-        // Add message to conversation immediately for real-time feedback
-        const updatedConversation = [...messages, newMessage];
-        setMessages(updatedConversation);
-        setNewMessage('');
-        
-        // Scroll to bottom
-        setTimeout(() => {
-          if (messagesEndRef.current) {
-            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-          }
-        }, 100);
-      } else {
-        // Fallback to API if socket not available
-        console.log('Socket not available, using API fallback');
-        toast('Using standard messaging mode');
-        
-        // Create form data for API call
+      // Add message to UI immediately
+      setMessages(prev => [...prev, newMessage]);
+      setNewMessage('');
+      
+      // Create FormData for API request with enhanced handling
       const formData = new FormData();
-      formData.append('content', content || '');
+      formData.append('content', content);
+      formData.append('receiverId', receiverId);
+      
+      // Ensure senderId is included and is a string (not an object)
+      if (senderId) {
+        // Convert to string if it's an ObjectId
+        const senderIdStr = typeof senderId === 'object' ? senderId.toString() : senderId;
+        formData.append('senderId', senderIdStr);
+        console.log('Added senderId to FormData:', senderIdStr);
+      } else {
+        console.error('No valid senderId found.');
+      }
+      
+      // Log all form data being sent
+      for (let [key, value] of formData.entries()) {
+        console.log(`FormData: ${key} = ${value}`);
+      }
+      
+      try {
+        console.log('Sending message via API');
         
-        // Use the validated receiverId from above
-        formData.append('receiverId', receiverId);
-        formData.append('senderId', senderId);
+        // Use JSON payload instead of FormData for simpler text-only messages
+        const messageData = {
+          content,
+          receiverId,
+          senderId
+        };
         
-        if (attachment) {
-          formData.append('file', attachment);
-        }
+        console.log('Sending message data:', messageData);
         
-        // Send via API
-        try {
-          console.log('Sending via API with formData:', {
-            content: formData.get('content'),
-            receiverId: formData.get('receiverId'),
-            senderId: formData.get('senderId'),
-            hasFile: !!formData.get('file')
-          });
-          
-          const response = await axiosInstance.post(API_ENDPOINTS.SEND_MESSAGE, formData, {
+        const response = await axiosInstance.post(API_ENDPOINTS.SEND_MESSAGE, messageData, {
           headers: {
-            'Content-Type': 'multipart/form-data',
+            'Content-Type': 'application/json',
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }
         });
         
-          console.log('API message response:', response.data);
-          
-          if (response.data) {
-            // Add the sent message to the conversation
-            const apiMessage = {
-              ...newMessage,
-              _id: response.data._id || response.data.data?._id || `temp-${Date.now()}`,
-              createdAt: response.data.createdAt || response.data.data?.createdAt || new Date().toISOString()
-            };
-            
-            setMessages(prev => [...prev, apiMessage]);
-            setNewMessage('');
-            
-            // Scroll to bottom
-            setTimeout(() => {
-              if (messagesEndRef.current) {
-                messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-              }
-            }, 100);
-          }
-        } catch (apiError) {
-          console.error('API send error:', apiError);
-          
-          // Handle ObjectId casting errors
-          if (apiError.response?.data?.error?.includes('Cast to ObjectId failed')) {
-            toast.error('Invalid recipient ID format');
-            console.error('MongoDB ObjectId casting error with receiverId:', receiverId);
-        } else {
-            // Generic error fallback
-            toast.error(apiError.message || 'Failed to send message via API');
-          }
-          
-          // Still update UI with a temporary message to improve UX
-          const tempMessage = {
+        console.log('API message response:', response.data);
+        
+        if (response.data) {
+          // Update the message in state with the server-provided details
+          const apiMessage = {
             ...newMessage,
-            _id: `temp-${Date.now()}`,
-            createdAt: new Date().toISOString(),
-            status: 'failed'
+            _id: response.data._id || response.data.data?._id || `temp-${Date.now()}`,
+            createdAt: response.data.createdAt || response.data.data?.createdAt || new Date().toISOString(),
+            status: 'sent'
           };
           
-          setMessages(prev => [...prev, tempMessage]);
-          setNewMessage('');
+          setMessages(prev => 
+            prev.map(msg => 
+              msg === newMessage ? apiMessage : msg
+            )
+          );
+          
+          // Scroll to bottom
+          setTimeout(() => {
+            if (messagesEndRef.current) {
+              messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+            }
+          }, 100);
         }
+      } catch (apiError) {
+        console.error('API send error:', apiError);
+        
+        // Special handling for MongoDB ObjectId casting errors
+        const errorMessage = apiError.response?.data?.message || '';
+        console.error('Error response data:', apiError.response?.data);
+        
+        if (errorMessage.includes('Cast to ObjectId failed')) {
+          toast.error('Invalid user ID format. Please refresh the page.');
+        } else if (errorMessage.includes('Sender ID is required')) {
+          toast.error('User ID missing. Please try logging out and logging in again.');
+        } else {
+          toast.error('Failed to send message');
+        }
+        
+        // Update the message status to failed
+        setMessages(prev => 
+          prev.map(msg => 
+            msg === newMessage ? { ...msg, status: 'failed' } : msg
+          )
+        );
       }
     } catch (error) {
       console.error('Error sending message:', error);
@@ -2323,4 +2411,4 @@ const MessagingSystem = ({ isOpen, onClose }) => {
   );
 };
 
-export default MessagingSystem; 
+export default MessagingSystem;
