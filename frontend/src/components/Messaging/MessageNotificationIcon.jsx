@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { FiMessageCircle } from 'react-icons/fi';
 import { useSelector } from 'react-redux';
 import axiosInstance from '../../utils/axiosInstance';
+import { toast } from 'react-hot-toast';
 
 const MessageNotificationIcon = ({ onClick }) => {
   const [unreadCount, setUnreadCount] = useState(0);
@@ -29,6 +30,9 @@ const MessageNotificationIcon = ({ onClick }) => {
       // Listen for custom events from MessagingSystem about read messages
       window.addEventListener('messagesMarkedAsRead', handleMessagesRead);
       
+      // Listen for updated count events
+      window.addEventListener('unreadCountUpdated', handleCountUpdated);
+      
       // Listen for user changes in the messaging system
       window.addEventListener('messagingUsersLoaded', () => {
         console.log('MessageNotificationIcon: User list changed, refreshing count');
@@ -45,11 +49,24 @@ const MessageNotificationIcon = ({ onClick }) => {
       return () => {
         clearInterval(interval);
         window.removeEventListener('messagesMarkedAsRead', handleMessagesRead);
+        window.removeEventListener('unreadCountUpdated', handleCountUpdated);
         window.removeEventListener('messagingUsersLoaded', fetchUnreadCount);
         window.removeEventListener('adminMessageSent', fetchUnreadCount);
       };
     }
   }, [user]);
+  
+  // Handler for the unreadCountUpdated event
+  const handleCountUpdated = (event) => {
+    if (event.detail) {
+      console.log(`MessageNotificationIcon: Unread count updated event received`, event.detail);
+      
+      // Update the count based on the event data
+      if (event.detail.totalCount !== undefined) {
+        setUnreadCount(event.detail.totalCount);
+      }
+    }
+  };
   
   // Handler for the custom event when messages are marked as read
   const handleMessagesRead = (event) => {
@@ -61,6 +78,18 @@ const MessageNotificationIcon = ({ onClick }) => {
     }
   };
   
+  // Handle manual reset (double-click)
+  const handleDoubleClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!unreadCount) return;
+    
+    console.log('MessageNotificationIcon: Manual reset initiated');
+    setUnreadCount(0);
+    toast.success('Notification count reset', { duration: 2000 });
+  };
+
   // Add animation when unread count changes
   useEffect(() => {
     if (unreadCount > 0) {
@@ -151,8 +180,10 @@ const MessageNotificationIcon = ({ onClick }) => {
   return (
     <button 
       onClick={onClick}
+      onDoubleClick={handleDoubleClick}
       className="relative p-2.5 text-gray-700 hover:bg-blue-50 rounded-full transition-all duration-300"
       aria-label="Messages"
+      title="Click to open messages. Double-click to reset notification count."
     >
       <FiMessageCircle 
         size={24} 

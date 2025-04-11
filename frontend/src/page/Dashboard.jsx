@@ -39,10 +39,37 @@ const Dashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
+      // First try to fetch standard dashboard data
       const response = await axiosInstance.get("/dashboard/data");
-      if (response.data?.success) {
-        setDashboardData(response.data.data);
+      let updatedData = response.data?.data || {
+        totalPrisoners: 0,
+        pendingTransfers: 0,
+        urgentCases: 0,
+        recentTransfers: [],
+        recentIncidents: [],
+      };
+      
+      // Now fetch transfer data similar to SecurityStaffReport component
+      try {
+        const transferResponse = await axiosInstance.get("/transfer/getall-transfers");
+        if (transferResponse.data?.data) {
+          const processedTransfers = transferResponse.data.data.map(transfer => ({
+            ...transfer,
+            transferDate: transfer.transferDate ? new Date(transfer.transferDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+            createdAt: transfer.createdAt ? new Date(transfer.createdAt).toISOString().split('T')[0] : null,
+            status: transfer.status?.toLowerCase() || 'pending'
+          }));
+          
+          // Update dashboard data with transfer stats
+          updatedData.pendingTransfers = processedTransfers.filter(t => t?.status?.toLowerCase() === 'pending').length;
+          updatedData.recentTransfers = processedTransfers.slice(0, 5);
+        }
+      } catch (transferError) {
+        console.error("Error fetching transfer data:", transferError);
       }
+      
+      // Set final dashboard data
+      setDashboardData(updatedData);
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
       toast.error(error.response?.data?.error || "Failed to fetch dashboard data");
@@ -127,14 +154,14 @@ const Dashboard = () => {
                     <div className="flex justify-between items-start">
                       <div>
                         <p className="font-medium">
-                          {transfer.fromPrison?.prison_name} → {transfer.toPrison?.prison_name}
+                          {transfer.fromPrison} → {transfer.toPrison}
                         </p>
                         <p className="text-sm text-gray-600">
                           Status: <span className="font-medium">{transfer.status}</span>
                         </p>
                       </div>
                       <span className="text-sm text-gray-500">
-                        {new Date(transfer.createdAt).toLocaleDateString()}
+                        {new Date(transfer.transferDate || transfer.createdAt).toLocaleDateString()}
                       </span>
                     </div>
                   </div>

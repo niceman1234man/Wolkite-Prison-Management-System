@@ -21,6 +21,7 @@ import {
   FaChevronDown,
   FaChevronUp,
   FaPrint,
+  FaTrash
 } from "react-icons/fa";
 import TransferButton from "./TransferButton";
 
@@ -52,6 +53,18 @@ export default function AddWoredaInmate() {
     assignedPrison: "",
     documents: [],
   });
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [totalItems, setTotalItems] = useState(0);
+  const [loading, setLoading] = useState(false);
+  
+  // Delete confirmation state
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [inmateToDelete, setInmateToDelete] = useState(null);
+  
+  // Transfer modal state
   const [transferModalOpen, setTransferModalOpen] = useState(false);
   const [selectedInmate, setSelectedInmate] = useState(null);
   const [selectedPrison, setSelectedPrison] = useState("");
@@ -112,7 +125,9 @@ export default function AddWoredaInmate() {
 
   const fetchInmates = async () => {
     try {
+      setLoading(true);
       const response = await axiosInstance.get("/woreda-inmate/getall-inmates");
+      
       if (response.data?.success) {
         const data = response.data.inmates.map((inmate) => {
           const timeRemaining = calculateTimeRemaining(inmate.intakeDate);
@@ -122,9 +137,11 @@ export default function AddWoredaInmate() {
           };
         });
 
-        // First set all inmates
+        // Set inmates and pagination data
         setInmates(data);
-
+        setTotalItems(data.length);
+        setFilteredInmates(data);
+        
         // Log the data for debugging
         console.log("All inmates:", data);
         console.log(
@@ -139,6 +156,8 @@ export default function AddWoredaInmate() {
     } catch (error) {
       console.error("Error fetching inmates:", error);
       toast.error("Failed to fetch inmate data");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -453,19 +472,103 @@ export default function AddWoredaInmate() {
     };
   };
 
-  // Add handleSearch function
+  // Handle search function
   const handleSearch = (e) => {
     const term = e.target.value.toLowerCase();
     setSearchTerm(term);
+    setCurrentPage(1); // Reset to first page on new search
+  };
+  
+  // Calculate pagination
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredInmates.slice(indexOfFirstItem, indexOfLastItem);
+  
+  // Handle page change
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber);
+  };
+  
+  // Handle items per page change
+  const handleItemsPerPageChange = (e) => {
+    setItemsPerPage(Number(e.target.value));
+    setCurrentPage(1); // Reset to first page
+  };
+  
+  // Get status color utility function
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "Critical":
+        return "bg-red-100 text-red-800";
+      case "Warning":
+        return "bg-yellow-100 text-yellow-800";
+      case "Pending Transfer":
+        return "bg-blue-100 text-blue-800";
+      case "Transfer Approved":
+        return "bg-green-100 text-green-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
 
-    const filtered = inmates.filter(
-      (inmate) =>
-        inmate.firstName.toLowerCase().includes(term) ||
-        inmate.lastName.toLowerCase().includes(term) ||
-        inmate.crime.toLowerCase().includes(term)
-    );
+  // Handle delete button click
+  const handleDeleteClick = (inmate) => {
+    setInmateToDelete(inmate);
+    setDeleteConfirmOpen(true);
+  };
+  
+  // Handle delete inmate confirmation
+  const handleDeleteConfirm = async () => {
+    if (!inmateToDelete) return;
+    
+    try {
+      setLoading(true);
+      const response = await axiosInstance.delete(`/woreda-inmate/delete-inmate/${inmateToDelete._id}`);
+      
+      if (response.data?.success) {
+        toast.success("Inmate deleted successfully");
+        fetchInmates(); // Refresh the inmate list
+      } else {
+        toast.error(response.data?.error || "Failed to delete inmate");
+      }
+    } catch (error) {
+      console.error("Error deleting inmate:", error);
+      toast.error(error.response?.data?.error || "Failed to delete inmate");
+    } finally {
+      setLoading(false);
+      setDeleteConfirmOpen(false);
+      setInmateToDelete(null);
+    }
+  };
+  
+  // Cancel delete
+  const handleDeleteCancel = () => {
+    setDeleteConfirmOpen(false);
+    setInmateToDelete(null);
+  };
+
+  // Apply filters and search with pagination
+  const applyFilters = () => {
+    let filtered = inmates;
+    
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (inmate) =>
+          inmate.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          inmate.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          inmate.crime.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
+    setTotalItems(filtered.length);
     setFilteredInmates(filtered);
   };
+  
+  // Effect to apply filters when search term changes
+  useEffect(() => {
+    applyFilters();
+  }, [searchTerm, inmates]);
 
   return (
     <div className="flex mt-10">
@@ -522,47 +625,15 @@ export default function AddWoredaInmate() {
 
         {/* Push content down to prevent overlap */}
         <div className="mt-24">
-          {/* Notifications Section */}
-          <div className="bg-white rounded-lg shadow-md p-4 md:p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-4">Custody Alerts</h2>
-            <div className="space-y-3">
-              {notifications.map((notification) => (
-                <div
-                  key={notification._id}
-                  className={`p-4 rounded-lg ${
-                    notification.isRead
-                      ? "bg-gray-50"
-                      : "bg-yellow-50 border border-yellow-200"
-                  }`}
-                >
-                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-2">
-                    <p className="text-sm text-gray-700">
-                      {notification.message}
-                    </p>
-                    {!notification.isRead && (
-                      <button
-                        onClick={() => markNotificationAsRead(notification._id)}
-                        className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-                      >
-                        Mark as Read
-                      </button>
-                    )}
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    {new Date(notification.createdAt).toLocaleString()}
-                  </p>
-                </div>
-              ))}
-              {notifications.length === 0 && (
-                <p className="text-gray-500 text-center py-4">
-                  No custody alerts
-                </p>
-              )}
-            </div>
-          </div>
-
           {/* Inmates Table */}
           <div className="bg-white rounded-lg shadow-md overflow-hidden">
+            {loading && (
+              <div className="p-4 text-center">
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <p className="mt-2 text-gray-600">Loading inmates...</p>
+              </div>
+            )}
+            
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -588,7 +659,7 @@ export default function AddWoredaInmate() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {(searchTerm ? filteredInmates : inmates).map((inmate) => (
+                  {currentItems.map((inmate) => (
                     <tr key={inmate._id} className="hover:bg-gray-50">
                       <td className="px-4 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
@@ -619,7 +690,7 @@ export default function AddWoredaInmate() {
                         </span>
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap">
-                        <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(getTimeStatus(inmate.timeRemaining).status)}`}>
                           {getTimeStatus(inmate.timeRemaining).status}
                         </span>
                       </td>
@@ -649,12 +720,148 @@ export default function AddWoredaInmate() {
                             onTransferComplete={handleTransfer}
                             currentPrison={inmate.assignedPrison}
                           />
+                          <button
+                            onClick={() => handleDeleteClick(inmate)}
+                            className="text-red-600 hover:text-red-900 flex items-center gap-1"
+                          >
+                            <FaTrash className="h-4 w-4" />
+                            <span className="hidden md:inline">Delete</span>
+                          </button>
                         </div>
                       </td>
                     </tr>
                   ))}
+                  
+                  {currentItems.length === 0 && !loading && (
+                    <tr>
+                      <td colSpan="6" className="px-4 py-6 text-center text-gray-500">
+                        No inmates found. {searchTerm ? "Try a different search term." : ""}
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
+            </div>
+            
+            {/* Pagination Controls */}
+            <div className="px-4 py-3 bg-white border-t border-gray-200 sm:px-6">
+              <div className="flex flex-col sm:flex-row justify-between items-center">
+                <div className="mb-4 sm:mb-0 flex items-center">
+                  <p className="text-sm text-gray-700">
+                    Showing
+                    <span className="font-medium mx-1">
+                      {filteredInmates.length > 0 ? indexOfFirstItem + 1 : 0}
+                    </span>
+                    to
+                    <span className="font-medium mx-1">
+                      {Math.min(indexOfLastItem, filteredInmates.length)}
+                    </span>
+                    of
+                    <span className="font-medium mx-1">{totalItems}</span>
+                    results
+                  </p>
+                  
+                  <div className="ml-4">
+                    <select
+                      className="form-select border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      value={itemsPerPage}
+                      onChange={handleItemsPerPageChange}
+                    >
+                      <option value={5}>5 per page</option>
+                      <option value={10}>10 per page</option>
+                      <option value={25}>25 per page</option>
+                      <option value={50}>50 per page</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <div className="flex justify-center">
+                  <nav className="relative z-0 inline-flex rounded-md shadow-sm" aria-label="Pagination">
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
+                        currentPage === 1
+                          ? "text-gray-300 cursor-not-allowed"
+                          : "text-gray-500 hover:bg-gray-50"
+                      }`}
+                    >
+                      <span className="sr-only">Previous</span>
+                      <svg
+                        className="h-5 w-5"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        aria-hidden="true"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </button>
+                    
+                    {/* Page Numbers */}
+                    {Array.from({ length: Math.ceil(totalItems / itemsPerPage) }, (_, i) => i + 1)
+                      .filter(
+                        (page) =>
+                          page === 1 ||
+                          page === Math.ceil(totalItems / itemsPerPage) ||
+                          (page >= currentPage - 1 && page <= currentPage + 1)
+                      )
+                      .map((page, index, array) => {
+                        const prevPage = array[index - 1];
+                        const needsEllipsis = prevPage && page - prevPage > 1;
+                        
+                        return (
+                          <div key={page}>
+                            {needsEllipsis && (
+                              <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
+                                ...
+                              </span>
+                            )}
+                            <button
+                              onClick={() => handlePageChange(page)}
+                              className={`relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium ${
+                                currentPage === page
+                                  ? "bg-blue-50 text-blue-600 border-blue-500 z-10"
+                                  : "text-gray-500 hover:bg-gray-50"
+                              }`}
+                            >
+                              {page}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === Math.ceil(totalItems / itemsPerPage)}
+                      className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
+                        currentPage === Math.ceil(totalItems / itemsPerPage)
+                          ? "text-gray-300 cursor-not-allowed"
+                          : "text-gray-500 hover:bg-gray-50"
+                      }`}
+                    >
+                      <span className="sr-only">Next</span>
+                      <svg
+                        className="h-5 w-5"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                        aria-hidden="true"
+                      >
+                        <path
+                          fillRule="evenodd"
+                          d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    </button>
+                  </nav>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -913,6 +1120,41 @@ export default function AddWoredaInmate() {
                 </button>
               </DialogFooter>
             </form>
+          </DialogContent>
+        </Dialog>
+        
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Confirm Delete</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete inmate {inmateToDelete?.firstName} {inmateToDelete?.lastName}? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex items-center justify-end gap-4 mt-6">
+              <button
+                onClick={handleDeleteCancel}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                disabled={loading}
+              >
+                {loading ? (
+                  <span className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Deleting...
+                  </span>
+                ) : (
+                  "Delete Inmate"
+                )}
+              </button>
+            </div>
           </DialogContent>
         </Dialog>
       </div>

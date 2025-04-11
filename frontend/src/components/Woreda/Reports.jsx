@@ -78,9 +78,58 @@ const Reports = () => {
         `/woreda/stats?range=${timeRange}`
       );
 
+      // Create a stats object with defaults
+      let statsData = {
+        totalInmates: 0,
+        activeInmates: 0,
+        transferRequested: 0,
+        transferred: 0,
+        maleInmates: 0,
+        femaleInmates: 0,
+        highRiskInmates: 0,
+        mediumRiskInmates: 0,
+        lowRiskInmates: 0,
+        inmatesWithMedicalConditions: 0,
+        paroleEligible: 0,
+        averageSentenceLength: 0,
+        totalCrimes: 0,
+        topCrimes: [],
+        inmateTrend: 0,
+        riskTrend: 0,
+        genderTrend: 0,
+        medicalTrend: 0,
+      };
+      
+      // Update with received data if available
       if (response.data?.success && response.data?.stats) {
-        setWoredaStats(response.data.stats);
+        statsData = { ...statsData, ...response.data.stats };
       }
+      
+      // Fetch transfer data separately to ensure we have the latest
+      try {
+        const transferResponse = await axiosInstance.get(`/transfer/getall-transfers?range=${timeRange}`);
+        if (transferResponse.data?.data) {
+          const transfers = transferResponse.data.data;
+          
+          // Count pending transfer requests
+          statsData.transferRequested = transfers.filter(t => 
+            t.status && t.status.toLowerCase() === 'pending'
+          ).length;
+          
+          // Count completed transfers - include approved status as well
+          statsData.transferred = transfers.filter(t => 
+            t.status && (
+              t.status.toLowerCase() === 'completed' || 
+              t.status.toLowerCase() === 'accepted' || 
+              t.status.toLowerCase() === 'approved'
+            )
+          ).length;
+        }
+      } catch (transferError) {
+        console.error("Error fetching transfer data:", transferError);
+      }
+      
+      setWoredaStats(statsData);
     } catch (error) {
       console.error("Error fetching woreda reports:", error);
       console.error("Error details:", {

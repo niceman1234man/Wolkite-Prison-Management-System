@@ -205,134 +205,6 @@ const messageUtils = {
     }
   },
   
-  sendMessage: async (content, receiverId, currentUserId, attachment) => {
-    if ((!content || !content.trim()) && !attachment) return null;
-    
-    try {
-      // Validate inputs to prevent 400 errors
-      if (!receiverId) {
-        throw new Error("Receiver ID is required");
-      }
-      
-      // Get user ID directly from Redux store or localStorage as fallback
-      let senderId = currentUserId;
-      if (!senderId) {
-        const userString = localStorage.getItem('user');
-        if (userString) {
-          try {
-            const userData = JSON.parse(userString);
-            senderId = userData._id || userData.id;
-          } catch (e) {
-            console.error('Error parsing user data:', e);
-          }
-        }
-      }
-      
-      if (!senderId) {
-        throw new Error("Sender ID is required");
-      }
-      
-      console.log("Preparing to send message with:", {
-        content: content ? content.substring(0, 30) + (content.length > 30 ? '...' : '') : '',
-        receiverId,
-        senderId: senderId,
-        hasAttachment: !!attachment
-      });
-      
-      const formData = new FormData();
-      formData.append('content', content || '');
-      formData.append('receiverId', receiverId);
-      formData.append('senderId', senderId);
-      
-      if (attachment) {
-        // Use 'file' field name to match backend expectation (not 'attachment')
-        formData.append('file', attachment);
-        console.log("Attaching file:", attachment.name, attachment.type, attachment.size);
-      }
-      
-      // Get token to ensure authorization
-      const token = localStorage.getItem('token');
-      
-      console.log('Sending message with formData:', Array.from(formData.entries()));
-      
-      // Send via API
-      try {
-        console.log('Sending via API with formData:', {
-          content: formData.get('content'),
-          receiverId: formData.get('receiverId'),
-          senderId: formData.get('senderId'),
-          hasFile: !!formData.get('file')
-        });
-      
-      const response = await axiosInstance.post(API_ENDPOINTS.SEND_MESSAGE, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
-        });
-        
-        console.log('API message response:', response.data);
-        
-        if (response.data) {
-          // Add the sent message to the conversation
-          const apiMessage = {
-            ...newMessage,
-            _id: response.data._id || response.data.data?._id || `temp-${Date.now()}`,
-            createdAt: response.data.createdAt || response.data.data?.createdAt || new Date().toISOString(),
-            status: 'sent'
-          };
-          
-          setMessages(prev => [...prev, apiMessage]);
-          setNewMessage('');
-          
-          // Scroll to bottom
-          setTimeout(() => {
-            if (messagesEndRef.current) {
-              messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-            }
-          }, 100);
-        }
-      } catch (apiError) {
-        console.error('API send error:', apiError);
-        
-        // Handle ObjectId casting errors
-        if (apiError.response?.data?.error?.includes('Cast to ObjectId failed')) {
-          toast.error('Invalid recipient ID format');
-          console.error('MongoDB ObjectId casting error with receiverId:', receiverId);
-        } else {
-          // Generic error fallback
-          toast.error(apiError.message || 'Failed to send message via API');
-        }
-        
-        // Still update UI with a temporary message to improve UX
-        const tempMessage = {
-          ...newMessage,
-          _id: `temp-${Date.now()}`,
-          createdAt: new Date().toISOString(),
-          status: 'failed'
-        };
-        
-        setMessages(prev => [...prev, tempMessage]);
-        setNewMessage('');
-      }
-      
-      if (response.data && response.data._id) {
-        return { ...response.data, status: 'sent' };
-      }
-      
-      if (response.data && response.data.data && response.data.data._id) {
-        return { ...response.data.data, status: 'sent' };
-      }
-      
-      console.error('Message sent but returned unexpected response format:', response.data);
-      return null;
-    } catch (error) {
-      console.error('Error sending message:', error);
-      toast.error(error.message || 'Failed to send message');
-      return null;
-    }
-  },
-  
   checkForNewMessages: async (userId, currentUserId, lastCheckedTime) => {
     try {
       const response = await axiosInstance.get(
@@ -891,16 +763,179 @@ const MessagingSystem = ({ isOpen, onClose }) => {
     }
   };
 
-  // Function to fetch unread counts
+  // Add function to properly filter users based on search query
+  const filterUsers = (usersList, query) => {
+    if (!query || !query.trim()) return usersList;
+    
+    return usersList.filter(user => {
+      if (!user) return false;
+      
+      // Check all possible name fields
+      const searchFields = [
+        user.name,
+        user.username,
+        user.firstName,
+        user.middleName,
+        user.lastName
+      ].filter(Boolean).join(' ').toLowerCase();
+      
+      return searchFields.includes(query.toLowerCase());
+    });
+  };
+
+  // Enhance the fetchUnreadCounts function to handle different response formats and sync UI
   const fetchUnreadCounts = async () => {
     try {
-      const counts = await messageUtils.fetchUnreadCounts();
-      console.log('Unread message counts:', counts);
-      setUnreadCounts(counts);
+      // Get user ID for the API request
+      const userId = user?._id || getUserFromStorage()?._id;
+      if (!userId) {
+        console.log('No user ID available for fetching unread counts');
+        return {};
+      }
+      
+      console.log('Fetching unread counts for user:', userId);
+      const response = await axiosInstance.get(`${API_ENDPOINTS.UNREAD_COUNT}?userId=${userId}`);
+      console.log('Unread message counts response:', response.data);
+        
+        // Handle different response formats
+      let counts = {};
+      
+      if (response.data) {
+        if (response.data.bySender && typeof response.data.bySender === 'object') {
+          counts = response.data.bySender;
+        } else if (typeof response.data === 'object' && !Array.isArray(response.data)) {
+          // Handle case where the API returns a map of senderId -> count
+          Object.keys(response.data).forEach(key => {
+            // Exclude totalCount or count keys that aren't sender IDs
+            if (key !== 'totalCount' && key !== 'count' && typeof response.data[key] === 'number') {
+              counts[key] = response.data[key];
+            }
+          });
+        }
+      }
+      
+      // If we have counts, update user list UI to show unread indicators
+      if (Object.keys(counts).length > 0) {
+        // Update total count in the component state
+        setUnreadCounts(counts);
+        
+        // Mark users with unread messages in the UI
+        updateUserListWithUnreadIndicators(counts);
+        
+        // Broadcast update for notification icon
+        const totalCount = Object.values(counts).reduce((sum, count) => sum + count, 0);
+        window.dispatchEvent(new CustomEvent('unreadCountUpdated', {
+          detail: { totalCount, counts }
+        }));
+        } else {
+        setUnreadCounts({});
+      }
+      
       return counts;
     } catch (error) {
       console.error('Error in fetchUnreadCounts:', error);
       return {};
+    }
+  };
+  
+  // Function to update user list with unread indicators
+  const updateUserListWithUnreadIndicators = (unreadCounts) => {
+    if (!users || users.length === 0) return;
+    
+    // Map through users and add unread count property
+    const updatedUsers = users.map(user => {
+      const unreadCount = unreadCounts[user._id] || 0;
+      return {
+        ...user,
+        unreadCount,
+        lastMessage: user.lastMessage || null,
+        lastMessageAt: user.lastMessageAt || null
+      };
+    });
+    
+    // Sort users with unread messages to the top
+    const sortedUsers = [...updatedUsers].sort((a, b) => {
+      // First priority: unread count (higher comes first)
+      if ((b.unreadCount || 0) - (a.unreadCount || 0) !== 0) {
+        return (b.unreadCount || 0) - (a.unreadCount || 0);
+      }
+      // Second priority: online status
+      if (b.isOnline !== a.isOnline) {
+        return b.isOnline ? 1 : -1;
+      }
+      // Third priority: alphabetical by name
+      return (a.name || '').localeCompare(b.name || '');
+    });
+    
+    // Update the filtered users list to reflect unread status
+    setFilteredUsers(sortedUsers);
+  };
+  
+  // Enhance the markMessagesAsRead function to properly update counts and UI
+  const markMessagesAsRead = async (senderId) => {
+    if (!user?._id) return;
+    
+    console.log(`Marking messages from sender ${senderId} as read`);
+    
+    // Skip API calls for virtual admin user
+    if (senderId === 'system-admin') {
+      // Update local unread counts
+      const updatedCounts = {
+        ...unreadCounts,
+        [senderId]: 0
+      };
+      
+      setUnreadCounts(updatedCounts);
+      
+      // Update the UI to remove unread indicators
+      updateUserListWithUnreadIndicators(updatedCounts);
+      
+      // Broadcast update for notification icon
+      const totalCount = Object.values(updatedCounts).reduce((sum, count) => sum + count, 0);
+      window.dispatchEvent(new CustomEvent('unreadCountUpdated', {
+        detail: { totalCount, counts: updatedCounts }
+      }));
+      
+      return;
+    }
+    
+    try {
+      const success = await messageUtils.markMessagesAsRead(senderId, user._id);
+      
+      if (success) {
+        // Update local unread counts
+        const updatedCounts = {
+          ...unreadCounts,
+          [senderId]: 0
+        };
+        
+        setUnreadCounts(updatedCounts);
+        
+        // Update the UI to remove unread indicators
+        updateUserListWithUnreadIndicators(updatedCounts);
+        
+        // Broadcast a custom event that messages were read
+        // This allows the MessageNotificationIcon to update in real-time
+        window.dispatchEvent(new CustomEvent('messagesMarkedAsRead', {
+          detail: { 
+            senderId: senderId,
+            userId: user._id 
+          }
+        }));
+        
+        // Also broadcast updated count for notification icon
+        const totalCount = Object.values(updatedCounts).reduce((sum, count) => sum + count, 0);
+        window.dispatchEvent(new CustomEvent('unreadCountUpdated', {
+          detail: { totalCount, counts: updatedCounts }
+        }));
+        
+        // If there's a global function to mark messages as read, call it
+        if (window.markMessageAsRead) {
+          window.markMessageAsRead(senderId);
+        }
+      }
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
     }
   };
 
@@ -1058,14 +1093,20 @@ const MessagingSystem = ({ isOpen, onClose }) => {
   };
 
   // This implementation of handleSendMessage uses the getUserFromStorage helper for more robust user data retrieval
-  const handleSendMessage = async (content) => {
+  const handleSendMessage = async (content, attachment) => {
     // Basic validation
-    if (!selectedUser || !content.trim() || isSending) {
-      console.log('Cannot send message: missing data or already sending');
+    if ((!content || !content.trim()) && !attachment) {
+      console.log('Cannot send message: no content or attachment');
+        return;
+      }
+
+    if (!selectedUser || isSending) {
+      console.log('Cannot send message: no selected user or already sending');
       return;
     }
     
     setIsSending(true);
+    console.log('Attachment received:', attachment);
     
     try {
       // Get user data from component state or localStorage
@@ -1085,26 +1126,36 @@ const MessagingSystem = ({ isOpen, onClose }) => {
       console.log('User data retrieved:', { 
         source: user ? 'component state' : 'localStorage', 
         id: senderId,
-        hasToken: !!localStorage.getItem('token')
+        hasToken: !!localStorage.getItem('token'),
+        hasAttachment: !!attachment
       });
       
-      // Create the message object - text only
+      // Create the message object
       const newMessage = {
         senderId,
         senderName: currentUser.firstName || currentUser.name || currentUser.username || 'You',
         receiverId,
-        content: content,
+        content: content || '',
         createdAt: new Date().toISOString(),
         status: 'sending'
       };
+      
+      // Add attachment information if valid
+      if (attachment && attachment instanceof File) {
+        newMessage.hasAttachment = true;
+        newMessage.attachmentName = attachment.name;
+        console.log('Valid file attachment:', attachment.name, attachment.type, attachment.size);
+      } else if (attachment) {
+        console.warn('Attachment is not a valid File object:', typeof attachment);
+      }
       
       // Add message to UI immediately
       setMessages(prev => [...prev, newMessage]);
       setNewMessage('');
       
-      // Create FormData for API request with enhanced handling
+      // Create FormData for API request
       const formData = new FormData();
-      formData.append('content', content);
+      formData.append('content', content || '');
       formData.append('receiverId', receiverId);
       
       // Ensure senderId is included and is a string (not an object)
@@ -1117,26 +1168,37 @@ const MessagingSystem = ({ isOpen, onClose }) => {
         console.error('No valid senderId found.');
       }
       
-      // Log all form data being sent
-      for (let [key, value] of formData.entries()) {
-        console.log(`FormData: ${key} = ${value}`);
+      // Only append file if it's valid
+      let fileAdded = false;
+      if (attachment && attachment instanceof File) {
+        try {
+          formData.append('file', attachment, attachment.name);
+          fileAdded = true;
+          console.log('File added to FormData:', attachment.name);
+        } catch (error) {
+          console.error('Error adding file to FormData:', error);
+        }
+      } else if (attachment) {
+        console.error('Invalid attachment:', typeof attachment);
       }
+      
+      // Log all form data keys being sent
+      const formDataEntries = [];
+      for (let [key, value] of formData.entries()) {
+        const entryInfo = key === 'file' 
+          ? { key, fileName: value.name, fileType: value.type, fileSize: value.size }
+          : { key, value };
+        formDataEntries.push(entryInfo);
+      }
+      console.log('FormData entries:', formDataEntries);
       
       try {
         console.log('Sending message via API');
         
-        // Use JSON payload instead of FormData for simpler text-only messages
-        const messageData = {
-          content,
-          receiverId,
-          senderId
-        };
-        
-        console.log('Sending message data:', messageData);
-        
-        const response = await axiosInstance.post(API_ENDPOINTS.SEND_MESSAGE, messageData, {
+        // Use FormData for API call to handle files properly
+        const response = await axiosInstance.post(API_ENDPOINTS.SEND_MESSAGE, formData, {
           headers: {
-            'Content-Type': 'application/json',
+            'Content-Type': 'multipart/form-data',
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }
         });
@@ -1176,6 +1238,8 @@ const MessagingSystem = ({ isOpen, onClose }) => {
           toast.error('Invalid user ID format. Please refresh the page.');
         } else if (errorMessage.includes('Sender ID is required')) {
           toast.error('User ID missing. Please try logging out and logging in again.');
+        } else if (fileAdded && (errorMessage.includes('file') || errorMessage.includes('upload'))) {
+          toast.error('Error uploading file. Please try a different file.');
         } else {
           toast.error('Failed to send message');
         }
@@ -1891,86 +1955,13 @@ const MessagingSystem = ({ isOpen, onClose }) => {
   // Update the search functionality to use filteredUsers
   useEffect(() => {
     if (users.length > 0 && searchQuery) {
-      const filtered = users.filter(user => {
-        // Search by name, username, firstName, middleName, lastName
-        const searchFields = [
-          user.name,
-          user.username,
-          user.firstName,
-          user.middleName,
-          user.lastName
-        ].filter(Boolean).join(' ').toLowerCase();
-        
-        return searchFields.includes(searchQuery.toLowerCase());
-      });
+      // Use the filterUsers function defined earlier in the file
+      const filtered = filterUsers(users, searchQuery);
       setFilteredUsers(filtered);
     } else if (users.length > 0) {
       setFilteredUsers(users);
     }
   }, [searchQuery, users]);
-
-  // Add this function to properly filter users based on search query
-  const filterUsers = (usersList, query) => {
-    if (!query || !query.trim()) return usersList;
-    
-    return usersList.filter(user => {
-      if (!user) return false;
-      
-      // Check all possible name fields
-      const searchFields = [
-        user.name,
-        user.username,
-        user.firstName,
-        user.middleName,
-        user.lastName
-      ].filter(Boolean).join(' ').toLowerCase();
-      
-      return searchFields.includes(query.toLowerCase());
-    });
-  };
-
-  // Function to mark messages as read and broadcast event for notification icon
-  const markMessagesAsRead = async (senderId) => {
-    if (!user?._id) return;
-    
-    console.log(`Marking messages from sender ${senderId} as read`);
-    
-    // Skip API calls for virtual admin user
-    if (senderId === 'system-admin') {
-      // Update local unread counts
-      setUnreadCounts(prev => ({
-        ...prev,
-        [senderId]: 0
-      }));
-      return;
-    }
-    
-    try {
-      await messageUtils.markMessagesAsRead(senderId, user._id);
-      
-      // Update local unread counts
-      setUnreadCounts(prev => ({
-        ...prev,
-        [senderId]: 0
-      }));
-      
-      // Broadcast a custom event that messages were read
-      // This allows the MessageNotificationIcon to update in real-time
-      window.dispatchEvent(new CustomEvent('messagesMarkedAsRead', {
-        detail: { 
-          senderId: senderId,
-          userId: user._id 
-        }
-      }));
-      
-      // If there's a global function to mark messages as read, call it
-      if (window.markMessageAsRead) {
-        window.markMessageAsRead(senderId);
-      }
-    } catch (error) {
-      console.error('Error marking messages as read:', error);
-    }
-  };
 
   // Add a function to check if the selected user is a real admin (not virtual)
   const isRealAdmin = (userId) => {
@@ -2293,15 +2284,46 @@ const MessagingSystem = ({ isOpen, onClose }) => {
               ${!selectedUser ? 'w-full' : isMobileView || containerSize.width < 768 ? 'w-0' : 'md:max-w-[280px] md:min-w-[250px] md:w-[30%]'}
               h-full bg-white border-r
             `}>
+              {/* User list */}
+              <div className={`messaging-left-panel ${!showUserList ? 'hidden' : ''}`}>
               <MessageList 
-              users={isViewingStarred ? starredMessages : filteredUsers || users}
+                  users={filteredUsers.map(user => ({
+                    ...user,
+                    className: (unreadCounts[user._id] > 0) ? 'has-unread' : ''
+                  }))}
                 selectedUserId={selectedUser}
-              onSelectUser={handleSelectUser}
+                  onSelectUser={handleSelectUser}
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
                 unreadCounts={unreadCounts}
-              isLoading={isLoading}
-              />
+                  isLoading={isLoading}
+                />
+                
+                {/* Add buttons at the bottom of the user list */}
+                <div className="messaging-left-panel-footer">
+                  <button
+                    onClick={openGroupChatModal}
+                    className="messaging-footer-button"
+                    title="Create a group chat"
+                  >
+                    <FiUsers size={20} />
+                  </button>
+                  <button
+                    onClick={handleRefresh}
+                    className="messaging-footer-button"
+                    title="Refresh contacts"
+                  >
+                    <FiRefreshCw size={20} />
+                  </button>
+                  <button
+                    onClick={toggleSettings}
+                    className="messaging-footer-button"
+                    title="Settings"
+                  >
+                    <FiSettings size={20} />
+                  </button>
+                </div>
+              </div>
                                       </div>
             
             {/* Messages column - shown when user is selected */}
@@ -2411,4 +2433,4 @@ const MessagingSystem = ({ isOpen, onClose }) => {
   );
 };
 
-export default MessagingSystem;
+export default MessagingSystem; 

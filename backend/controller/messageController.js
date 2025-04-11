@@ -1,5 +1,59 @@
 import Message from '../model/Message.js';
 import mongoose from 'mongoose';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    const uploadDir = 'uploads/messages';
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    // Add a random identifier to prevent filename collisions
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = path.extname(file.originalname);
+    cb(null, uniqueSuffix + ext);
+  }
+});
+
+// File filter to reject empty files or unsupported types
+const fileFilter = (req, file, cb) => {
+  // Check if the file has content (size > 0 will be checked after upload)
+  if (!file.originalname) {
+    console.log('Rejecting file with no original name');
+    cb(null, false);
+    return;
+  }
+  
+  // Check file type
+  const allowedTypes = /jpeg|jpg|png|gif|pdf|doc|docx|xls|xlsx|txt|csv/;
+  const ext = path.extname(file.originalname).toLowerCase();
+  const isValidType = allowedTypes.test(ext.substring(1)); // Remove the dot from extension
+  
+  if (!isValidType) {
+    console.log(`Rejecting file with unsupported type: ${ext}`);
+    cb(null, false);
+    return;
+  }
+  
+  // Accept the file
+  cb(null, true);
+};
+
+// Setup multer with the storage configuration, file filter, and size limits
+export const upload = multer({
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB max file size
+    files: 1 // Only allow one file per request
+  }
+});
 
 // Get all messages between two users
 export const getMessages = async (req, res) => {
@@ -75,7 +129,7 @@ export const getMessages = async (req, res) => {
   }
 };
 
-// Send a new message - text only, no file attachments
+// Send a message with optional file attachment
 export const sendMessage = async (req, res) => {
   try {
     // Extract request data
@@ -83,10 +137,16 @@ export const sendMessage = async (req, res) => {
     const senderId = req.user?._id || bodySenderId || req.query.currentUserId;
     
     // Debug logging
-    console.log('Text message request received:', {
+    console.log('Message request received:', {
       senderId,
       receiverId,
-      contentLength: content ? content.length : 0
+      contentLength: content ? content.length : 0,
+      hasFile: !!req.file,
+      fileInfo: req.file ? {
+        name: req.file.originalname,
+        size: req.file.size,
+        mimetype: req.file.mimetype
+      } : null
     });
     
     // Validation checks
@@ -98,18 +158,40 @@ export const sendMessage = async (req, res) => {
       return res.status(400).json({ message: 'Receiver ID is required' });
     }
     
-    // Validate content
+    // Validate content - we need either text content or a valid file
     const hasValidContent = content && content.trim().length > 0;
+    const hasValidFile = req.file && req.file.size > 0 && req.file.filename;
     
-    if (!hasValidContent) {
-      return res.status(400).json({ message: 'Message must contain text content' });
+    if (!hasValidContent && !hasValidFile) {
+      return res.status(400).json({ message: 'Message must contain text or a valid file attachment' });
+    }
+    
+    // Handle file attachment
+    let fileUrl = null;
+    if (hasValidFile) {
+      fileUrl = `/uploads/messages/${req.file.filename}`;
+      console.log('Valid file uploaded:', req.file.originalname, req.file.size, 'bytes');
+    } else if (req.file) {
+      // If we received a file object but it's invalid (empty, etc.), log and delete it
+      console.log('Received invalid file, not saving:', req.file.originalname);
+      
+      // Clean up the invalid file
+      try {
+        if (req.file.path) {
+          fs.unlinkSync(req.file.path);
+          console.log('Cleaned up invalid file at:', req.file.path);
+        }
+      } catch (fileErr) {
+        console.error('Error removing invalid file:', fileErr);
+      }
     }
 
-    // Create the message document - text only, no file
+    // Create the message document
     const message = new Message({
       senderId,
       receiverId,
-      content,
+      content: hasValidContent ? content : (hasValidFile ? '(attachment)' : ''),
+      file: fileUrl,
       status: 'sent'
     });
 

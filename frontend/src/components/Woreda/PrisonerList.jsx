@@ -172,12 +172,13 @@ const PrisonerList = () => {
             ...prisoner,
             timeRemaining: calculateTimeRemaining(prisoner.intakeDate),
             transferStatus: status || "No Transfer Request",
+            hasPendingTransfer: status && status.toLowerCase() === 'pending'
           };
         });
 
-        // Filter inmates with 40 hours or less remaining time
+        // Filter inmates with 12 hours or less remaining time (instead of 40)
         const urgentInmates = data.filter(
-          (prisoner) => prisoner.timeRemaining <= 40 * 60 * 60 * 1000
+          (prisoner) => prisoner.timeRemaining <= 12 * 60 * 60 * 1000
         );
 
         // Set both all prisoners and filtered prisoners
@@ -185,7 +186,7 @@ const PrisonerList = () => {
         setFilteredPrisoners(urgentInmates);
 
         // Log the data for debugging
-        console.log("Urgent inmates:", urgentInmates);
+        console.log("Urgent inmates (12h or less):", urgentInmates);
         console.log(
           "Inmates with time details:",
           urgentInmates.map((prisoner) => ({
@@ -193,6 +194,7 @@ const PrisonerList = () => {
             timeRemaining: prisoner.timeRemaining,
             hoursRemaining: prisoner.timeRemaining / (60 * 60 * 1000),
             transferStatus: prisoner.transferStatus,
+            hasPendingTransfer: prisoner.hasPendingTransfer
           }))
         );
       }
@@ -236,12 +238,18 @@ const PrisonerList = () => {
 
   const handleFilterUrgent = () => {
     const urgentPrisoners = prisoners.filter(
-      (prisoner) => prisoner.timeRemaining <= 40 * 60 * 60 * 1000 // Less than 40 hours remaining
+      (prisoner) => prisoner.timeRemaining <= 6 * 60 * 60 * 1000 // Less than 6 hours remaining (critical cases)
     );
     setFilteredPrisoners(urgentPrisoners);
   };
 
   const handleTransferClick = (prisoner) => {
+    // Check if prisoner already has a pending transfer request
+    if (prisoner.hasPendingTransfer) {
+      toast.error("This inmate already has a pending transfer request.");
+      return;
+    }
+    
     setSelectedInmate(prisoner._id);
     setSelectedPrisonerData(prisoner);
     setTransferModalOpen(true);
@@ -597,7 +605,7 @@ const PrisonerList = () => {
           <div className="flex items-center gap-6">
             <div className="flex flex-col">
               <h3 className="text-2xl font-bold text-gray-800">
-                Urgent Inmates (40h or less)
+                Urgent Inmates (12h or less)
               </h3>
               <div className="flex items-center gap-4 mt-2">
                 {/* Digital Clock Display */}

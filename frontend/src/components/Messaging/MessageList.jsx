@@ -166,7 +166,7 @@ const MessageList = ({
             placeholder="Search users..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            style={{ color: '#1e293b', backgroundColor: 'white' }}
+            style={{ color: '#000000', backgroundColor: 'white' }}
           />
           {searchQuery && (
             <button 
@@ -209,7 +209,7 @@ const MessageList = ({
                   <div
                     key={user._id}
                     onClick={() => onSelectUser(user._id)}
-                    className={`user-list-item ${selectedUserId === user._id ? 'active' : ''}`}
+                    className={`user-list-item ${selectedUserId === user._id ? 'active' : ''} ${hasUnread ? 'has-unread' : ''} ${user.className || ''}`}
                   >
                     <div className="user-avatar relative">
                       {user.photo ? (
@@ -245,40 +245,24 @@ const MessageList = ({
                       <div className="flex justify-between items-center">
                         <span className={`user-name truncate ${user.isAdmin || user.role === 'admin' ? 'text-red-600 font-medium' : 'font-medium'}`}>
                           {displayName}
+                          {hasUnread && (
+                            <span className="ml-1 text-blue-600">{user.role === 'admin' ? '(admin)' : ''}</span>
+                          )}
                         </span>
                         <span className="text-xs text-gray-400 flex-shrink-0">
                           {user.lastMessageAt ? new Date(user.lastMessageAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : ''}
                         </span>
                       </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div className="last-message max-w-[75%] truncate">
-                          {user.lastMessage ? (
-                            <span className="truncate text-gray-600">{user.lastMessage}</span>
-                          ) : (
-                            <span className="text-gray-400 italic text-sm">No messages yet</span>
-                          )}
-                        </div>
-                        
+                      <div className="flex justify-between items-center">
+                        <span className={`text-sm truncate max-w-[75%] ${hasUnread ? 'text-gray-800 font-medium' : 'text-gray-500'}`}>
+                          {user.lastMessage?.text || (user.isOnline ? 'Online' : '')}
+                        </span>
                         {hasUnread && (
-                          <div className="unread-badge ml-auto bg-blue-500 text-white text-xs font-bold rounded-full h-5 min-w-[20px] flex items-center justify-center px-1">
+                          <span className="flex-shrink-0 bg-blue-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
                             {unreadCounts[user._id]}
-                          </div>
+                          </span>
                         )}
                       </div>
-                      
-                      {user.role && (
-                        <div className="mt-1">
-                          <span className={`role-badge inline-block px-2 py-0.5 rounded-full text-xs ${
-                            user.role === 'admin' || user.isAdmin ? 'bg-red-100 text-red-800' : 
-                            user.role === 'staff' ? 'bg-blue-100 text-blue-800' : 
-                            user.role === 'police-officer' ? 'bg-green-100 text-green-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
-                            {user.role}
-                          </span>
-                        </div>
-                      )}
                     </div>
                   </div>
                 );

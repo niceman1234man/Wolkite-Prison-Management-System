@@ -86,6 +86,35 @@ const TransferList = () => {
     return `${minutes}m`;
   };
 
+  // Helper function to determine time status color
+  const getTimeStatus = (timeRemaining) => {
+    if (timeRemaining < 0) {
+      return { status: "overdue", color: "text-red-600 font-bold" };
+    }
+    
+    const hoursRemaining = timeRemaining / (1000 * 60 * 60);
+    
+    if (hoursRemaining <= 4) {
+      return { status: "critical", color: "text-red-600 font-bold" };
+    } else if (hoursRemaining <= 12) {
+      return { status: "urgent", color: "text-orange-500 font-semibold" };
+    } else {
+      return { status: "normal", color: "text-gray-600" };
+    }
+  };
+
+  // Handle view details
+  const handleViewDetails = (row) => {
+    // Implement view details functionality
+    console.log("View details for", row);
+  };
+
+  // Handle print
+  const handlePrint = (row) => {
+    // Implement print functionality
+    console.log("Print for", row);
+  };
+
   // Define columns with status styling
   const columns = [
     {

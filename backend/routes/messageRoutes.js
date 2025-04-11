@@ -1,5 +1,5 @@
 import express from 'express';
-import { getMessages, sendMessage, getUnreadCount, markAsRead, checkAuth } from '../controller/messageController.js';
+import { getMessages, sendMessage, getUnreadCount, markAsRead, checkAuth, upload } from '../controller/messageController.js';
 import { authenticateToken } from '../utilities.js';
 
 const router = express.Router();
@@ -22,8 +22,8 @@ const optionalAuth = (req, res, next) => {
 // Get messages between two users - make auth optional
 router.get('/:userId', optionalAuth, getMessages);
 
-// Send a new message - removed file upload middleware
-router.post('/send', optionalAuth, sendMessage);
+// Send a new message with optional file attachment
+router.post('/send', optionalAuth, upload.single('file'), sendMessage);
 
 // Get unread message count - make auth optional
 router.get('/unread/count', optionalAuth, getUnreadCount);

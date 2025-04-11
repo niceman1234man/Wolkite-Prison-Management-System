@@ -111,11 +111,16 @@ const MessageChat = ({
   
   // Handle file selection
   const handleFileChange = (e) => {
+    console.log("File input change event triggered in MessageChat", e.target.files);
+    
     // First clear any existing file references
     clearSelectedFile();
     
     const file = e.target.files[0];
-    if (!file) return;
+    if (!file) {
+      console.log("No file selected in MessageChat");
+      return;
+    }
     
     console.log("File selected in MessageChat:", file.name, file.type, file.size);
     
@@ -133,34 +138,61 @@ const MessageChat = ({
       return;
     }
     
-    // Store the file directly without wrapping
-    setSelectedFile(file);
+    try {
+      // Create a copy of the file to ensure it's not affected by garbage collection
+      const fileBlob = new Blob([file], { type: file.type });
+      const newFile = new File([fileBlob], file.name, { 
+        type: file.type,
+        lastModified: file.lastModified
+      });
+      
+      // Store the file
+      setSelectedFile(newFile);
+      console.log("File stored successfully:", newFile.name);
     
-    // Create preview for images
-    if (file.type.startsWith('image/')) {
-      try {
-        const objectUrl = URL.createObjectURL(file);
-        setFilePreview(objectUrl);
-      } catch (err) {
-        console.error("Error creating preview:", err);
+      // Create preview for images
+      if (file.type.startsWith('image/')) {
+        try {
+          const objectUrl = URL.createObjectURL(file);
+          console.log("Created image preview URL:", objectUrl);
+          setFilePreview(objectUrl);
+        } catch (err) {
+          console.error("Error creating preview:", err);
+          setFilePreview(null);
+        }
+      } else {
+        console.log("Non-image file, no preview created");
         setFilePreview(null);
       }
+    } catch (error) {
+      console.error("Error processing file:", error);
+      alert("There was a problem processing the file. Please try again.");
     }
     
-    // Reset the file input
-    e.target.value = '';
+    // Reset the file input value to allow selecting the same file again
+    if (e.target) {
+      e.target.value = '';
+    }
   };
   
   // Clear the selected file
   const clearSelectedFile = () => {
+    console.log("Clearing selected file in MessageChat");
+    
+    // Revoke any URL objects to prevent memory leaks
     if (filePreview) {
-      URL.revokeObjectURL(filePreview);
+      try {
+        URL.revokeObjectURL(filePreview);
+        console.log("Revoked file preview URL");
+      } catch (err) {
+        console.error("Error revoking URL:", err);
+      }
     }
     
     setSelectedFile(null);
     setFilePreview(null);
     
-    // Reset the file input
+    // Reset the file input if it exists
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -169,16 +201,19 @@ const MessageChat = ({
   // Message submission handler
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!message.trim()) return;
     
-    console.log("Submitting message:", message);
+    // Check if we have either text or a file
+    if (!message.trim() && !selectedFile) return;
     
-    // Only sending text, no file attachment
+    console.log("Submitting message:", message, selectedFile ? `with attachment: ${selectedFile.name}` : 'without attachment');
+    
     try {
-      onSendMessage(message);
+      // Send message with attachment (if any)
+      onSendMessage(message, selectedFile);
       
       // Reset form
       setMessage('');
+      clearSelectedFile();
     } catch (error) {
       console.error("Error in handleSubmit:", error);
     }
