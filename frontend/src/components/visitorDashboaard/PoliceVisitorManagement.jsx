@@ -20,7 +20,10 @@ import {
   FaPrint,
   FaHistory,
   FaSync,
-  FaTrash
+  FaTrash,
+  FaClock,
+  FaChevronLeft,
+  FaChevronRight
 } from "react-icons/fa";
 import { toast } from "react-hot-toast";
 import axiosInstance from "../../utils/axiosInstance";
@@ -48,6 +51,8 @@ const PoliceVisitorManagement = () => {
     searchQuery: ""
   });
   const [openDropdownId, setOpenDropdownId] = useState(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const totalSlides = 3; // Total number of slides
 
   // Fetch visitors data
   const fetchVisitors = useCallback(async () => {
@@ -83,6 +88,13 @@ const PoliceVisitorManagement = () => {
           idType: schedule.idType,
           idNumber: schedule.idNumber,
           address: schedule.address
+        },
+        inmate: schedule.inmate || {
+          firstName: schedule.inmate?.firstName,
+          middleName: schedule.inmate?.middleName,
+          lastName: schedule.inmate?.lastName,
+          inmateId: schedule.inmate?.inmateId,
+          cellBlock: schedule.inmate?.cellBlock
         }
       }));
       
@@ -366,6 +378,33 @@ const PoliceVisitorManagement = () => {
         toast.error(error.response?.data?.message || 'Failed to delete visitor schedule');
       }
     }
+  };
+
+  // Add getStatusColor function
+  const getStatusColor = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'approved':
+        return 'text-green-600';
+      case 'rejected':
+        return 'text-red-600';
+      case 'pending':
+        return 'text-yellow-600';
+      case 'completed':
+        return 'text-blue-600';
+      case 'cancelled':
+        return 'text-gray-600';
+      default:
+        return 'text-gray-600';
+    }
+  };
+
+  // Add slide navigation functions
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % totalSlides);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + totalSlides) % totalSlides);
   };
 
   // Render loading state
@@ -707,100 +746,301 @@ const PoliceVisitorManagement = () => {
         )}
 
         {/* Detail Modal */}
-        {showDetailModal && selectedVisitor && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-6">
-                  <h2 className="text-2xl font-bold text-gray-800">Visitor Details</h2>
+        {selectedVisitor && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+              {/* Fixed Header */}
+              <div className="bg-gradient-to-r from-blue-600 to-blue-800 p-4 text-white">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-bold">Visitor Details</h2>
                   <button
-                    onClick={() => setShowDetailModal(false)}
-                    className="text-gray-500 hover:text-gray-700"
+                    onClick={() => setSelectedVisitor(null)}
+                    className="text-white hover:text-gray-200 transition-colors"
                   >
-                    <FaTimes />
+                    <FaTimes size={24} />
                   </button>
                 </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-800 mb-2">Personal Information</h3>
-                      <div className="space-y-2">
-                        <p className="flex items-center text-gray-700">
-                          <FaUser className="mr-2 text-gray-500" />
-                          <span className="font-medium">Name:</span> {`${selectedVisitor.visitorDetails.firstName || ''} ${selectedVisitor.visitorDetails.middleName || ''} ${selectedVisitor.visitorDetails.lastName || ''}`}
-                        </p>
-                        <p className="flex items-center text-gray-700">
-                          <FaIdCard className="mr-2 text-gray-500" />
-                          <span className="font-medium">ID Type:</span> {selectedVisitor.visitorDetails.idType || 'N/A'}
-                        </p>
-                        <p className="flex items-center text-gray-700">
-                          <FaIdCard className="mr-2 text-gray-500" />
-                          <span className="font-medium">ID Number:</span> {selectedVisitor.visitorDetails.idNumber || 'N/A'}
-                        </p>
-                        <p className="flex items-center text-gray-700">
-                          <FaPhone className="mr-2 text-gray-500" />
-                          <span className="font-medium">Phone:</span> {selectedVisitor.visitorDetails.phone || 'N/A'}
-                        </p>
-                        <p className="flex items-center text-gray-700">
-                          <FaMapMarkerAlt className="mr-2 text-gray-500" />
-                          <span className="font-medium">Address:</span> {selectedVisitor.visitorDetails.address || 'N/A'}
-                        </p>
+              </div>
+
+              {/* Scrollable Content */}
+              <div className="overflow-y-auto p-6">
+                {/* Slide Navigation */}
+                <div className="flex justify-between items-center mb-6">
+                  <button
+                    onClick={prevSlide}
+                    className="flex items-center text-gray-600 hover:text-gray-800"
+                  >
+                    <FaChevronLeft className="mr-2" />
+                    Previous
+                  </button>
+                  <div className="flex space-x-2">
+                    {[...Array(totalSlides)].map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentSlide(index)}
+                        className={`w-2 h-2 rounded-full ${
+                          currentSlide === index ? 'bg-blue-600' : 'bg-gray-300'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <button
+                    onClick={nextSlide}
+                    className="flex items-center text-gray-600 hover:text-gray-800"
+                  >
+                    Next
+                    <FaChevronRight className="ml-2" />
+                  </button>
+                </div>
+
+                {/* Slides */}
+                <div className="relative">
+                  {/* Slide 1: Basic Information */}
+                  <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 ${currentSlide === 0 ? 'block' : 'hidden'}`}>
+                    {/* Visitor Photos */}
+                    <div className="space-y-4">
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Visitor Photos</h3>
+                        <div className="space-y-4">
+                          <div>
+                            <p className="text-sm text-gray-500 mb-2">Profile Photo</p>
+                            <div className="w-full h-48 bg-gray-200 rounded-lg overflow-hidden">
+                              {selectedVisitor.visitorPhoto ? (
+                                <img 
+                                  src={`${import.meta.env.VITE_API_URL}${selectedVisitor.visitorPhoto}`} 
+                                  alt="Profile" 
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                  <FaUser size={48} />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-sm text-gray-500 mb-2">ID Photo</p>
+                            <div className="w-full h-48 bg-gray-200 rounded-lg overflow-hidden">
+                              {selectedVisitor.idPhoto ? (
+                                <img 
+                                  src={`${import.meta.env.VITE_API_URL}${selectedVisitor.idPhoto}`} 
+                                  alt="ID" 
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                  <FaIdCard size={48} />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Personal Information */}
+                    <div className="space-y-4">
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Personal Information</h3>
+                        <div className="space-y-3">
+                          <div className="flex items-start">
+                            <FaUser className="mt-1 mr-3 text-gray-500" />
+                            <div>
+                              <p className="text-sm text-gray-500">Full Name</p>
+                              <p className="font-medium text-gray-900">
+                                {`${selectedVisitor.firstName || ''} ${selectedVisitor.middleName || ''} ${selectedVisitor.lastName || ''}`}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-start">
+                            <FaIdCard className="mt-1 mr-3 text-gray-500" />
+                            <div>
+                              <p className="text-sm text-gray-500">ID Information</p>
+                              <p className="font-medium text-gray-900">
+                                {selectedVisitor.idType || 'N/A'} - {selectedVisitor.idNumber || 'N/A'}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-start">
+                            <FaPhone className="mt-1 mr-3 text-gray-500" />
+                            <div>
+                              <p className="text-sm text-gray-500">Contact</p>
+                              <p className="font-medium text-gray-900">{selectedVisitor.phone || 'N/A'}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-start">
+                            <FaClipboard className="mt-1 mr-3 text-gray-500" />
+                            <div>
+                              <p className="text-sm text-gray-500">Purpose</p>
+                              <p className="font-medium text-gray-900">{selectedVisitor.purpose || 'N/A'}</p>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-800 mb-2">Visit Information</h3>
-                      <div className="space-y-2">
-                        <p className="flex items-center text-gray-700">
-                          <FaCalendarAlt className="mr-2 text-gray-500" />
-                          <span className="font-medium">Visit Date:</span> {formatDate(selectedVisitor.visitDate)}
-                        </p>
-                        <p className="flex items-center text-gray-700">
-                          <FaClipboard className="mr-2 text-gray-500" />
-                          <span className="font-medium">Purpose:</span> {selectedVisitor.purpose || 'N/A'}
-                        </p>
-                        <p className="flex items-center text-gray-700">
-                          <FaUser className="mr-2 text-gray-500" />
-                          <span className="font-medium">Relationship:</span> {selectedVisitor.visitorDetails.relationship || 'N/A'}
-                        </p>
-                        <p className="flex items-center text-gray-700">
-                          <FaClipboard className="mr-2 text-gray-500" />
-                          <span className="font-medium">Status:</span> <StatusBadge status={selectedVisitor.status || 'Pending'} />
-                        </p>
+
+                  {/* Slide 2: Visit & Inmate Information */}
+                  <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 ${currentSlide === 1 ? 'block' : 'hidden'}`}>
+                    {/* Visit Information */}
+                    <div className="space-y-4">
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Visit Information</h3>
+                        <div className="space-y-3">
+                          <div className="flex items-start">
+                            <FaCalendarAlt className="mt-1 mr-3 text-gray-500" />
+                            <div>
+                              <p className="text-sm text-gray-500">Visit Date & Time</p>
+                              <p className="font-medium text-gray-900">{formatDate(selectedVisitor.visitDate)}</p>
+                              <p className="text-sm text-gray-600">{selectedVisitor.visitTime}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-start">
+                            <FaClock className="mt-1 mr-3 text-gray-500" />
+                            <div>
+                              <p className="text-sm text-gray-500">Duration</p>
+                              <p className="font-medium text-gray-900">{selectedVisitor.visitDuration} minutes</p>
+                            </div>
+                          </div>
+                          <div className="flex items-start">
+                            <FaClipboard className="mt-1 mr-3 text-gray-500" />
+                            <div>
+                              <p className="text-sm text-gray-500">Status</p>
+                              <StatusBadge status={selectedVisitor.status || 'Pending'} />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Inmate Information */}
+                    <div className="space-y-4">
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Inmate Information</h3>
+                        <div className="space-y-3">
+                          <div className="flex items-start">
+                            <FaUser className="mt-1 mr-3 text-gray-500" />
+                            <div>
+                              <p className="text-sm text-gray-500">Inmate Name</p>
+                              <p className="font-medium text-gray-900">
+                                {`${selectedVisitor.inmate?.firstName || ''} ${selectedVisitor.inmate?.middleName || ''} ${selectedVisitor.inmate?.lastName || ''}`}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="flex items-start">
+                            <FaIdCard className="mt-1 mr-3 text-gray-500" />
+                            <div>
+                              <p className="text-sm text-gray-500">Inmate ID</p>
+                              <p className="font-medium text-gray-900">{selectedVisitor.inmateId || 'N/A'}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-start">
+                            <FaMapMarkerAlt className="mt-1 mr-3 text-gray-500" />
+                            <div>
+                              <p className="text-sm text-gray-500">Cell Block</p>
+                              <p className="font-medium text-gray-900">{selectedVisitor.inmate?.cellBlock || 'N/A'}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-start">
+                            <FaClipboard className="mt-1 mr-3 text-gray-500" />
+                            <div>
+                              <p className="text-sm text-gray-500">Relationship</p>
+                              <p className="font-medium text-gray-900 capitalize">{selectedVisitor.relationship || 'N/A'}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Slide 3: Approval & Additional Information */}
+                  <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 ${currentSlide === 2 ? 'block' : 'hidden'}`}>
+                    {/* Approval Information */}
+                    {selectedVisitor.status?.toLowerCase() !== 'pending' && (
+                      <div className="space-y-4">
+                        <div className="bg-gray-50 p-4 rounded-lg">
+                          <h3 className="text-lg font-semibold text-gray-800 mb-4">Approval Details</h3>
+                          <div className="space-y-3">
+                            {selectedVisitor.approvedBy && (
+                              <div className="flex items-start">
+                                <FaUser className="mt-1 mr-3 text-gray-500" />
+                                <div>
+                                  <p className="text-sm text-gray-500">Approved By</p>
+                                  <p className="font-medium text-gray-900">{selectedVisitor.approvedBy?.name || 'Unknown'}</p>
+                                </div>
+                              </div>
+                            )}
+                            {selectedVisitor.approvedAt && (
+                              <div className="flex items-start">
+                                <FaCalendarAlt className="mt-1 mr-3 text-gray-500" />
+                                <div>
+                                  <p className="text-sm text-gray-500">Approval Date</p>
+                                  <p className="font-medium text-gray-900">{formatDate(selectedVisitor.approvedAt)}</p>
+                                </div>
+                              </div>
+                            )}
+                            {selectedVisitor.status?.toLowerCase() === 'rejected' && selectedVisitor.rejectionReason && (
+                              <div className="flex items-start">
+                                <FaTimes className="mt-1 mr-3 text-red-500" />
+                                <div>
+                                  <p className="text-sm text-gray-500">Rejection Reason</p>
+                                  <p className="font-medium text-red-600">{selectedVisitor.rejectionReason}</p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Additional Information */}
+                    <div className="space-y-4">
+                      <div className="bg-gray-50 p-4 rounded-lg">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Additional Information</h3>
+                        <div className="space-y-3">
+                          {selectedVisitor.notes && (
+                            <div className="flex items-start">
+                              <FaClipboard className="mt-1 mr-3 text-gray-500" />
+                              <div>
+                                <p className="text-sm text-gray-500">Notes</p>
+                                <p className="font-medium text-gray-900">{selectedVisitor.notes}</p>
+                              </div>
+                            </div>
+                          )}
+                          <div className="flex items-start">
+                            <FaHistory className="mt-1 mr-3 text-gray-500" />
+                            <div>
+                              <p className="text-sm text-gray-500">Last Updated</p>
+                              <p className="font-medium text-gray-900">{formatDate(selectedVisitor.updatedAt)}</p>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-                
+
+                {/* Action Buttons */}
                 <div className="mt-6 flex justify-end gap-4">
                   {selectedVisitor.status?.toLowerCase() === 'pending' && (
                     <>
                       <button
-                        onClick={() => {
-                          handleStatusUpdate(selectedVisitor._id, 'approved');
-                          setShowDetailModal(false);
-                        }}
-                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center"
+                        onClick={() => handleStatusUpdate(selectedVisitor._id, 'approved')}
+                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
                       >
                         <FaCheck className="mr-2" /> Approve
                       </button>
                       <button
-                        onClick={() => {
-                          handleStatusUpdate(selectedVisitor._id, 'rejected');
-                          setShowDetailModal(false);
-                        }}
-                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center"
+                        onClick={() => handleStatusUpdate(selectedVisitor._id, 'rejected')}
+                        className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center transition-colors"
                       >
                         <FaTimes className="mr-2" /> Reject
                       </button>
                     </>
                   )}
                   <button
-                    onClick={() => setShowDetailModal(false)}
-                    className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg"
+                    onClick={() => setSelectedVisitor(null)}
+                    className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
                   >
                     Close
                   </button>
