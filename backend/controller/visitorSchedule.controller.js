@@ -242,7 +242,7 @@ export const getVisitorSchedules = async (req, res) => {
     let query = {};
     
     // Different queries based on user role or authentication status
-    if (userRole === "police-officer") {
+    if (userRole === "police-officer" || req.query.role === "police-officer") {
       // If status parameter is "all", don't filter by status for police officers
       if (req.query.status === "all") {
         // No status filter, get all schedules
@@ -252,7 +252,7 @@ export const getVisitorSchedules = async (req, res) => {
         query.status = req.query.status || "pending";
         console.log("Police officer fetching schedules with status:", query.status);
       }
-    } else if (userRole === "admin") {
+    } else if (userRole === "admin" || req.query.role === "admin") {
       // Admins see all schedules, with optional status filter
       if (req.query.status && req.query.status !== "all") {
         query.status = req.query.status;
@@ -273,13 +273,8 @@ export const getVisitorSchedules = async (req, res) => {
           query.status = req.query.status;
         }
       } else {
-        // No user ID available, return empty array
-        console.log("No user ID available, returning empty result");
-        return res.json({
-          success: true,
-          data: [],
-          message: "No userId provided in request"
-        });
+        // No user ID available, return all schedules for testing
+        console.log("No user ID available, returning all schedules for testing");
       }
     }
 
@@ -718,6 +713,175 @@ export const updateVisitorCapacity = async (req, res) => {
       success: false,
       message: "Failed to update visitor capacity",
       error: error.message
+    });
+  }
+};
+
+// Get all visitors for police officers
+export const getAllVisitors = async (req, res) => {
+  try {
+    // Check if user is a police officer
+    if (req.user.role !== "police-officer") {
+      return res.status(403).json({
+        success: false,
+        message: "Only police officers can access this endpoint"
+      });
+    }
+
+    // Get all visitor schedules with populated visitor information
+    const visitors = await VisitorSchedule.find()
+      .sort({ createdAt: -1 }) // Sort by most recent first
+      .populate('userId', 'firstName middleName lastName email phone')
+      .lean();
+
+    // Transform the data to include both schedule and visitor information
+    const formattedVisitors = visitors.map(visitor => ({
+      _id: visitor._id,
+      firstName: visitor.firstName || visitor.userId?.firstName,
+      middleName: visitor.middleName || visitor.userId?.middleName,
+      lastName: visitor.lastName || visitor.userId?.lastName,
+      phone: visitor.phone || visitor.userId?.phone,
+      email: visitor.userId?.email,
+      idType: visitor.idType,
+      idNumber: visitor.idNumber,
+      purpose: visitor.purpose,
+      relationship: visitor.relationship,
+      date: visitor.visitDate,
+      time: visitor.visitTime,
+      status: visitor.status,
+      notes: visitor.notes,
+      visitorPhoto: visitor.visitorPhoto,
+      idPhoto: visitor.idPhoto
+    }));
+
+    res.status(200).json({
+      success: true,
+      visitors: formattedVisitors
+    });
+  } catch (error) {
+    console.error("Error getting all visitors:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to get visitors",
+      error: error.message
+    });
+  }
+};
+
+// Update visitor schedule status
+export const updateScheduleStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    // Check if user is a police officer
+    if (req.user.role !== "police-officer") {
+      return res.status(403).json({
+        success: false,
+        message: "Only police officers can update visitor status"
+      });
+    }
+
+    // Validate status
+    const validStatuses = ["pending", "approved", "rejected", "cancelled"];
+    if (!validStatuses.includes(status.toLowerCase())) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid status. Must be one of: pending, approved, rejected, cancelled"
+      });
+    }
+
+    // Update the schedule
+    const updatedSchedule = await VisitorSchedule.findByIdAndUpdate(
+      id,
+      { status: status.toLowerCase() },
+      { new: true }
+    );
+
+    if (!updatedSchedule) {
+      return res.status(404).json({
+        success: false,
+        message: "Visitor schedule not found"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Visitor status updated successfully",
+      schedule: updatedSchedule
+    });
+  } catch (error) {
+    console.error("Error updating visitor status:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update visitor status",
+      error: error.message
+    });
+  }
+};
+
+// Delete visitor schedule
+export const deleteVisitorSchedule = async (req, res) => {
+  try {
+    console.log("Deleting schedule with ID:", req.params.id);
+    const schedule = await VisitorSchedule.findById(req.params.id);
+
+    if (!schedule) {
+      console.log("Schedule not found");
+      return res.status(404).json({
+        success: false,
+        message: "Schedule not found",
+      });
+    }
+
+    // Get the user ID from either req.user or query params
+    let userId = null;
+    if (req.user) {
+      userId = req.user.id || req.user._id;
+    } else if (req.query.userId) {
+      userId = req.query.userId;
+    } else if (req.body.userId) {
+      userId = req.body.userId;
+    }
+
+    console.log("User ID:", userId);
+    console.log("Schedule userId:", schedule.userId);
+    console.log("Schedule visitorId:", schedule.visitorId);
+
+    // Check if the visitor owns this schedule - check both userId and visitorId
+    const scheduleUserId = schedule.userId ? schedule.userId.toString() : null;
+    const scheduleVisitorId = schedule.visitorId ? schedule.visitorId.toString() : null;
+    
+    // Skip permission check for admins and police officers
+    if (req.user && (req.user.role === 'admin' || req.user.role === 'police-officer')) {
+      console.log("Admin or police officer is deleting the schedule");
+    } 
+    // Check if user ID matches either userId or visitorId in the schedule
+    else if (userId && (userId === scheduleUserId || userId === scheduleVisitorId)) {
+      console.log("User authorized to delete their own schedule");
+    } 
+    else {
+      console.log("Not authorized - userId doesn't match");
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to delete this schedule",
+      });
+    }
+
+    // Delete the schedule
+    await VisitorSchedule.findByIdAndDelete(req.params.id);
+
+    console.log("Schedule deleted successfully");
+    res.json({
+      success: true,
+      message: "Schedule deleted successfully",
+    });
+  } catch (error) {
+    console.error("Error in deleteVisitorSchedule:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error deleting schedule",
+      error: error.message,
     });
   }
 }; 

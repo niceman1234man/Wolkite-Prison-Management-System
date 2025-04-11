@@ -52,6 +52,10 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
   // Track if user has pending schedule
   const [hasPendingSchedule, setHasPendingSchedule] = useState(false);
 
+  // Add new state for inmates
+  const [inmates, setInmates] = useState([]);
+  const [inmatesLoading, setInmatesLoading] = useState(false);
+
   // Check if user has pending schedules
   const checkPendingSchedules = useCallback(() => {
     const userSchedules = schedules || [];
@@ -384,6 +388,70 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
     setShowScheduleForm(true);
   }, [hasPendingSchedule]);
 
+  // Add function to fetch inmates
+  const fetchInmates = useCallback(async () => {
+    setInmatesLoading(true);
+    try {
+      const response = await axiosInstance.get("/inmates/allInmates");
+      console.log("API Response:", response.data);
+
+      // Check if response.data has an inmates array
+      const inmatesData = response.data?.inmates || response.data || [];
+      
+      if (Array.isArray(inmatesData)) {
+        let sno = 1;
+        const formattedData = inmatesData.map((inmate) => {
+          // Create full name from first, middle and last name
+          const fullName = [inmate.firstName, inmate.middleName, inmate.lastName]
+            .filter(Boolean)
+            .join(" ");
+            
+          // Format the sentence information
+          const sentenceInfo = inmate.sentenceYear ? 
+            `${inmate.sentenceYear} ${inmate.sentenceYear === 1 ? 'year' : 'years'}` : 
+            "Not specified";
+            
+          // Format location data
+          const location = [inmate.currentWereda, inmate.currentZone]
+            .filter(Boolean)
+            .join(", ");
+            
+          return {
+            _id: inmate._id,
+            sno: sno++,
+            inmate_name: fullName || "Not available",
+            age: inmate.age || "N/A",
+            gender: inmate.gender || "N/A",
+            case_type: inmate.caseType || "Not specified",
+            reason: inmate.sentenceReason || "",
+            sentence: sentenceInfo,
+            current_location: location || "Not specified",
+            photo: inmate.photo,
+            firstName: inmate.firstName,
+            middleName: inmate.middleName,
+            lastName: inmate.lastName,
+            fullName: fullName
+          };
+        });
+
+        setInmates(formattedData);
+      } else {
+        console.error("Invalid API response structure:", response.data);
+        toast.error("Invalid response structure from server");
+      }
+    } catch (error) {
+      console.error("Error fetching inmates:", error);
+      toast.error(error.response?.data?.error || "Failed to fetch inmate data");
+    } finally {
+      setInmatesLoading(false);
+    }
+  }, []);
+
+  // Fetch inmates on component mount
+  useEffect(() => {
+    fetchInmates();
+  }, [fetchInmates]);
+
   // Render functions for different card states
   const renderLoading = () => (
     <div className="flex justify-center items-center py-12">
@@ -424,7 +492,9 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
 
   const renderScheduleCard = (schedule) => {
     const visitorName = getVisitorName(schedule);
-    const inmateName = schedule.inmateId?.fullName || "Unknown Inmate";
+    // Find the inmate in the inmates array using the inmateId
+    const inmate = inmates.find(i => i._id === schedule.inmateId?._id);
+    const inmateName = inmate ? inmate.inmate_name : "Unknown Inmate";
     const canEdit = schedule.status?.toLowerCase() === 'pending';
 
   return (
@@ -486,7 +556,9 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
           <tbody className="bg-white divide-y divide-gray-200">
             {schedules.map((schedule) => {
               const visitorName = getVisitorName(schedule);
-              const inmateName = schedule.inmateId?.fullName || "Unknown Inmate";
+              // Find the inmate in the inmates array using the inmateId
+              const inmate = inmates.find(i => i._id === schedule.inmateId?._id);
+              const inmateName = inmate ? inmate.inmate_name : "Unknown Inmate";
               const canEdit = schedule.status?.toLowerCase() === 'pending';
               
               return (
@@ -690,6 +762,8 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
           }}
           onSuccess={handleScheduleSuccess}
           schedule={scheduleToEdit}
+          inmates={inmates}
+          inmatesLoading={inmatesLoading}
         />
       )}
       

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { FaTimes } from "react-icons/fa";
+import { FaTimes, FaUser, FaCalendar, FaClock, FaInfoCircle, FaSpinner } from "react-icons/fa";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axiosInstance from "../../../utils/axiosInstance.js";
+import { format } from "date-fns";
 
 // Common toast configuration to prevent errors
 const toastConfig = {
@@ -19,7 +20,9 @@ const ScheduleForm = ({
   isOpen,
   onClose,
   schedule,
-  onSuccess
+  onSuccess,
+  inmates,
+  inmatesLoading
 }) => {
   const [formData, setFormData] = useState({
     firstName: "",
@@ -29,18 +32,17 @@ const ScheduleForm = ({
     idType: "",
     idNumber: "",
     idExpiryDate: "",
-    purpose: "",
-    relationship: "",
-    inmateId: "",
-    visitDate: "",
-    visitTime: "",
-    visitDuration: 30,
+    purpose: schedule?.purpose || "",
+    relationship: schedule?.relationship || "",
+    inmateId: schedule?.inmateId || "",
+    visitDate: schedule?.visitDate || format(new Date(), "yyyy-MM-dd"),
+    visitTime: schedule?.visitTime || "09:00",
+    visitDuration: schedule?.visitDuration || "30",
     notes: "",
     visitorPhoto: null,
     idPhoto: null
   });
   
-  const [inmates, setInmates] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [idPhotoPreview, setIdPhotoPreview] = useState(null);
@@ -53,10 +55,10 @@ const ScheduleForm = ({
     currentDailyVisits: {}
   });
   const [capacityHeatmap, setCapacityHeatmap] = useState([]);
-  const [inmatesLoading, setInmatesLoading] = useState(false);
   const [inmatesError, setInmatesError] = useState(false);
   const [validatedUserId, setValidatedUserId] = useState(null);
   const [submitError, setSubmitError] = useState("");
+  const [loading, setLoading] = useState(false);
 
   // Add this function above the useEffect
   const debugUserData = () => {
@@ -179,12 +181,11 @@ const ScheduleForm = ({
         setValidatedUserId(userId);
         
         // Continue with regular initialization
-        fetchInmates();
         fetchCapacityInfo();
         
         // Only check for pending schedules if we're creating a new schedule, not editing
         if (!schedule) {
-          checkPendingSchedules(userId);
+          checkPendingSchedules();
         }
       }
       
@@ -244,138 +245,43 @@ const ScheduleForm = ({
     }
   }, [capacityInfo.currentDailyVisits]);
 
-  const fetchInmates = async () => {
-    setInmatesLoading(true);
-    setInmatesError(false);
-    
-    try {
-      // Use correct API endpoint
-      const response = await axiosInstance.get("/visitor/schedule/inmates");
-      
-      console.log("Fetching inmates response:", response.data);
-      
-      if (response.data && response.data.success) {
-        // Set inmates from the data property based on the controller's response structure
-        const inmateData = response.data.data || [];
-        
-        if (inmateData.length === 0) {
-          // If no inmates found, add a default option for demonstration purposes
-          setInmates([
-            {
-              _id: "default-inmate",
-              fullName: "Default Inmate (Demo)",
-              prisonerId: "DEMO-12345"
-            }
-          ]);
-        } else {
-          setInmates(inmateData);
-        }
-      } else if (response.data && Array.isArray(response.data.inmates)) {
-        // Alternative format if API returns inmates directly
-        if (response.data.inmates.length === 0) {
-          // If empty array, add default option
-          setInmates([
-            {
-              _id: "default-inmate",
-              fullName: "Default Inmate (Demo)",
-              prisonerId: "DEMO-12345"
-            }
-          ]);
-        } else {
-          setInmates(response.data.inmates);
-        }
-      } else {
-        console.error("Invalid inmate data structure:", response.data);
-        // Set a default inmate for demonstration
-        setInmates([
-          {
-            _id: "default-inmate",
-            fullName: "Default Inmate (Demo)",
-            prisonerId: "DEMO-12345"
-          }
-        ]);
-        toast.info("Using a default inmate for demonstration purposes", toastConfig);
-      }
-    } catch (error) {
-      console.error("Error fetching inmates:", error);
-      // Add a demo inmate
-      setInmates([
-        {
-          _id: "default-inmate",
-          fullName: "Default Inmate (Demo)",
-          prisonerId: "DEMO-12345"
-        }
-      ]);
-      toast.info("Using a default inmate for demonstration purposes", toastConfig);
-      
-      // Make inmate selection optional on error
-      setErrors(prev => {
-        const newErrors = {...prev};
-        delete newErrors.inmateId;
-        return newErrors;
-      });
-    } finally {
-      setInmatesLoading(false);
-    }
-  };
-
   const fetchCapacityInfo = async () => {
     try {
-      // Use correct API endpoint
       const response = await axiosInstance.get('/visitor/schedule/capacity');
-      
       if (response.data && response.data.success) {
-        const maxCapacity = response.data.maxCapacity || 50;
-        
-        // Fetch daily visit counts for the next 30 days
-        const dailyVisitsResponse = await axiosInstance.get('/visitor/schedule/daily-visits');
-        
-        if (dailyVisitsResponse.data && dailyVisitsResponse.data.success) {
-          const dailyVisits = dailyVisitsResponse.data.dailyVisits || {};
-          
-          // Calculate which dates are at or above capacity
-          const disabledDatesObj = {};
-          Object.keys(dailyVisits).forEach(date => {
-            if (dailyVisits[date] >= maxCapacity) {
-              disabledDatesObj[date] = true;
-            }
-          });
-          
-          setDisabledDates(disabledDatesObj);
-          setCapacityInfo({
-            maxCapacity,
-            currentDailyVisits: dailyVisits
-          });
-        }
+        setCapacityInfo({
+          maxCapacity: response.data.maxCapacity || 50,
+          currentDailyVisits: response.data.dailyVisits || {}
+        });
       }
     } catch (error) {
       console.error("Error fetching capacity info:", error);
-      // Default empty disabled dates if API fails
-      setDisabledDates({});
+      // Set default capacity info on error
+      setCapacityInfo({
+        maxCapacity: 50,
+        currentDailyVisits: {}
+      });
     }
   };
 
-  const checkPendingSchedules = async (userId) => {
+  const checkPendingSchedules = async () => {
     try {
-      console.log("Checking pending schedules for user:", userId);
-      
-      // Use correct API endpoint
+      const userStr = localStorage.getItem('user');
+      if (!userStr) return;
+
+      const userData = JSON.parse(userStr);
+      const userId = userData.id || userData._id;
+      if (!userId) return;
+
       const response = await axiosInstance.get(`/visitor/schedule/check-pending?userId=${userId}`);
-      
-      console.log("Pending schedule check response:", response.data);
-      
-      if (response.data && response.data.hasPendingSchedule) {
-        setHasPendingSchedule(true);
-        // Only show the toast if not in edit mode
-        if (!schedule) {
-          toast.error("You already have a pending visit schedule. Please wait for approval or cancel your existing schedule before creating a new one.", toastConfig);
+      if (response.data.success) {
+        setHasPendingSchedule(response.data.hasPendingSchedule);
+        if (response.data.hasPendingSchedule) {
+          toast.error("You already have a pending visit schedule. Please wait for approval or cancel your existing schedule before creating a new one.");
         }
-      } else {
-        setHasPendingSchedule(false);
       }
     } catch (error) {
       console.error("Error checking pending schedules:", error);
-      // Don't show an error to the user, just silently fail
     }
   };
 
@@ -475,91 +381,65 @@ const ScheduleForm = ({
     setStep(step - 1);
   };
 
-  const handleSubmit = async () => {
-    // Validate form
-    const validationResult = validateFormData(formData);
-    if (!validationResult.isValid) {
-      setValidationErrors(validationResult.errors);
-      toast.error("Please fix the form errors before submitting");
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Don't allow new schedule creation if there's a pending schedule
+    if (!schedule && hasPendingSchedule) {
+      toast.error("You already have a pending visit schedule. Please wait for approval or cancel your existing schedule before creating a new one.");
       return;
     }
+
+    setLoading(true);
     
-    // Clear previous errors
-    setValidationErrors({});
-    setSubmitting(true);
-    
-    // Create a FormData instance for file uploads
-    const submitFormData = new FormData();
-    
-    // Add visitor data fields to form data
-    Object.keys(formData).forEach(key => {
-      if (formData[key] !== null && formData[key] !== undefined) {
-        submitFormData.append(key, formData[key]);
-      }
-    });
-    
-    // Add user ID from localStorage if available
+    // Validate form
+    const formErrors = validateForm();
+    if (Object.keys(formErrors).length > 0) {
+      setErrors(formErrors);
+      setLoading(false);
+      return;
+    }
+
     try {
+      // Get user ID from localStorage
       const userStr = localStorage.getItem('user');
-      if (userStr) {
-        const userData = JSON.parse(userStr);
-        // Use either id or _id format, whichever is available
-        const userId = userData.id || userData._id;
-        if (userId) {
-          submitFormData.append('userId', userId);
-          console.log('Added userId to form data:', userId);
-        }
+      if (!userStr) {
+        toast.error("User information not found. Please log in again.");
+        setLoading(false);
+        return;
       }
-    } catch (err) {
-      console.error('Error getting userId from localStorage:', err);
-    }
-    
-    // Add token if available
-    const token = localStorage.getItem('token');
-    if (token) {
-      submitFormData.append('token', token);
-      console.log('Added token to form data');
-    }
-    
-    try {
-      console.log('Submitting visitor schedule...');
-      
-      // Use the visitor prefix endpoint instead of visitorSchedule
-      const response = await axiosInstance.post(
-        "/visitor/schedule", 
-        submitFormData, 
-        {
-        headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
-      
-      console.log('Schedule submission response:', response.data);
-      
+
+      const userData = JSON.parse(userStr);
+      const userId = userData.id || userData._id;
+      if (!userId) {
+        toast.error("User ID not found. Please log in again.");
+        setLoading(false);
+        return;
+      }
+
+      // Add user ID to form data
+      const submitData = {
+        ...formData,
+        userId: userId
+      };
+
+      // Use different endpoints for update vs create
+      const endpoint = schedule ? `/visitor/schedule/${schedule._id}` : '/visitor/schedule';
+      const method = schedule ? 'put' : 'post';
+
+      const response = await axiosInstance[method](endpoint, submitData);
       if (response.data.success) {
-        toast.success("Schedule created successfully!");
-        setFormData(initialFormState);
-        setValidationErrors({});
-        setSubmitting(false);
-        setVisitorPhoto(null);
-        setIdPhoto(null);
-        
-        // Test viewing all schedules in the api response
-        await checkScheduleVisibility();
-        
-        if (onSuccess) {
-          onSuccess(response.data.schedule);
-        }
-        } else {
-        console.error('Schedule submission failed:', response.data);
-        toast.error(response.data.message || "Failed to create schedule");
-        setSubmitting(false);
+        toast.success(schedule ? "Schedule updated successfully!" : "Schedule created successfully!");
+        onSuccess(response.data.schedule);
+        onClose();
+      } else {
+        toast.error(response.data.message || "Failed to save schedule");
       }
     } catch (error) {
-      console.error('Error submitting schedule:', error);
-      toast.error(error.message || "An error occurred while creating schedule");
-      setSubmitting(false);
+      console.error("Error submitting schedule:", error);
+      toast.error(error.response?.data?.message || "An error occurred while saving the schedule");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -822,11 +702,7 @@ const ScheduleForm = ({
         )}
 
         {/* Form */}
-        <form className="p-6" onSubmit={(e) => {
-          e.preventDefault();
-          console.log("Form onSubmit triggered");
-          handleSubmit(e);
-        }}>
+        <form className="p-6" onSubmit={handleSubmit}>
           {/* Step 1: Personal Information */}
           {step === 1 && (
             <div>
@@ -1100,68 +976,36 @@ const ScheduleForm = ({
                 <div>
                   <div className="flex justify-between items-center mb-1">
                     <label className="block text-sm font-medium text-gray-700">
-                      Select Inmate {inmates && inmates.length > 0 ? "*" : "(Optional)"}
-                      {inmatesLoading && <span className="ml-2 text-xs text-blue-600">Loading...</span>}
+                      Select Inmate *
                     </label>
-                    
-                    {inmatesError && (
-                      <button 
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          fetchInmates();
-                        }}
-                        className="text-xs text-blue-600 hover:text-blue-800"
-                      >
-                        Retry loading inmates
-                      </button>
-                    )}
                   </div>
                   
-                  {inmatesLoading ? (
-                    <div className="w-full p-6 flex justify-center">
-                      <div className="animate-pulse text-center">
-                        <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto mb-2"></div>
-                        <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
+                  <div className="relative">
+                    {inmatesLoading ? (
+                      <div className="flex items-center justify-center p-2 border border-gray-300 rounded-md">
+                        <FaSpinner className="animate-spin mr-2" />
+                        Loading inmates...
                       </div>
-                    </div>
-                  ) : inmates && inmates.length > 0 ? (
-                    <select
-                      name="inmateId"
-                      value={formData.inmateId}
-                      onChange={handleChange}
-                      className={`w-full p-2 border rounded-md ${
-                        errors.inmateId ? "border-red-500" : "border-gray-300"
-                      }`}
-                    >
-                      <option value="">Select Inmate</option>
-                      {inmates.map((inmate) => (
-                        <option key={inmate._id} value={inmate._id}>
-                          {inmate.fullName} {inmate.prisonerId ? `(ID: ${inmate.prisonerId})` : ''}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <div className="mb-2">
-                      <input
-                        type="text"
+                    ) : (
+                      <select
                         name="inmateId"
                         value={formData.inmateId}
                         onChange={handleChange}
-                        placeholder="Enter inmate name or ID (optional)"
-                        className="w-full p-2 border border-gray-300 rounded-md"
-                      />
-                      <p className="text-xs text-gray-500 mt-1 italic">
-                        {inmatesError 
-                          ? "Error loading inmates. You can enter inmate details manually."
-                          : "No inmates available from the system. You can enter inmate details manually."}
-                      </p>
-                    </div>
-                  )}
-                  
-                  {errors.inmateId && (
-                    <p className="text-red-500 text-xs mt-1">{errors.inmateId}</p>
-                  )}
+                        className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        required
+                      >
+                        <option value="">Select an inmate</option>
+                        {inmates.map((inmate) => (
+                          <option key={inmate._id} value={inmate._id}>
+                            {inmate.fullName} - {inmate.prisonerId ? `(ID: ${inmate.prisonerId})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    {errors.inmateId && (
+                      <p className="mt-1 text-sm text-red-600">{errors.inmateId}</p>
+                    )}
+                  </div>
                 </div>
               </div>
               
@@ -1281,17 +1125,19 @@ const ScheduleForm = ({
                 </button>
                 <button
                   type="submit"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    console.log("Submit button clicked directly");
-                    handleSubmit(e);
-                  }}
-                  disabled={isSubmitting || (hasPendingSchedule && !schedule)}
+                  disabled={loading || (!schedule && hasPendingSchedule)}
                   className={`px-6 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 transition-colors ${
-                    (isSubmitting || (hasPendingSchedule && !schedule)) ? "opacity-50 cursor-not-allowed" : ""
+                    (loading || (hasPendingSchedule && !schedule)) ? "opacity-50 cursor-not-allowed" : ""
                   }`}
                 >
-                  {isSubmitting ? "Submitting..." : schedule ? "Update Schedule" : "Schedule Visit"}
+                  {loading ? (
+                    <span className="flex items-center">
+                      <FaSpinner className="animate-spin mr-2" />
+                      {schedule ? "Updating..." : "Scheduling..."}
+                    </span>
+                  ) : (
+                    schedule ? "Update Schedule" : "Schedule Visit"
+                  )}
                 </button>
               </div>
             </div>

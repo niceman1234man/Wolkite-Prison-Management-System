@@ -20,18 +20,8 @@ const PUBLIC_ROUTES = [
   "/managemessages/get-messages",
   "/manageimages/get-side-images",
   "/inmates/allInmates",
-  // Keep these for backward compatibility
-  "/visitorSchedule/schedule",
-  "/visitorSchedule/schedules",
-  "/visitorSchedule/schedule/",
-  "/visitorSchedule/inmates",
-  "/visitorSchedule/capacity",
-  "/visitorSchedule/daily-visits",
-  "/visitorSchedule/check-pending",
-  // Add visitor routes
-  "/visitor/schedule",
-  "/visitor/schedule/",
-  "/visitor/schedules",
+  // Visitor schedule routes
+  "/visitor/schedule/schedules",
   "/visitor/schedule/inmates",
   "/visitor/schedule/capacity",
   "/visitor/schedule/daily-visits",
@@ -42,9 +32,7 @@ const PUBLIC_ROUTES = [
 axiosInstance.interceptors.request.use(
   (config) => {
     // Map old endpoints to new endpoints
-    // This helps maintain backward compatibility while transitioning APIs
     const endpointMappings = {
-      '/visitorSchedule/schedule': '/visitor/schedule',
       '/visitorSchedule/schedules': '/visitor/schedule/schedules',
       '/visitorSchedule/inmates': '/visitor/schedule/inmates',
       '/visitorSchedule/capacity': '/visitor/schedule/capacity',

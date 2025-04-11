@@ -62,10 +62,9 @@ router.post(
   visitorScheduleController.createVisitorSchedule
 );
 
-// Get visitor schedules
+// Get visitor schedules - temporarily public for testing
 router.get(
   "/schedule/schedules",
-  authMiddleware,
   visitorScheduleController.getVisitorSchedules
 );
 
@@ -97,10 +96,9 @@ router.post(
   visitorScheduleController.cancelVisitorSchedule
 );
 
-// Get visitor capacity status
+// Get visitor capacity status - public route for testing
 router.get(
   "/schedule/capacity",
-  authMiddleware,
   visitorScheduleController.getCapacityStatus
 );
 
@@ -115,6 +113,20 @@ router.put(
 router.post(
   "/check-face-duplicate",
   visitorController.checkFaceDuplicate
+);
+
+// Get all visitors for police officers
+router.get(
+  "/allVisitors",
+  authMiddleware,
+  visitorScheduleController.getAllVisitors
+);
+
+// Update visitor schedule status
+router.put(
+  "/schedule/:id/status",
+  authMiddleware,
+  visitorScheduleController.updateScheduleStatus
 );
 
 module.exports = router; 

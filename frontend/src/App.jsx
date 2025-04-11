@@ -111,6 +111,7 @@ import SecurityStaffReport from "./components/SecurityStaff/SecurityStaffReport"
 import { Toaster } from 'react-hot-toast';
 import { SocketProvider } from './context/SocketContext';
 import AuthContext from './context/authContext';
+import PoliceVisitorManagementPage from "./components/policeofficerdashboard/PoliceVisitorManagementPage";
 
 function App() {
   return (
@@ -137,6 +138,7 @@ function App() {
               >
                 <Route index element={<PoliceOfficerSummary />} />
                 <Route path="visitors" element={<VisitorList />} />
+                <Route path="visitor-management" element={<PoliceVisitorManagementPage />} />
                 <Route path="add" element={<RegisterVisitor />} />
                 <Route path="edit/:id" element={<EditVisitor />} />
                 <Route path="view/:id" element={<ViewVisitor />} />

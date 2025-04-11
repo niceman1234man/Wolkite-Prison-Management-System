@@ -12,7 +12,8 @@ import {
   rejectSchedule,
   postponeSchedule,
   getVisitorCapacity,
-  updateVisitorCapacity
+  updateVisitorCapacity,
+  deleteVisitorSchedule
 } from "../controller/visitorSchedule.controller.js";
 import multer from "multer";
 import path from "path";
@@ -166,3 +167,6 @@ visitorRouter.get("/schedule/daily-visits", async (req, res) => {
     });
   }
 });
+
+// Delete visitor schedule
+visitorRouter.delete("/schedule/:id", authenticateToken, deleteVisitorSchedule);
