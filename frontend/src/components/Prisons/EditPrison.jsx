@@ -16,17 +16,27 @@ const EditPrison = ({ setOpen, id: propId }) => {
     prison_name: "",
     location: "",
     description: "",
-    capacity: "",
+    capacity: 0,
     current_population: "",
     status: ""
   });
 
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({});
 
   // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setPrisonData((prevState) => ({ ...prevState, [name]: value }));
+    
+    // Clear error for this field when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: "" }));
+    }
+    
+    setPrisonData((prevState) => ({
+      ...prevState,
+      [name]: name === "capacity" ? Number(value) : value,
+    }));
   };
 
   // Fetch prison data when component mounts or ID changes
@@ -43,7 +53,7 @@ const EditPrison = ({ setOpen, id: propId }) => {
             prison_name: response.data.prison.prison_name || "",
             location: response.data.prison.location || "",
             description: response.data.prison.description || "",
-            capacity: response.data.prison.capacity || "",
+            capacity: response.data.prison.capacity || 0,
             current_population: response.data.prison.current_population || "",
             status: response.data.prison.status || ""
           });
@@ -75,29 +85,58 @@ const EditPrison = ({ setOpen, id: propId }) => {
     }
   };
 
+  const validateForm = () => {
+    const newErrors = {};
+    
+    if (!prisonData.prison_name.trim()) {
+      newErrors.prison_name = "Prison name is required";
+    }
+    
+    if (!prisonData.location.trim()) {
+      newErrors.location = "Location is required";
+    }
+    
+    if (!prisonData.description.trim()) {
+      newErrors.description = "Description is required";
+    }
+    
+    if (isNaN(prisonData.capacity) || prisonData.capacity < 0) {
+      newErrors.capacity = "Capacity must be a positive number";
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      toast.error("Please fix the errors in the form");
+      return;
+    }
+    
     setLoading(true);
 
     try {
       console.log("Updating prison with ID:", id);
-      // Update the endpoint to match the backend router
-      await axiosInstance.put(`/prison/${id}`, prisonData);
-      toast.success("Prison updated successfully!");
-      
-      // Close modal or navigate away
-      handleClose();
-      
-      // Refresh the prisons list if it was a modal
-      if (setOpen) {
-        // Typically we'd use a callback here, but as a workaround
-        // we can dispatch a custom event
-        window.dispatchEvent(new CustomEvent('prisonsUpdated'));
+      const formattedData = {
+        ...prisonData,
+        capacity: Number(prisonData.capacity)
+      };
+
+      const response = await axiosInstance.put(`/prison/${id}`, formattedData);
+
+      if (response.data?.success) {
+        toast.success("Prison updated successfully!");
+        setOpen(false);
+        // Dispatch event to refresh the prison list
+        window.dispatchEvent(new Event('prisonsUpdated'));
       }
     } catch (error) {
-      console.error("Error:", error);
-      toast.error(error.response?.data?.error || "Failed to update prison. Please try again.");
+      console.error("Error updating prison:", error);
+      toast.error(error.response?.data?.error || "Failed to update prison");
     } finally {
       setLoading(false);
     }
@@ -122,7 +161,7 @@ const EditPrison = ({ setOpen, id: propId }) => {
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} id="prisonForm" className="space-y-4">
         {/* Prison Name */}
         <div>
           <label htmlFor="prison_name" className="block text-sm font-medium text-gray-700">
@@ -134,9 +173,14 @@ const EditPrison = ({ setOpen, id: propId }) => {
             value={prisonData.prison_name}
             onChange={handleChange}
             placeholder="Enter prison name"
-            className="mt-1 w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500"
+            className={`w-full p-2 border ${
+              errors.prison_name ? "border-red-500" : "border-gray-300"
+            } rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500`}
             required
           />
+          {errors.prison_name && (
+            <p className="text-sm text-red-500">{errors.prison_name}</p>
+          )}
         </div>
 
         {/* Location */}
@@ -150,9 +194,14 @@ const EditPrison = ({ setOpen, id: propId }) => {
             value={prisonData.location}
             onChange={handleChange}
             placeholder="Enter location or woreda"
-            className="mt-1 w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500"
+            className={`w-full p-2 border ${
+              errors.location ? "border-red-500" : "border-gray-300"
+            } rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500`}
             required
           />
+          {errors.location && (
+            <p className="text-sm text-red-500">{errors.location}</p>
+          )}
         </div>
 
         {/* Two-column layout for desktop */}
@@ -168,8 +217,15 @@ const EditPrison = ({ setOpen, id: propId }) => {
               value={prisonData.capacity}
               onChange={handleChange}
               placeholder="Enter capacity"
-              className="mt-1 w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500"
+              className={`w-full p-2 border ${
+                errors.capacity ? "border-red-500" : "border-gray-300"
+              } rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500`}
+              min="0"
+              required
             />
+            {errors.capacity && (
+              <p className="text-sm text-red-500">{errors.capacity}</p>
+            )}
           </div>
 
           {/* Current Population */}
@@ -216,9 +272,15 @@ const EditPrison = ({ setOpen, id: propId }) => {
             value={prisonData.description}
             onChange={handleChange}
             placeholder="Provide details about the prison"
-            className="mt-1 w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500"
+            className={`w-full p-2 border ${
+              errors.description ? "border-red-500" : "border-gray-300"
+            } rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500`}
             rows="4"
+            required
           ></textarea>
+          {errors.description && (
+            <p className="text-sm text-red-500">{errors.description}</p>
+          )}
         </div>
 
         {/* Action Buttons */}
