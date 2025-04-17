@@ -178,7 +178,7 @@ export default function AddWoredaInmate() {
         setInmates(formattedData);
         setTotalItems(formattedData.length);
         setFilteredInmates(formattedData);
-        
+
         // Log the data for debugging
         console.log("All inmates:", formattedData);
         console.log(
@@ -591,7 +591,7 @@ export default function AddWoredaInmate() {
     // Apply search filter
     if (searchTerm) {
       filtered = filtered.filter(
-        (inmate) =>
+      (inmate) =>
           inmate.inmate_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
           inmate.crime.toLowerCase().includes(searchTerm.toLowerCase()) ||
           inmate.case_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -669,7 +669,7 @@ export default function AddWoredaInmate() {
               <div className="p-4 text-center">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 <p className="mt-2 text-gray-600">Loading inmates...</p>
-              </div>
+                  </div>
             )}
             
             <div className="overflow-x-auto">
