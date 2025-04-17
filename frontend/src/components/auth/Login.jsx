@@ -432,16 +432,14 @@ function Login({ onClose, isVisitor = false }) {
               )}
             </button>
 
-        {!isVisitor && (
-            <div className="text-center mt-3 space-y-2">
-              <button
-                onClick={() => navigate("/forgot-password")}
-                className="text-teal-600 hover:text-teal-700 hover:underline transition duration-300 text-sm"
-              >
-                Forgot Password?
-              </button>
-          </div>
-        )}
+        <div className="text-center mt-3 space-y-2">
+          <button
+            onClick={() => navigate("/forgot-password")}
+            className="text-teal-600 hover:text-teal-700 hover:underline transition duration-300 text-sm"
+          >
+            Forgot Password?
+          </button>
+        </div>
         
         {/* DEBUG section - remove in production */}
         {process.env.NODE_ENV !== 'production' && (

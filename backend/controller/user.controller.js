@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import bcrypt from 'bcrypt'
 import nodemailer from 'nodemailer'
+import { logActivity, logLogin, logLogout } from "../controller/activityLog.controller.js";
 dotenv.config();
 export const createAccount = async (req, res) => {
   try {
@@ -73,15 +74,61 @@ export const login = async (req, res) => {
     }
     const isMatch = await bcrypt.compare(password, userInfo.password);
     if (!isMatch) {
+      // Log failed login attempt
+      try {
+        await logLogin(
+          userInfo._id.toString(), // Convert ObjectId to string to avoid serialization issues
+          req.ip,
+          req.headers['user-agent'],
+          'failure'
+        );
+      } catch (logError) {
+        console.error('Error logging failed login activity:', logError);
+        // Continue with login process despite logging error
+      }
+      
       return res.status(401).json({ error: true, message: "Invalid password" });
     }
+    
+    // Update user's last login timestamp and increment login count
+    try {
+      // Use findByIdAndUpdate to avoid validation issues with required fields
+      await User.findByIdAndUpdate(
+        userInfo._id,
+        { 
+          lastLogin: new Date(),
+          $inc: { loginCount: 1 }
+        },
+        { 
+          runValidators: false,
+          new: false
+        }
+      );
+    } catch (updateError) {
+      console.error('Error updating login stats:', updateError);
+      // Continue with login despite the error
+    }
+    
     const accessToken = jwt.sign(
-      { id: userInfo._id, userId: userInfo._id, email: userInfo.email, role: userInfo.role },
+      { id: userInfo._id.toString(), userId: userInfo._id.toString(), email: userInfo.email, role: userInfo.role },
       process.env.TOKEN_SECRET || process.env.ACCESS_TOKEN_SECRET,
       { expiresIn: "2h" } 
     );
 
     console.log(`User ${userInfo.email} logged in with ID: ${userInfo._id}`);
+    
+    // Log successful login
+    try {
+      await logLogin(
+        userInfo._id.toString(), // Convert ObjectId to string to avoid serialization issues
+        req.ip,
+        req.headers['user-agent'],
+        'success'
+      );
+    } catch (logError) {
+      console.error('Error logging successful login activity:', logError);
+      // Continue with login process despite logging error
+    }
 
     // After successful authentication, check for unread messages
     const unreadMessages = await Message.countDocuments({
@@ -350,9 +397,10 @@ export const sendPassword = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(newPassword, salt);
 
-    // Only update password fields
+    // Update password fields and set passwordSent to true
     user.password = hashedPassword;
     user.passwordChanged = false;
+    user.passwordSent = true; // Flag to indicate password has been sent
 
     // ✅ Skip validation
     await user.save({ validateBeforeSave: false });
@@ -386,6 +434,20 @@ export const sendPassword = async (req, res) => {
     };
 
     await transporter.sendMail(mailOptions);
+
+    // Log the password send activity
+    try {
+      await logActivity({
+        user: userId,
+        action: 'password_change',
+        description: 'Password sent to user',
+        resourceType: 'user',
+        resourceId: userId,
+        status: 'success'
+      });
+    } catch (logError) {
+      console.error('Error logging password send activity:', logError);
+    }
 
     return res.status(200).json({
       success: true,
@@ -488,5 +550,44 @@ export const ResetPassword = async (req, res) => {
 
     console.error(error);
     res.status(500).json({ success: false, message: "Internal server error." });
+  }
+};
+
+export const logoutUser = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    
+    if (!userId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "User ID is required for logout" 
+      });
+    }
+
+    console.log(`Processing logout for user ID: ${userId}`);
+
+    // Log the logout activity
+    try {
+      const logResult = await logLogout(
+        userId.toString(),
+        req.ip,
+        req.headers['user-agent']
+      );
+      console.log(`User with ID ${userId} logged out successfully. Log ID: ${logResult?._id || 'No log created'}`);
+    } catch (logError) {
+      console.error('Error logging logout activity:', logError);
+      // Continue with logout despite logging error
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Logout successful and activity logged"
+    });
+  } catch (error) {
+    console.error('Error during logout:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Error processing logout" 
+    });
   }
 };

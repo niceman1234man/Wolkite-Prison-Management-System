@@ -2,7 +2,7 @@ import axios from  "axios";
 import { useNavigate }  from "react-router-dom";
 import AddModal from "@/components/Modals/AddModal";
 import ViewUser from "@/components/Accounts/ViewUser";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import EditUser from "@/components/Accounts/EditUser";
 import { toast } from "react-toastify";
 import axiosInstance from "@/utils/axiosInstance";
@@ -85,6 +85,25 @@ export const UserButtons = ({ _id, email }) => {
   const [edit, setEdit] = useState(false);
   const [view, setView] = useState(false);
   const [sending, setSending] = useState(false);
+  const [passwordSent, setPasswordSent] = useState(false);
+  
+  // Check if password has been sent previously when component mounts
+  useEffect(() => {
+    const checkPasswordStatus = async () => {
+      try {
+        if (_id) {
+          const response = await axiosInstance.get(`/user/get-user/${_id}`);
+          if (response.data && response.data.user && response.data.user.passwordSent) {
+            setPasswordSent(true);
+          }
+        }
+      } catch (error) {
+        console.error("Error checking password status:", error);
+      }
+    };
+    
+    checkPasswordStatus();
+  }, [_id]);
 
   // Function to send password email
   const sendPasswordEmail = async () => {
@@ -102,7 +121,22 @@ export const UserButtons = ({ _id, email }) => {
       });
       
       if (response.data.success) {
-        toast.success(`Password sent to ${email || "user's email"}!`);
+        setPasswordSent(true);
+        toast.success(`Password ${passwordSent ? "resent" : "sent"} to ${email || "user's email"}!`);
+        
+        // Log the password send activity
+        try {
+          await axiosInstance.post("/activity/logs", {
+            user: _id,
+            action: "password_change",
+            description: `Password ${passwordSent ? "resent" : "sent"} to user`,
+            resourceType: "user",
+            resourceId: _id,
+            status: "success"
+          });
+        } catch (logError) {
+          console.error("Error logging password send activity:", logError);
+        }
       } else {
         toast.error(response.data.message || "Failed to send password email");
       }
@@ -165,7 +199,7 @@ export const UserButtons = ({ _id, email }) => {
         ) : (
           <>
             <FaEnvelope className="mr-1.5" size={14} />
-            Send
+            {passwordSent ? "Resend" : "Send"}
           </>
         )}
       </button>

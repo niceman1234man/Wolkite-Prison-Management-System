@@ -6,7 +6,7 @@ import Signup from "./components/auth/Signup";
 import Admin from "./page/Admin";
 import Visitor from "./page/Visitor";
 import VisitorRegister from "./page/VisitorRegister";
-import ForegotPassword from "./components/auth/ForgotPassword.jsx";
+import ForgotPassword from "./components/auth/ForgotPassword.jsx";
 import VisitorDashboard from "./page/VisitorDashboard";
 import PoliceOfficerDashboard from "./page/PoliceOfficerDashboard";
 import Inspector from "./page/Inspector";
@@ -112,6 +112,7 @@ import { Toaster } from 'react-hot-toast';
 import { SocketProvider } from './context/SocketContext';
 import AuthContext from './context/authContext';
 import PoliceVisitorManagementPage from "./components/policeofficerdashboard/PoliceVisitorManagementPage";
+import ActivityLog from "./components/Accounts/Log";
 
 function App() {
   return (
@@ -127,7 +128,7 @@ function App() {
             <Route path="/reset-password/:id/:token" element={<ResetPassword />} />
             <Route path="/visitor" element={<Visitor />} />
             <Route path="/register" element={<VisitorRegister />} />
-            <Route path="/forgot-password" element={<ForegotPassword />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/visitor-dash" element={<VisitorDashboard />} />
             <Route path="/security" element={<SecurityStaff />} />
             <Route element={<PrivateRoute />}>
@@ -161,6 +162,7 @@ function App() {
               {/* Admin Dashboard Routes */}
               <Route path="/admin-dashboard" element={<AdminDashboard />}>
                 <Route index element={<AdminSummary />} />
+                <Route path="activity-logs" element={<ActivityLog />} />
                 <Route path="CreateAccount" element={<CreateUserAccount />} />
                 <Route path="system-setting" element={<BackeUp />} />
                 <Route path="users" element={<ListofUsers />} />

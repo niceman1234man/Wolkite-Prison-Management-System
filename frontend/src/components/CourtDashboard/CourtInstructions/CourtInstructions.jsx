@@ -3,6 +3,7 @@ import axiosInstance from "../../../utils/axiosInstance";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { FiSend, FiFile, FiFileText, FiCalendar, FiCheckCircle, FiUpload, FiUser, FiMapPin, FiBookOpen, FiBriefcase } from "react-icons/fi";
+import { validateCourtInstructionForm } from "../../../utils/formValidation";
 
 // Helper function to calculate age from birthdate
 const calculateAge = (birthdate) => {
@@ -68,6 +69,7 @@ const CourtInstructions = ({ setOpen }) => {
   const [signaturePreview, setSignaturePreview] = useState(null);
   const [attachmentPreview, setAttachmentPreview] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
 
   // Generate automatic case number on component mount
   useEffect(() => {
@@ -143,6 +145,32 @@ const CourtInstructions = ({ setOpen }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate the form data
+    const validationErrors = validateCourtInstructionForm({
+      ...formData,
+      attachment: attachment
+    });
+    
+    // If there are validation errors, set them and prevent form submission
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      
+      // Scroll to the first error
+      const firstErrorField = Object.keys(validationErrors)[0];
+      const errorElement = document.getElementById(firstErrorField);
+      if (errorElement) {
+        errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        errorElement.focus();
+      }
+      
+      // Display error toast
+      toast.error("Please correct the errors in the form");
+      return;
+    }
+    
+    // Clear previous errors if form is valid
+    setErrors({});
     setIsSubmitting(true);
     
     try {
@@ -254,6 +282,13 @@ const CourtInstructions = ({ setOpen }) => {
     }
   };
 
+  // Helper function to render error message
+  const renderError = (fieldName) => {
+    return errors[fieldName] ? (
+      <p className="text-red-500 text-xs mt-1">{errors[fieldName]}</p>
+    ) : null;
+  };
+
   return (
     <div className="p-6 w-full mx-auto bg-white shadow-lg rounded-lg border border-gray-100">
       <div className="bg-gradient-to-r from-blue-700 to-blue-500 -mx-6 -mt-6 px-6 py-4 rounded-t-lg mb-6">
@@ -279,9 +314,10 @@ const CourtInstructions = ({ setOpen }) => {
                 placeholder="Enter first name"
                 value={formData.firstName}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={`w-full px-3 py-2 border ${errors.firstName ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500`}
                 required
               />
+              {renderError('firstName')}
             </div>
 
             {/* Middle Name */}
@@ -296,9 +332,10 @@ const CourtInstructions = ({ setOpen }) => {
                 placeholder="Enter middle name"
                 value={formData.middleName}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={`w-full px-3 py-2 border ${errors.middleName ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500`}
                 required
               />
+              {renderError('middleName')}
             </div>
 
             {/* Last Name */}
@@ -313,9 +350,10 @@ const CourtInstructions = ({ setOpen }) => {
                 placeholder="Enter last name"
                 value={formData.lastName}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={`w-full px-3 py-2 border ${errors.lastName ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500`}
                 required
               />
+              {renderError('lastName')}
             </div>
 
             {/* Age */}
@@ -344,13 +382,14 @@ const CourtInstructions = ({ setOpen }) => {
                 name="gender"
                 value={formData.gender}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={`w-full px-3 py-2 border ${errors.gender ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500`}
                 required
               >
                 <option value="">Select Gender</option>
                 <option value="male">Male</option>
                 <option value="female">Female</option>
               </select>
+              {renderError('gender')}
             </div>
 
             {/* Birthdate */}
@@ -364,9 +403,10 @@ const CourtInstructions = ({ setOpen }) => {
                 name="birthdate"
                 value={formData.birthdate}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={`w-full px-3 py-2 border ${errors.birthdate ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500`}
                 required
               />
+              {renderError('birthdate')}
             </div>
 
             {/* Marital Status */}
@@ -379,7 +419,7 @@ const CourtInstructions = ({ setOpen }) => {
                 name="maritalStatus"
                 value={formData.maritalStatus}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={`w-full px-3 py-2 border ${errors.maritalStatus ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500`}
                 required
               >
                 <option value="">Select Marital Status</option>
@@ -388,6 +428,7 @@ const CourtInstructions = ({ setOpen }) => {
                 <option value="divorced">Divorced</option>
                 <option value="widowed">Widowed</option>
               </select>
+              {renderError('maritalStatus')}
             </div>
 
             {/* Nationality */}
@@ -402,9 +443,10 @@ const CourtInstructions = ({ setOpen }) => {
                 placeholder="Enter nationality"
                 value={formData.nationality}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={`w-full px-3 py-2 border ${errors.nationality ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500`}
                 required
               />
+              {renderError('nationality')}
             </div>
 
             {/* Education Level */}
@@ -417,7 +459,7 @@ const CourtInstructions = ({ setOpen }) => {
                 name="educationLevel"
                 value={formData.educationLevel}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={`w-full px-3 py-2 border ${errors.educationLevel ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500`}
                 required
               >
                 <option value="">Select Education Level</option>
@@ -429,6 +471,7 @@ const CourtInstructions = ({ setOpen }) => {
                 <option value="masters">Master's Degree</option>
                 <option value="doctorate">Doctorate</option>
               </select>
+              {renderError('educationLevel')}
             </div>
 
             {/* Occupation */}
@@ -443,9 +486,10 @@ const CourtInstructions = ({ setOpen }) => {
                 placeholder="Enter occupation"
                 value={formData.occupation}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={`w-full px-3 py-2 border ${errors.occupation ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500`}
                 required
               />
+              {renderError('occupation')}
             </div>
           </div>
         </div>
@@ -468,9 +512,10 @@ const CourtInstructions = ({ setOpen }) => {
                 placeholder="Enter region"
                 value={formData.birthRegion}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                className={`w-full px-3 py-2 border ${errors.birthRegion ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-green-500`}
                 required
               />
+              {renderError('birthRegion')}
             </div>
 
             {/* Birth Zone */}
@@ -485,9 +530,10 @@ const CourtInstructions = ({ setOpen }) => {
                 placeholder="Enter zone"
                 value={formData.birthZone}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                className={`w-full px-3 py-2 border ${errors.birthZone ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-green-500`}
                 required
               />
+              {renderError('birthZone')}
             </div>
 
             {/* Birth Woreda */}
@@ -502,9 +548,10 @@ const CourtInstructions = ({ setOpen }) => {
                 placeholder="Enter woreda"
                 value={formData.birthWoreda}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                className={`w-full px-3 py-2 border ${errors.birthWoreda ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-green-500`}
                 required
               />
+              {renderError('birthWoreda')}
             </div>
 
             {/* Birth Kebele */}
@@ -519,9 +566,10 @@ const CourtInstructions = ({ setOpen }) => {
                 placeholder="Enter kebele"
                 value={formData.birthKebele}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                className={`w-full px-3 py-2 border ${errors.birthKebele ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-green-500`}
                 required
               />
+              {renderError('birthKebele')}
             </div>
           </div>
         </div>
@@ -544,9 +592,10 @@ const CourtInstructions = ({ setOpen }) => {
                 placeholder="Enter region"
                 value={formData.currentRegion}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className={`w-full px-3 py-2 border ${errors.currentRegion ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500`}
                 required
               />
+              {renderError('currentRegion')}
             </div>
 
             {/* Current Zone */}
@@ -561,9 +610,10 @@ const CourtInstructions = ({ setOpen }) => {
                 placeholder="Enter zone"
                 value={formData.currentZone}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className={`w-full px-3 py-2 border ${errors.currentZone ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500`}
                 required
               />
+              {renderError('currentZone')}
             </div>
 
             {/* Current Woreda */}
@@ -578,9 +628,10 @@ const CourtInstructions = ({ setOpen }) => {
                 placeholder="Enter woreda"
                 value={formData.currentWoreda}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className={`w-full px-3 py-2 border ${errors.currentWoreda ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500`}
                 required
               />
+              {renderError('currentWoreda')}
             </div>
 
             {/* Current Kebele */}
@@ -595,9 +646,10 @@ const CourtInstructions = ({ setOpen }) => {
                 placeholder="Enter kebele"
                 value={formData.currentKebele}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className={`w-full px-3 py-2 border ${errors.currentKebele ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500`}
                 required
               />
+              {renderError('currentKebele')}
             </div>
           </div>
         </div>
@@ -645,9 +697,10 @@ const CourtInstructions = ({ setOpen }) => {
                 placeholder="Enter case type"
                 value={formData.caseType}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border ${errors.caseType ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 required
               />
+              {renderError('caseType')}
             </div>
 
             {/* Judge Name */}
@@ -662,9 +715,10 @@ const CourtInstructions = ({ setOpen }) => {
                 placeholder="Enter judge name"
                 value={formData.judgeName}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border ${errors.judgeName ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 required
               />
+              {renderError('judgeName')}
             </div>
 
             {/* Prison Name */}
@@ -679,9 +733,10 @@ const CourtInstructions = ({ setOpen }) => {
                 placeholder="Enter prison name"
                 value={formData.prisonName}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border ${errors.prisonName ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 required
               />
+              {renderError('prisonName')}
             </div>
 
             {/* Sentence Year */}
@@ -696,11 +751,12 @@ const CourtInstructions = ({ setOpen }) => {
                 placeholder="Enter sentence year"
                 value={formData.sentenceYear}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border ${errors.sentenceYear ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 required
                 min="0"
                 step="0.1"
               />
+              {renderError('sentenceYear')}
             </div>
 
             {/* Verdict Selection */}
@@ -713,13 +769,14 @@ const CourtInstructions = ({ setOpen }) => {
                 name="verdict"
                 value={formData.verdict}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border ${errors.verdict ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 required
               >
                 <option value="">Select Verdict</option>
                 <option value="guilty">Guilty</option>
                 <option value="not_guilty">Not Guilty</option>
               </select>
+              {renderError('verdict')}
             </div>
           </div>
         </div>
@@ -741,9 +798,10 @@ const CourtInstructions = ({ setOpen }) => {
                 name="hearingDate"
                 value={formData.hearingDate}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border ${errors.hearingDate ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 required
               />
+              {renderError('hearingDate')}
             </div>
 
             {/* Effective Date */}
@@ -757,9 +815,10 @@ const CourtInstructions = ({ setOpen }) => {
                 name="effectiveDate"
                 value={formData.effectiveDate}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border ${errors.effectiveDate ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 required
               />
+              {renderError('effectiveDate')}
             </div>
 
             {/* Send Date */}
@@ -773,9 +832,10 @@ const CourtInstructions = ({ setOpen }) => {
                 name="sendDate"
                 value={formData.sendDate}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border ${errors.sendDate ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 required
               />
+              {renderError('sendDate')}
             </div>
           </div>
         </div>
@@ -792,10 +852,11 @@ const CourtInstructions = ({ setOpen }) => {
               value={formData.instructions}
               onChange={handleChange}
               rows="4"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={`w-full px-3 py-2 border ${errors.instructions ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
               placeholder="Enter details regarding the verdict or instructions to the prison"
               required
             ></textarea>
+            {renderError('instructions')}
           </div>
         </div>
 

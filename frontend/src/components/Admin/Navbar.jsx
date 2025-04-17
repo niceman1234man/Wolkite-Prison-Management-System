@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
 import { getInitials } from "../getNameInitials.js";
 import { FaBars, FaDungeon } from "react-icons/fa"; // Prison Icon
 import { FiSettings, FiHelpCircle, FiLogOut, FiMessageSquare } from "react-icons/fi";
@@ -9,6 +9,7 @@ import axiosInstance from "../../utils/axiosInstance.js";
 import NotificationBell from "../Notices/NotificationBell";
 import MessagingSystem from "../Messaging/MessagingSystem";
 import "./Navbar.css"; // Import CSS for styling
+import { logoutAndLog } from '../../redux/userSlice';
 
 const Navbar = ({ toggleSidebar }) => {
   const navigate = useNavigate();
@@ -18,6 +19,7 @@ const Navbar = ({ toggleSidebar }) => {
   const userRole = user ? user.role?.toLowerCase() : "";
   const [showMessaging, setShowMessaging] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const dispatch = useDispatch();
   
   // Fetch unread message count
   useEffect(() => {
@@ -89,9 +91,19 @@ const Navbar = ({ toggleSidebar }) => {
     };
   }, []);
 
-  const onLogout = () => {
-    localStorage.clear();
-    navigate("/", { state: { fromLogout: true } });
+  const onLogout = async () => {
+    try {
+      // Dispatch the thunk that handles logging the logout activity
+      await dispatch(logoutAndLog());
+      
+      // Navigate after the logout is complete
+      navigate("/", { state: { fromLogout: true } });
+    } catch (error) {
+      console.error('Error during logout:', error);
+      // Fallback: Clear storage and navigate anyway
+      localStorage.clear();
+      navigate("/", { state: { fromLogout: true } });
+    }
   };
 
   return (

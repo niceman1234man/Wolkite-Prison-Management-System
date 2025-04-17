@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { toggleSidebar, setSidebarState } from "../../redux/sidebarSlice";
-import { FaBars, FaBuilding, FaCogs, FaTachometerAlt, FaUsers } from "react-icons/fa";
+import { FaBars, FaBuilding, FaCogs, FaTachometerAlt, FaUsers, FaUserPlus, FaUserEdit, FaChartBar, FaDatabase, FaList, FaUserShield, FaCog, FaSignOutAlt, FaHome, FaQuestionCircle, FaHistory } from "react-icons/fa";
 
 const AdminSidebar = () => {
   const dispatch = useDispatch();
@@ -91,7 +91,17 @@ const AdminSidebar = () => {
             {!isCollapsed && <span className="ml-3">System Setting</span>}
           </NavLink>
 
-          
+          <NavLink
+            to="/admin-dashboard/activity-logs"
+            className={({ isActive }) =>
+              `flex items-center p-2 rounded-lg hover:bg-teal-600 transition-colors ${
+                isActive ? "bg-teal-600" : ""
+              } ${isCollapsed ? "justify-center" : "justify-start"}`
+            }
+          >
+            <FaHistory className="h-6 w-6" />
+            {!isCollapsed && <span className="ml-3">Activity Logs</span>}
+          </NavLink>
         </nav>
       </div>
     </>

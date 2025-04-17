@@ -148,11 +148,26 @@ const Navbar = () => {
                       Settings
                     </a>
                     <button
-                      onClick={() => {
-                        // Handle logout
-                        localStorage.removeItem('token');
-                        localStorage.removeItem('user');
-                        window.location.href = '/login';
+                      onClick={async () => {
+                        // Get user information before logout
+                        const user = JSON.parse(localStorage.getItem('user'));
+                        
+                        try {
+                          if (user && user._id) {
+                            // Call the logout endpoint to record activity
+                            await axiosInstance.post('/user/logout', { 
+                              userId: user._id 
+                            });
+                            console.log('Logout activity logged successfully');
+                          }
+                        } catch (error) {
+                          console.error('Error logging logout activity:', error);
+                        } finally {
+                          // Handle logout (clear storage and redirect)
+                          localStorage.removeItem('token');
+                          localStorage.removeItem('user');
+                          window.location.href = '/login';
+                        }
                       }}
                       className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
                     >
