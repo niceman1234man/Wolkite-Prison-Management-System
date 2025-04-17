@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import DataTable from "react-data-table-component";
 import { useSelector } from "react-redux";
 import axiosInstance from "../../utils/axiosInstance";
-import { FaArrowLeft, FaSearch } from "react-icons/fa";
+import { FaArrowLeft, FaSearch, FaTimes, FaTrash } from "react-icons/fa";
 import AddPrison from "./AddPrison";
 import EditPrison from "./EditPrison";
 import AddModal from "../Modals/AddModal";
@@ -36,7 +36,9 @@ const PrisonsList = () => {
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedPrisonId, setSelectedPrisonId] = useState(null);
+  const [prisonToDelete, setPrisonToDelete] = useState(null);
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
   const navigate = useNavigate();
 
@@ -52,7 +54,10 @@ const PrisonsList = () => {
           Edit
         </button>
         <button
-          onClick={() => handleDelete(row._id)}
+          onClick={() => {
+            setPrisonToDelete(row._id);
+            setDeleteModalOpen(true);
+          }}
           className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
         >
           Delete
@@ -149,18 +154,18 @@ const PrisonsList = () => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this prison?")) {
-      try {
-        const response = await axiosInstance.delete(`/prison/${id}`);
-        
-        if (response.data?.success) {
-          toast.success("Prison deleted successfully");
-          fetchPrisons();
-        }
-      } catch (error) {
-        console.error("Error deleting prison:", error);
-        toast.error(error.response?.data?.error || "Failed to delete prison");
+    try {
+      const response = await axiosInstance.delete(`/prison/${id}`);
+      
+      if (response.data?.success) {
+        toast.success("Prison deleted successfully");
+        fetchPrisons();
+        setDeleteModalOpen(false);
+        setPrisonToDelete(null);
       }
+    } catch (error) {
+      console.error("Error deleting prison:", error);
+      toast.error(error.response?.data?.error || "Failed to delete prison");
     }
   };
 
@@ -241,6 +246,49 @@ const PrisonsList = () => {
       <AddModal open={editOpen} setOpen={setEditOpen}>
         <EditPrison setOpen={setEditOpen} id={selectedPrisonId} />
       </AddModal>
+
+      {/* Delete Confirmation Modal */}
+      {deleteModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="text-xl font-semibold text-gray-800">Confirm Deletion</h3>
+                <button
+                  onClick={() => {
+                    setDeleteModalOpen(false);
+                    setPrisonToDelete(null);
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <FaTimes size={20} />
+                </button>
+              </div>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete this prison? This action cannot be undone.
+              </p>
+              <div className="flex justify-end gap-4">
+                <button
+                  onClick={() => {
+                    setDeleteModalOpen(false);
+                    setPrisonToDelete(null);
+                  }}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDelete(prisonToDelete)}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium flex items-center"
+                >
+                  <FaTrash className="mr-2" />
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

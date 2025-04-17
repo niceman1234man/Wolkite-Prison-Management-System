@@ -3,14 +3,6 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-  DialogHeader,
-  DialogFooter,
-} from "@/components/ui/dialog";
 
 const AddPrison = ({ setOpen }) => {
   const [prisonData, setPrisonData] = useState({
@@ -114,151 +106,108 @@ const AddPrison = ({ setOpen }) => {
   };
 
   return (
-    <Dialog open={true} onOpenChange={setOpen}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Add New Prison</DialogTitle>
-          <DialogDescription>
-            Fill in the details below to register a new prison facility.
-          </DialogDescription>
-        </DialogHeader>
+    <form onSubmit={handleSubmit} id="prisonForm" className="space-y-6">
+      {/* Prison Name */}
+      <div className="space-y-2">
+        <label
+          htmlFor="prison_name"
+          className="block text-sm font-medium text-gray-700"
+        >
+          Prison Name
+        </label>
+        <input
+          type="text"
+          id="prison_name"
+          name="prison_name"
+          value={prisonData.prison_name}
+          onChange={handleChange}
+          placeholder="Enter prison name"
+          className={`w-full p-3 border ${
+            errors.prison_name ? "border-red-500" : "border-gray-300"
+          } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors`}
+          required
+        />
+        {errors.prison_name && (
+          <p className="text-sm text-red-500">{errors.prison_name}</p>
+        )}
+      </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Prison Name */}
-          <div>
-            <label
-              htmlFor="prison_name"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Prison Name
-            </label>
-            <input
-              type="text"
-              id="prison_name"
-              name="prison_name"
-              value={prisonData.prison_name}
-              onChange={handleChange}
-              placeholder="Enter prison name"
-              className={`mt-1 w-full p-2 border ${
-                errors.prison_name ? "border-red-500" : "border-gray-300"
-              } rounded-md focus:ring-teal-500 focus:border-teal-500`}
-              required
-              aria-describedby="prison_name-description"
-            />
-            {errors.prison_name && (
-              <p className="mt-1 text-sm text-red-500">{errors.prison_name}</p>
-            )}
-            <p
-              id="prison_name-description"
-              className="mt-1 text-sm text-gray-500"
-            >
-              Enter the name of the prison facility
-            </p>
-          </div>
+      {/* Location */}
+      <div className="space-y-2">
+        <label
+          htmlFor="location"
+          className="block text-sm font-medium text-gray-700"
+        >
+          Location / Woreda
+        </label>
+        <input
+          type="text"
+          id="location"
+          name="location"
+          value={prisonData.location}
+          onChange={handleChange}
+          placeholder="Enter location or woreda"
+          className={`w-full p-3 border ${
+            errors.location ? "border-red-500" : "border-gray-300"
+          } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors`}
+          required
+        />
+        {errors.location && (
+          <p className="text-sm text-red-500">{errors.location}</p>
+        )}
+      </div>
 
-          {/* Location */}
-          <div>
-            <label
-              htmlFor="location"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Location / Woreda
-            </label>
-            <input
-              type="text"
-              id="location"
-              name="location"
-              value={prisonData.location}
-              onChange={handleChange}
-              placeholder="Enter location or woreda"
-              className={`mt-1 w-full p-2 border ${
-                errors.location ? "border-red-500" : "border-gray-300"
-              } rounded-md focus:ring-teal-500 focus:border-teal-500`}
-              required
-              aria-describedby="location-description"
-            />
-            {errors.location && (
-              <p className="mt-1 text-sm text-red-500">{errors.location}</p>
-            )}
-            <p id="location-description" className="mt-1 text-sm text-gray-500">
-              Enter the location or woreda where the prison is situated
-            </p>
-          </div>
+      {/* Capacity */}
+      <div className="space-y-2">
+        <label
+          htmlFor="capacity"
+          className="block text-sm font-medium text-gray-700"
+        >
+          Capacity
+        </label>
+        <input
+          type="number"
+          id="capacity"
+          name="capacity"
+          value={prisonData.capacity}
+          onChange={handleChange}
+          placeholder="Enter prison capacity"
+          className={`w-full p-3 border ${
+            errors.capacity ? "border-red-500" : "border-gray-300"
+          } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors`}
+          min="0"
+          required
+        />
+        {errors.capacity && (
+          <p className="text-sm text-red-500">{errors.capacity}</p>
+        )}
+      </div>
 
-          {/* Capacity */}
-          <div>
-            <label
-              htmlFor="capacity"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Capacity
-            </label>
-            <input
-              type="number"
-              id="capacity"
-              name="capacity"
-              value={prisonData.capacity}
-              onChange={handleChange}
-              placeholder="Enter prison capacity"
-              className={`mt-1 w-full p-2 border ${
-                errors.capacity ? "border-red-500" : "border-gray-300"
-              } rounded-md focus:ring-teal-500 focus:border-teal-500`}
-              min="0"
-              required
-              aria-describedby="capacity-description"
-            />
-            {errors.capacity && (
-              <p className="mt-1 text-sm text-red-500">{errors.capacity}</p>
-            )}
-            <p id="capacity-description" className="mt-1 text-sm text-gray-500">
-              Enter the maximum number of inmates the prison can accommodate
-            </p>
-          </div>
-
-          {/* Description */}
-          <div>
-            <label
-              htmlFor="description"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Description
-            </label>
-            <textarea
-              id="description"
-              name="description"
-              value={prisonData.description}
-              onChange={handleChange}
-              placeholder="Provide details about the prison"
-              className={`mt-1 w-full p-2 border ${
-                errors.description ? "border-red-500" : "border-gray-300"
-              } rounded-md focus:ring-teal-500 focus:border-teal-500`}
-              rows="4"
-              required
-              aria-describedby="description-description"
-            ></textarea>
-            {errors.description && (
-              <p className="mt-1 text-sm text-red-500">{errors.description}</p>
-            )}
-            <p
-              id="description-description"
-              className="mt-1 text-sm text-gray-500"
-            >
-              Provide additional details about the prison facility
-            </p>
-          </div>
-
-          <DialogFooter>
-            <button
-              type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
-              disabled={loading}
-            >
-              {loading ? "Adding..." : "Add Prison"}
-            </button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      {/* Description */}
+      <div className="space-y-2">
+        <label
+          htmlFor="description"
+          className="block text-sm font-medium text-gray-700"
+        >
+          Description
+        </label>
+        <textarea
+          id="description"
+          name="description"
+          value={prisonData.description}
+          onChange={handleChange}
+          placeholder="Provide details about the prison"
+          className={`w-full p-3 border ${
+            errors.description ? "border-red-500" : "border-gray-300"
+          } rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors`}
+          rows="4"
+          required
+        ></textarea>
+        {errors.description && (
+          <p className="text-sm text-red-500">{errors.description}</p>
+        )}
+      </div>
+    </form>
   );
 };
 
