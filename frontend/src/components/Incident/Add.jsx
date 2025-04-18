@@ -266,7 +266,7 @@ const Add = ({ setOpen }) => {
               ) : (
                 inmates.map((inmate) => (
                   <option key={inmate._id} value={inmate.fullName}>
-                    {inmate.fullName}
+                    {inmate.firstName} {inmate.middleName} {inmate.lastName}
                   </option>
                 ))
               )}

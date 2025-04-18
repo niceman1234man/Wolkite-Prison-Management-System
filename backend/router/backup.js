@@ -70,7 +70,7 @@ const upload = multer({ storage });
 // Helper Functions
 // ---------------
 
-// Create MongoDB dump
+// Create MongoDB dump using native Node.js driver (no mongodump required)
 const createMongoDBDump = async (type, referenceId = null) => {
   try {
     const timestamp = new Date().toISOString().replace(/:/g, '-');
@@ -91,37 +91,32 @@ const createMongoDBDump = async (type, referenceId = null) => {
       fs.mkdirSync(outputDir, { recursive: true });
     }
     
-    // Set up mongodump command
-    let command = `mongodump --db ${dbName} --out ${outputDir}`;
-    
-    // For incremental backups, we need to check the oplog
-    if (type === 'incremental' && referenceId) {
-      const reference = await Backup.findById(referenceId);
-      if (reference && reference.metadata && reference.metadata.timestamp) {
-        // Use oplog to only get changes since the last backup
-        command += ` --oplog --oplogReplay --oplogLimit ${reference.metadata.timestamp}`;
-      } else {
-        // Fall back to full backup if reference is invalid
-        type = 'full';
-      }
-    }
-    
-    // Execute mongodump
-    return new Promise((resolve, reject) => {
-      exec(command, async (error, stdout, stderr) => {
-        if (error) {
-          console.error(`mongodump error: ${error.message}`);
-          await Backup.findByIdAndUpdate(backup._id, { 
-            status: 'failed',
-            metadata: { error: error.message } 
-          });
-          reject(error);
-          return;
+    try {
+      // Use MongoDB native driver to get all collections
+      const collections = await mongoose.connection.db.listCollections().toArray();
+      
+      // Export each collection to a JSON file
+      for (const collection of collections) {
+        const collectionName = collection.name;
+        
+        // Skip system collections
+        if (collectionName.startsWith('system.')) continue;
+        
+        // Create collection directory
+        const collectionDir = path.join(outputDir, dbName);
+        if (!fs.existsSync(collectionDir)) {
+          fs.mkdirSync(collectionDir, { recursive: true });
         }
         
-        if (stderr) {
-          console.log(`mongodump stderr: ${stderr}`);
-        }
+        // Get all documents from the collection
+        const documents = await mongoose.connection.db.collection(collectionName).find({}).toArray();
+        
+        // Write to JSON file
+        fs.writeFileSync(
+          path.join(collectionDir, `${collectionName}.json`), 
+          JSON.stringify(documents, null, 2)
+        );
+      }
         
         // Compress the output directory
         const archive = archiver('zip', {
@@ -134,17 +129,11 @@ const createMongoDBDump = async (type, referenceId = null) => {
         output.on('close', async () => {
           const stats = fs.statSync(zipFilename);
           
-          // Store backup metadata
-          const oplogTimestamp = type === 'incremental' ? 
-            await getOplogTimestamp() : null;
-          
           // Update backup entry
           await Backup.findByIdAndUpdate(backup._id, {
             status: 'completed',
             size: stats.size,
             metadata: {
-              timestamp: oplogTimestamp,
-              command,
               outputDir,
               zipFilename
             }
@@ -153,7 +142,7 @@ const createMongoDBDump = async (type, referenceId = null) => {
           // Clean up the uncompressed directory
           fs.rmSync(outputDir, { recursive: true, force: true });
           
-          resolve(backup._id);
+        return backup._id;
         });
         
         archive.on('error', async (err) => {
@@ -161,44 +150,29 @@ const createMongoDBDump = async (type, referenceId = null) => {
             status: 'failed',
             metadata: { error: err.message } 
           });
-          reject(err);
+        throw err;
         });
         
         archive.pipe(output);
         archive.directory(outputDir, false);
-        archive.finalize();
+      await archive.finalize();
+      
+      return backup._id;
+    } catch (error) {
+      console.error('Error during backup:', error);
+      await Backup.findByIdAndUpdate(backup._id, { 
+        status: 'failed',
+        metadata: { error: error.message } 
       });
-    });
+      throw error;
+    }
   } catch (error) {
     console.error('Error in createMongoDBDump:', error);
     throw error;
   }
 };
 
-// Get current oplog timestamp for incremental backups
-const getOplogTimestamp = async () => {
-  return new Promise((resolve, reject) => {
-    exec('mongosh admin --eval "db.oplog.rs.find().sort({$natural: -1}).limit(1).pretty()"', 
-      (error, stdout, stderr) => {
-        if (error) {
-          console.error(`Error getting oplog timestamp: ${error.message}`);
-          resolve(null);
-          return;
-        }
-        
-        // Parse the timestamp from output
-        const match = stdout.match(/"ts"\s*:\s*Timestamp\(\s*(\d+),\s*(\d+)\s*\)/);
-        if (match && match[1] && match[2]) {
-          resolve(`${match[1]}:${match[2]}`);
-        } else {
-          resolve(null);
-        }
-      }
-    );
-  });
-};
-
-// Restore from backup
+// Restore from backup using native Node.js driver
 const restoreFromBackup = async (backupId) => {
   try {
     const backup = await Backup.findById(backupId);
@@ -217,16 +191,9 @@ const restoreFromBackup = async (backupId) => {
       fs.mkdirSync(extractDir, { recursive: true });
     }
     
-    await new Promise((resolve, reject) => {
-      exec(`unzip -o ${zipFilename} -d ${extractDir}`, (error, stdout, stderr) => {
-        if (error) {
-          console.error(`Extract error: ${error.message}`);
-          reject(error);
-          return;
-        }
-        resolve();
-      });
-    });
+    // Use node's built-in module to extract the zip file
+    const extract = require('extract-zip');
+    await extract(zipFilename, { dir: extractDir });
     
     // If this is an incremental backup, we need the full backup chain
     let restoreChain = [];
@@ -244,32 +211,28 @@ const restoreFromBackup = async (backupId) => {
         ? path.join(extractDir, dbName) 
         : path.join(BACKUP_DIR, 'tmp', backupToRestore._id.toString(), dbName);
       
-      // Prepare mongorestore command
-      let command = `mongorestore --db ${dbName}`;
+      // Get all JSON files in the restore directory
+      const files = fs.readdirSync(restoreDir).filter(file => file.endsWith('.json'));
       
-      // Drop database only for the first backup in chain (which should be a full backup)
+      for (const file of files) {
+        const collectionName = path.basename(file, '.json');
+        const documents = JSON.parse(fs.readFileSync(path.join(restoreDir, file), 'utf8'));
+        
+        // Drop the collection if this is the first backup in chain (which should be a full backup)
       if (isFirst) {
-        command += ' --drop';
+          try {
+            await mongoose.connection.db.collection(collectionName).drop();
+          } catch (error) {
+            // Collection might not exist, that's fine
+            console.log(`Could not drop collection ${collectionName}, might not exist`);
+          }
+        }
+        
+        // Insert all documents to the collection
+        if (documents.length > 0) {
+          await mongoose.connection.db.collection(collectionName).insertMany(documents);
+        }
       }
-      
-      command += ` ${restoreDir}`;
-      
-      // Execute mongorestore
-      await new Promise((resolve, reject) => {
-        exec(command, (error, stdout, stderr) => {
-          if (error) {
-            console.error(`mongorestore error: ${error.message}`);
-            reject(error);
-            return;
-          }
-          
-          if (stderr) {
-            console.log(`mongorestore stderr: ${stderr}`);
-          }
-          
-          resolve();
-        });
-      });
     }
     
     // Clean up extract directories
@@ -715,4 +678,5 @@ router.post('/cleanup', async (req, res) => {
   }
 })();
 
+// Export the router for use in index.js
 export default router;

@@ -3,6 +3,7 @@ import axiosInstance from "../../../utils/axiosInstance";
 import { toast } from "react-toastify";
 import { useNavigate } from "react-router-dom";
 import { FiEdit, FiFile, FiFileText, FiCalendar, FiCheckCircle, FiUpload, FiArrowLeft, FiSave, FiUser, FiMapPin } from "react-icons/fi";
+import { validateCourtInstructionForm } from "../../../utils/formValidation";
 
 // Helper function to calculate age from birthdate
 const calculateAge = (birthdate) => {
@@ -72,6 +73,7 @@ const EditInstruction = ({ setOpen, id }) => {
   const [attachmentPreview, setAttachmentPreview] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [originalData, setOriginalData] = useState({});
+  const [errors, setErrors] = useState({});
 
   // Fetch existing instruction data
   useEffect(() => {
@@ -187,6 +189,34 @@ const EditInstruction = ({ setOpen, id }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate the form data
+    const formDataWithFiles = {
+      ...formData,
+      // Only validate attachment if there's no existing attachment preview
+      attachment: attachment || (attachmentPreview ? true : null)
+    };
+    
+    const validationErrors = validateCourtInstructionForm(formDataWithFiles);
+    
+    // If there are validation errors, set them and prevent form submission
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      
+      // Scroll to the first error
+      const firstErrorField = Object.keys(validationErrors)[0];
+      const errorElement = document.getElementById(firstErrorField);
+      if (errorElement) {
+        errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        errorElement.focus();
+      }
+      
+      toast.error("Please correct the errors in the form");
+      return;
+    }
+    
+    // Clear previous errors if form is valid
+    setErrors({});
     setIsSubmitting(true);
     
     try {
@@ -224,6 +254,13 @@ const EditInstruction = ({ setOpen, id }) => {
     }
   };
 
+  // Helper function to render error message
+  const renderError = (fieldName) => {
+    return errors[fieldName] ? (
+      <p className="text-red-500 text-xs mt-1">{errors[fieldName]}</p>
+    ) : null;
+  };
+
   return (
     <div className="p-6 w-full mx-auto bg-white shadow-lg rounded-lg border border-gray-100">
       <div className="bg-gradient-to-r from-indigo-700 to-purple-500 -mx-6 -mt-6 px-6 py-4 rounded-t-lg mb-6">
@@ -257,9 +294,10 @@ const EditInstruction = ({ setOpen, id }) => {
                 placeholder="Enter first name"
                 value={formData.firstName}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={`w-full px-3 py-2 border ${errors.firstName ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500`}
                 required
               />
+              {renderError('firstName')}
             </div>
 
             {/* Middle Name */}
@@ -274,9 +312,10 @@ const EditInstruction = ({ setOpen, id }) => {
                 placeholder="Enter middle name"
                 value={formData.middleName}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={`w-full px-3 py-2 border ${errors.middleName ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500`}
                 required
               />
+              {renderError('middleName')}
             </div>
 
             {/* Last Name */}
@@ -291,9 +330,10 @@ const EditInstruction = ({ setOpen, id }) => {
                 placeholder="Enter last name"
                 value={formData.lastName}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={`w-full px-3 py-2 border ${errors.lastName ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500`}
                 required
               />
+              {renderError('lastName')}
             </div>
 
             {/* Age */}
@@ -322,13 +362,14 @@ const EditInstruction = ({ setOpen, id }) => {
                 name="gender"
                 value={formData.gender}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={`w-full px-3 py-2 border ${errors.gender ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500`}
                 required
               >
                 <option value="">Select Gender</option>
                 <option value="male">Male</option>
                 <option value="female">Female</option>
               </select>
+              {renderError('gender')}
             </div>
 
             {/* Birthdate */}
@@ -342,9 +383,10 @@ const EditInstruction = ({ setOpen, id }) => {
                 name="birthdate"
                 value={formData.birthdate}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={`w-full px-3 py-2 border ${errors.birthdate ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500`}
                 required
               />
+              {renderError('birthdate')}
             </div>
 
             {/* Marital Status */}
@@ -357,7 +399,7 @@ const EditInstruction = ({ setOpen, id }) => {
                 name="maritalStatus"
                 value={formData.maritalStatus}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={`w-full px-3 py-2 border ${errors.maritalStatus ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500`}
                 required
               >
                 <option value="">Select Marital Status</option>
@@ -366,6 +408,7 @@ const EditInstruction = ({ setOpen, id }) => {
                 <option value="divorced">Divorced</option>
                 <option value="widowed">Widowed</option>
               </select>
+              {renderError('maritalStatus')}
             </div>
 
             {/* Nationality */}
@@ -380,9 +423,10 @@ const EditInstruction = ({ setOpen, id }) => {
                 placeholder="Enter nationality"
                 value={formData.nationality}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={`w-full px-3 py-2 border ${errors.nationality ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500`}
                 required
               />
+              {renderError('nationality')}
             </div>
 
             {/* Education Level */}
@@ -395,7 +439,7 @@ const EditInstruction = ({ setOpen, id }) => {
                 name="educationLevel"
                 value={formData.educationLevel}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={`w-full px-3 py-2 border ${errors.educationLevel ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500`}
                 required
               >
                 <option value="">Select Education Level</option>
@@ -407,6 +451,7 @@ const EditInstruction = ({ setOpen, id }) => {
                 <option value="masters">Master's Degree</option>
                 <option value="doctorate">Doctorate</option>
               </select>
+              {renderError('educationLevel')}
             </div>
 
             {/* Occupation */}
@@ -421,9 +466,10 @@ const EditInstruction = ({ setOpen, id }) => {
                 placeholder="Enter occupation"
                 value={formData.occupation}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className={`w-full px-3 py-2 border ${errors.occupation ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500`}
                 required
               />
+              {renderError('occupation')}
             </div>
           </div>
         </div>
@@ -446,9 +492,10 @@ const EditInstruction = ({ setOpen, id }) => {
                 placeholder="Enter region"
                 value={formData.birthRegion}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                className={`w-full px-3 py-2 border ${errors.birthRegion ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-green-500`}
                 required
               />
+              {renderError('birthRegion')}
             </div>
 
             {/* Birth Zone */}
@@ -463,9 +510,10 @@ const EditInstruction = ({ setOpen, id }) => {
                 placeholder="Enter zone"
                 value={formData.birthZone}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                className={`w-full px-3 py-2 border ${errors.birthZone ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-green-500`}
                 required
               />
+              {renderError('birthZone')}
             </div>
 
             {/* Birth Woreda */}
@@ -480,9 +528,10 @@ const EditInstruction = ({ setOpen, id }) => {
                 placeholder="Enter woreda"
                 value={formData.birthWoreda}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                className={`w-full px-3 py-2 border ${errors.birthWoreda ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-green-500`}
                 required
               />
+              {renderError('birthWoreda')}
             </div>
 
             {/* Birth Kebele */}
@@ -497,9 +546,10 @@ const EditInstruction = ({ setOpen, id }) => {
                 placeholder="Enter kebele"
                 value={formData.birthKebele}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                className={`w-full px-3 py-2 border ${errors.birthKebele ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-green-500`}
                 required
               />
+              {renderError('birthKebele')}
             </div>
           </div>
         </div>
@@ -522,9 +572,10 @@ const EditInstruction = ({ setOpen, id }) => {
                 placeholder="Enter region"
                 value={formData.currentRegion}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className={`w-full px-3 py-2 border ${errors.currentRegion ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500`}
                 required
               />
+              {renderError('currentRegion')}
             </div>
 
             {/* Current Zone */}
@@ -539,9 +590,10 @@ const EditInstruction = ({ setOpen, id }) => {
                 placeholder="Enter zone"
                 value={formData.currentZone}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className={`w-full px-3 py-2 border ${errors.currentZone ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500`}
                 required
               />
+              {renderError('currentZone')}
             </div>
 
             {/* Current Woreda */}
@@ -556,9 +608,10 @@ const EditInstruction = ({ setOpen, id }) => {
                 placeholder="Enter woreda"
                 value={formData.currentWoreda}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className={`w-full px-3 py-2 border ${errors.currentWoreda ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500`}
                 required
               />
+              {renderError('currentWoreda')}
             </div>
 
             {/* Current Kebele */}
@@ -573,9 +626,10 @@ const EditInstruction = ({ setOpen, id }) => {
                 placeholder="Enter kebele"
                 value={formData.currentKebele}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className={`w-full px-3 py-2 border ${errors.currentKebele ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500`}
                 required
               />
+              {renderError('currentKebele')}
             </div>
           </div>
         </div>
@@ -597,9 +651,10 @@ const EditInstruction = ({ setOpen, id }) => {
                 name="courtCaseNumber"
                 value={formData.courtCaseNumber}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border ${errors.courtCaseNumber ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 required
               />
+              {renderError('courtCaseNumber')}
             </div>
 
             {/* Judge Name */}
@@ -613,9 +668,10 @@ const EditInstruction = ({ setOpen, id }) => {
                 name="judgeName"
                 value={formData.judgeName}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border ${errors.judgeName ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 required
               />
+              {renderError('judgeName')}
             </div>
 
             {/* Prison Name */}
@@ -629,9 +685,10 @@ const EditInstruction = ({ setOpen, id }) => {
                 name="prisonName"
                 value={formData.prisonName}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border ${errors.prisonName ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 required
               />
+              {renderError('prisonName')}
             </div>
 
             {/* Case Type */}
@@ -646,9 +703,10 @@ const EditInstruction = ({ setOpen, id }) => {
                 placeholder="Enter case type"
                 value={formData.caseType}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border ${errors.caseType ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 required
               />
+              {renderError('caseType')}
             </div>
 
             {/* Sentence Year */}
@@ -663,11 +721,12 @@ const EditInstruction = ({ setOpen, id }) => {
                 placeholder="Enter sentence year"
                 value={formData.sentenceYear}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border ${errors.sentenceYear ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 required
                 min="0"
                 step="0.1"
               />
+              {renderError('sentenceYear')}
             </div>
 
             {/* Verdict Selection */}
@@ -680,13 +739,14 @@ const EditInstruction = ({ setOpen, id }) => {
                 name="verdict"
                 value={formData.verdict}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border ${errors.verdict ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 required
               >
                 <option value="">Select Verdict</option>
                 <option value="guilty">Guilty</option>
                 <option value="not_guilty">Not Guilty</option>
               </select>
+              {renderError('verdict')}
             </div>
           </div>
         </div>
@@ -708,9 +768,10 @@ const EditInstruction = ({ setOpen, id }) => {
                 name="hearingDate"
                 value={formData.hearingDate}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border ${errors.hearingDate ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 required
               />
+              {renderError('hearingDate')}
             </div>
 
             {/* Effective Date */}
@@ -724,9 +785,10 @@ const EditInstruction = ({ setOpen, id }) => {
                 name="effectiveDate"
                 value={formData.effectiveDate}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border ${errors.effectiveDate ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 required
               />
+              {renderError('effectiveDate')}
             </div>
 
             {/* Send Date */}
@@ -740,9 +802,10 @@ const EditInstruction = ({ setOpen, id }) => {
                 name="sendDate"
                 value={formData.sendDate}
                 onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className={`w-full px-3 py-2 border ${errors.sendDate ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
                 required
               />
+              {renderError('sendDate')}
             </div>
           </div>
         </div>
@@ -759,10 +822,11 @@ const EditInstruction = ({ setOpen, id }) => {
               value={formData.instructions}
               onChange={handleChange}
               rows="4"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className={`w-full px-3 py-2 border ${errors.instructions ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500`}
               placeholder="Enter details regarding the verdict or instructions to the prison"
               required
             ></textarea>
+            {renderError('instructions')}
           </div>
         </div>
 
@@ -801,8 +865,8 @@ const EditInstruction = ({ setOpen, id }) => {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Attachment</label>
               <div className="flex items-center space-x-2">
-                <label className="flex-1 cursor-pointer">
-                  <div className="px-3 py-2 border border-gray-300 rounded-md bg-white hover:bg-gray-50 flex items-center justify-center">
+                <label className={`flex-1 cursor-pointer ${errors.attachment ? 'border-red-500' : ''}`}>
+                  <div className={`px-3 py-2 border ${errors.attachment ? 'border-red-500' : 'border-gray-300'} rounded-md bg-white hover:bg-gray-50 flex items-center justify-center`}>
                     <FiUpload className="mr-2" />
                     <span className="text-sm">Upload New Attachment</span>
                   </div>
@@ -825,12 +889,20 @@ const EditInstruction = ({ setOpen, id }) => {
                   )}
                 </div>
               )}
+              {renderError('attachment')}
             </div>
           </div>
         </div>
 
         {/* Action Buttons */}
         <div className="flex justify-end pt-4">
+          <button
+            type="button"
+            onClick={() => navigate("/forgot-password")}
+            className="mr-3 px-5 py-2 text-indigo-600 hover:text-indigo-700 transition"
+          >
+            Forgot Password?
+          </button>
           <button
             type="button"
             onClick={() => setOpen(false)}

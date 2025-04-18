@@ -1,10 +1,11 @@
 import express from 'express'
-import { createAccount,getUser,getAllUsers,login, updateUser, updatePassword, activateUser, deleteUser, ForgotPassword, ResetPassword, updateProfile, sendPassword } from '../controller/user.controller.js';
+import { createAccount,getUser,getAllUsers,login, updateUser, updatePassword, activateUser, deleteUser, ForgotPassword, ResetPassword, updateProfile, sendPassword, logoutUser } from '../controller/user.controller.js';
 import { authenticateToken } from '../utilities.js';
 import { upload } from '../fileMiddleware.js';
 export const userRouter = express.Router();
 userRouter.post('/create-account',upload.single("photo"),createAccount);
 userRouter.post('/login',login);
+userRouter.post('/logout', logoutUser);
 userRouter.get('/getAlluser',authenticateToken,getAllUsers);
 userRouter.get('/get-user/:id',authenticateToken,getUser);
 userRouter.put('/update-user/:id',upload.single("photo"),authenticateToken,updateProfile);

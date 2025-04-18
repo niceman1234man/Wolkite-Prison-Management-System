@@ -25,7 +25,13 @@ const PUBLIC_ROUTES = [
   "/visitor/schedule/inmates",
   "/visitor/schedule/capacity",
   "/visitor/schedule/daily-visits",
-  "/visitor/schedule/check-pending"
+  "/visitor/schedule/check-pending",
+  // Backup routes
+  "/backup/history",
+  "/backup/create",
+  "/backup/restore",
+  "/backup/download",
+  "/backup/schedule"
 ];
 
 // Request interceptor

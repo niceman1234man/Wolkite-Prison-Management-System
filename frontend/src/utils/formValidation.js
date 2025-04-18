@@ -345,3 +345,130 @@ export const validateUserForm = (userData) => {
 
     return null;
   };
+
+  // Court instruction form validation
+  export const validateCourtInstructionForm = (formData) => {
+    const errors = {};
+
+    // Personal information validation
+    if (!formData.firstName?.trim()) {
+      errors.firstName = "First name is required";
+    }
+
+    if (!formData.middleName?.trim()) {
+      errors.middleName = "Middle name is required";
+    }
+
+    if (!formData.lastName?.trim()) {
+      errors.lastName = "Last name is required";
+    }
+
+    if (!formData.gender) {
+      errors.gender = "Gender is required";
+    }
+
+    if (!formData.birthdate) {
+      errors.birthdate = "Birth date is required";
+    } else {
+      const birthDate = new Date(formData.birthdate);
+      const today = new Date();
+      if (isNaN(birthDate.getTime())) {
+        errors.birthdate = "Please enter a valid birth date";
+      } else if (birthDate > today) {
+        errors.birthdate = "Birth date cannot be in the future";
+      }
+    }
+
+    if (!formData.maritalStatus) {
+      errors.maritalStatus = "Marital status is required";
+    }
+
+    if (!formData.nationality?.trim()) {
+      errors.nationality = "Nationality is required";
+    }
+
+    if (!formData.educationLevel) {
+      errors.educationLevel = "Education level is required";
+    }
+
+    if (!formData.occupation?.trim()) {
+      errors.occupation = "Occupation is required";
+    }
+
+    // Birth address validation
+    const birthAddressFields = ['birthRegion', 'birthZone', 'birthWoreda', 'birthKebele'];
+    birthAddressFields.forEach(field => {
+      if (!formData[field]?.trim()) {
+        errors[field] = `${field.replace('birth', '').replace(/([A-Z])/g, ' $1').trim()} is required`;
+      }
+    });
+
+    // Current address validation
+    const currentAddressFields = ['currentRegion', 'currentZone', 'currentWoreda', 'currentKebele'];
+    currentAddressFields.forEach(field => {
+      if (!formData[field]?.trim()) {
+        errors[field] = `${field.replace('current', '').replace(/([A-Z])/g, ' $1').trim()} is required`;
+      }
+    });
+
+    // Case information validation
+    if (!formData.courtCaseNumber?.trim()) {
+      errors.courtCaseNumber = "Court case number is required";
+    }
+
+    if (!formData.caseType?.trim()) {
+      errors.caseType = "Case type is required";
+    }
+
+    if (!formData.judgeName?.trim()) {
+      errors.judgeName = "Judge name is required";
+    }
+
+    if (!formData.prisonName?.trim()) {
+      errors.prisonName = "Prison name is required";
+    }
+
+    if (!formData.sentenceYear) {
+      errors.sentenceYear = "Sentence year is required";
+    } else {
+      const sentenceYear = parseFloat(formData.sentenceYear);
+      if (isNaN(sentenceYear) || sentenceYear <= 0) {
+        errors.sentenceYear = "Please enter a valid sentence year";
+      } else if (sentenceYear > 100) {
+        errors.sentenceYear = "Sentence year should be less than 100";
+      }
+    }
+
+    if (!formData.verdict) {
+      errors.verdict = "Verdict is required";
+    }
+
+    // Dates validation
+    if (!formData.hearingDate) {
+      errors.hearingDate = "Hearing date is required";
+    }
+
+    if (!formData.effectiveDate) {
+      errors.effectiveDate = "Effective date is required";
+    } else if (formData.hearingDate && new Date(formData.effectiveDate) < new Date(formData.hearingDate)) {
+      errors.effectiveDate = "Effective date should be after hearing date";
+    }
+
+    if (!formData.sendDate) {
+      errors.sendDate = "Send date is required";
+    }
+
+    // Instructions validation
+    if (!formData.instructions?.trim()) {
+      errors.instructions = "Instructions are required";
+    } else if (formData.instructions.trim().length < 10) {
+      errors.instructions = "Instructions should be at least 10 characters";
+    }
+
+    // Attachment validation (only checking for required - file validations are typically done separately)
+    if (!formData.attachment) {
+      errors.attachment = "Attachment is required";
+    }
+
+    return errors;
+  };

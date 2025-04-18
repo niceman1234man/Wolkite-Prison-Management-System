@@ -9,15 +9,29 @@ import VisitorsDashboard from "../components/Visitor/VisitorsDashboard";
 import ListofUsers from "../components/Admin/ListofUsers";
 import {useSelector } from 'react-redux'
 import { getInitials } from "../components/getNameInitials.js";
+import axiosInstance from "../utils/axiosInstance";
+
 function VisitorDashboard() {
   const user=useSelector(state=>state.user.user);
   const initial=getInitials(user.fullName)
   const navigate = useNavigate();
   const [activeComponent, setActiveComponent] = useState("Dashboard");
 
-  const onLogout = () => {
-    localStorage.clear();
-    navigate("/login"); // Fixed the typo here
+  const onLogout = async () => {
+    try {
+      if (user && user._id) {
+        // Call the logout endpoint to record activity
+        await axiosInstance.post('/user/logout', { 
+          userId: user._id 
+        });
+        console.log('Logout activity logged successfully');
+      }
+    } catch (error) {
+      console.error('Error logging logout activity:', error);
+    } finally {
+      localStorage.clear();
+      navigate("/login");
+    }
   };
   const renderComponent = () => {
     switch (activeComponent) {

@@ -31,7 +31,9 @@ const BackeUp = () => {
   const fetchBackupHistory = async () => {
     setLoading(true);
     try {
+      console.log("Fetching backup history...");
       const response = await axiosInstance.get('/backup/history');
+      console.log("Backup history response:", response.data);
       if(response.data){
         setBackupHistory(response.data);
       }
@@ -50,9 +52,11 @@ const BackeUp = () => {
     setBackupInProgress(true);
     
     try {
+      console.log("Creating backup with mode:", backupMode);
       const response = await axiosInstance.post('/backup/create', { 
         type: backupMode 
       });
+      console.log("Backup creation response:", response.data);
       
       if (response.data.success) {
         toast.success(`${backupMode === 'full' ? 'Full' : 'Incremental'} backup completed successfully!`);
@@ -384,12 +388,12 @@ const BackeUp = () => {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <div className="flex justify-end space-x-2">
-                            {backup.status === 'completed' && (
+                          <div className="flex justify-end space-x-3">
+                            {backup.status === 'completed' ? (
                               <>
                                 <button
                                   onClick={() => handleDownload(backup._id)}
-                                  className="text-blue-600 hover:text-blue-900"
+                                  className="text-blue-600 hover:text-blue-900 p-1 bg-blue-50 rounded"
                                   title="Download Backup"
                                 >
                                   <FaDownload />
@@ -397,10 +401,10 @@ const BackeUp = () => {
                                 <button
                                   onClick={() => handleRestore(backup._id)}
                                   disabled={restoreInProgress}
-                                  className={`${
+                                  className={`p-1 rounded ${
                                     restoreInProgress 
-                                      ? "text-gray-400 cursor-not-allowed" 
-                                      : "text-teal-600 hover:text-teal-900"
+                                      ? "text-gray-400 bg-gray-100 cursor-not-allowed" 
+                                      : "text-teal-600 bg-teal-50 hover:text-teal-900 hover:bg-teal-100"
                                   }`}
                                   title="Restore from Backup"
                                 >
@@ -410,6 +414,10 @@ const BackeUp = () => {
                                   }
                                 </button>
                               </>
+                            ) : (
+                              <span className="text-xs text-gray-500 italic">
+                                {backup.status === 'in_progress' ? 'Processing...' : 'Failed'}
+                              </span>
                             )}
                           </div>
                         </td>

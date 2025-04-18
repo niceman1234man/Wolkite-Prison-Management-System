@@ -103,7 +103,7 @@ const [openActivate, setOpenActivate] = useState(false);
                 <div className="w-24 h-24 rounded-full overflow-hidden bg-white p-1">
                   {user.photo ? (
                     <img 
-                      src={user.photo.startsWith('http') ? user.photo : `http://localhost:5000/uploads/${user.photo}`}
+                      src={user.photo.startsWith('http') ? user.photo : `http://localhost:5001/uploads/${user.photo}`}
                       alt={`${user.firstName}'s profile`}
                       className="w-full h-full object-cover rounded-full"
                       onError={(e) => {

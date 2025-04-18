@@ -1,4 +1,3 @@
-
 import mongoose from "mongoose";
 const userSchema=new mongoose.Schema({
     firstName:{
@@ -45,6 +44,18 @@ const userSchema=new mongoose.Schema({
     password:{
         type:String ,
         
+    },
+    lastLogin:{
+        type:Date,
+        default:null
+    },
+    loginCount:{
+        type:Number,
+        default:0
+    },
+    passwordSent: {
+        type: Boolean,
+        default: false
     }
 },{timestamps:true});
 export const User=mongoose.model('User',userSchema);

@@ -59,6 +59,31 @@ const ViewInstruction = ({ id }) => {
     }
   };
 
+  const sendInstruction = async () => {
+    try {
+      setLoading(true);
+      const response = await axiosInstance.post(`/instruction/send/${id}`);
+      
+      if (response.data && response.data.success) {
+        toast.success("Instruction sent successfully!");
+        // Update the instruction status if needed
+        if (instruction) {
+          setInstruction({
+            ...instruction,
+            status: "sent"
+          });
+        }
+      } else {
+        toast.error(response.data?.message || "Failed to send instruction");
+      }
+    } catch (error) {
+      console.error("Error sending instruction:", error);
+      toast.error(error.response?.data?.message || "Error sending instruction");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handlePrint = () => {
     const content = contentRef.current;
     const printWindow = window.open("", "", "height=600,width=800");
@@ -330,9 +355,11 @@ const ViewInstruction = ({ id }) => {
               <FiPrinter className="mr-1" /> Print
             </button>
             <button
+              onClick={sendInstruction}
               className="bg-white text-blue-600 font-medium py-1.5 px-3 rounded-md hover:bg-blue-50 transition-colors flex items-center"
+              disabled={loading}
             >
-              <FiSend className="mr-1" /> Send
+              <FiSend className="mr-1" /> {loading ? "Sending..." : "Send"}
             </button>
             <button
               onClick={() => setOpenDelete(true)}

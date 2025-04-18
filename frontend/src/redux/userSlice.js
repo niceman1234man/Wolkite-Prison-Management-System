@@ -1,4 +1,5 @@
-import { createSlice } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
+import axiosInstance from "../utils/axiosInstance";
 
 // Get initial user data from localStorage
 const getUserFromLocalStorage = () => {
@@ -10,6 +11,29 @@ const getUserFromLocalStorage = () => {
     return null;
   }
 };
+
+// Create async thunk for logging out
+export const logoutAndLog = createAsyncThunk(
+  "user/logoutAndLog",
+  async (_, { getState }) => {
+    try {
+      const user = getState().user.user;
+      if (user && user._id) {
+        // Call the logout endpoint to record activity
+        await axiosInstance.post('/user/logout', { userId: user._id });
+        console.log('Logout activity logged successfully');
+      }
+    } catch (error) {
+      console.error('Error logging logout activity:', error);
+    }
+    
+    // Clear localStorage regardless of API success
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+    
+    return null;
+  }
+);
 
 const initialState = {
   user: getUserFromLocalStorage(),
@@ -35,6 +59,11 @@ const userSlice = createSlice({
       // Update localStorage
       localStorage.setItem("user", JSON.stringify(state.user));
     },
+  },
+  extraReducers: (builder) => {
+    builder.addCase(logoutAndLog.fulfilled, (state) => {
+      state.user = null;
+    });
   },
 });
 

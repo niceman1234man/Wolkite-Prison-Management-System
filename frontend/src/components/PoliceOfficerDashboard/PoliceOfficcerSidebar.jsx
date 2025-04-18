@@ -55,17 +55,7 @@ const PoliceOfficerSidebar = () => {
             {!isCollapsed && <span className="ml-3">Dashboard</span>}
           </NavLink>
 
-          <NavLink
-            to="/policeOfficer-dashboard/visitors"
-            className={({ isActive }) =>
-              `flex items-center p-2 rounded-lg hover:bg-teal-600 transition-colors ${
-                isActive ? "bg-teal-600" : ""
-              } ${isCollapsed ? "justify-center" : "justify-start"}`
-            }
-          >
-            <FaUsers className="h-6 w-6" />
-            {!isCollapsed && <span className="ml-3">Visitors</span>}
-          </NavLink>
+         
 
           <NavLink
             to="/policeOfficer-dashboard/parole"
