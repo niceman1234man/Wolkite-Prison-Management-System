@@ -37,9 +37,10 @@ const [openActivate, setOpenActivate] = useState(false);
   const deleteUser = async () => {
       try {
         await axiosInstance.delete(`/user/delete-user/${id}`);
+        navigate("/admin-dashboard/users");
         setOpenDelete(false);
         toast.success("User deleted successfully!");
-        navigate("/admin-dashboard/users");
+       
       } catch (error) {
         toast.error(error.response?.data?.error || "Error deleting user");
       }
@@ -241,13 +242,7 @@ const [openActivate, setOpenActivate] = useState(false);
 
           {/* Action buttons */}
           <div className="border-t p-6 flex flex-col sm:flex-row justify-end gap-3">
-            <button 
-              className="flex-1 sm:flex-none px-5 py-2.5 bg-teal-600 text-white rounded-md hover:bg-teal-700 transition-colors flex items-center justify-center"
-              onClick={() => navigate(`/admin-dashboard/users/edit/${id}`)}
-            >
-              <FaUserEdit className="mr-2" />
-              Edit User
-            </button>
+            
             
           <button
               className="flex-1 sm:flex-none px-5 py-2.5 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center justify-center"
@@ -261,15 +256,15 @@ const [openActivate, setOpenActivate] = useState(false);
           {/* Confirmation Modals */}
 <ConfirmModal
   open={openActivate}
-  setOpen={setOpenActivate}
-  onDelete={toggleActivation}
+  onConfirm={toggleActivation}
+  onCancel={() => setOpenActivate(false)}
   message={`Do you want to ${user.isactivated ? "deactivate" : "activate"} this user account?`}
 />
 
 <ConfirmModal
   open={openDelete}
-  setOpen={setOpenDelete}
-  onDelete={deleteUser}
+  onConfirm={deleteUser}
+  onCancel={() => setOpenDelete(false)}
   message="Do you really want to delete this user? This action cannot be undone."
 />
         </>
