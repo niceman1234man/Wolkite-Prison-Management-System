@@ -1,14 +1,16 @@
 import React, { useEffect, useContext, useState, useMemo, useCallback } from "react";
-import { FaBook, FaClipboardCheck, FaSave, FaEye, FaExclamationTriangle, FaFilter, FaSync, FaEdit, FaTimes, FaTable, FaThLarge, FaTrash } from "react-icons/fa";
+import { FaBook, FaClipboardCheck, FaSave, FaEye, FaExclamationTriangle, FaFilter, FaSync, FaEdit, FaTimes, FaTable, FaThLarge, FaTrash, FaChevronDown, FaSearch, FaCalendarAlt, FaChevronLeft, FaChevronRight, FaClock, FaUser } from "react-icons/fa";
 import Loader from "../common/Loader";
 import { useSelector } from "react-redux";
 import { toast } from "react-hot-toast";
 import ScheduleForm from "./partials/ScheduleForm";
 import ScheduleDetailModal from "./partials/ScheduleDetailModal";
+import CancelConfirmationModal from "./partials/CancelConfirmationModal";
 import useVisitScheduleData from "../../hooks/useVisitScheduleData";
 import VisitorField from "../Visitor/RegisterVisitor";
 import { VisitorCapacityContext } from "../Visitor/VisitorList";
 import axiosInstance from "../../utils/axiosInstance";
+import { parseISO, isAfter, isPast, format, addDays } from "date-fns";
 import '../../styles/table.css'; // Import the table styles
 import '../../styles/responsive.css'; // Import the responsive utility classes
 
@@ -52,9 +54,17 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
   // Track if user has pending schedule
   const [hasPendingSchedule, setHasPendingSchedule] = useState(false);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  
   // Add new state for inmates
   const [inmates, setInmates] = useState([]);
   const [inmatesLoading, setInmatesLoading] = useState(false);
+
+  // Add this new state for the cancel confirmation modal
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [scheduleToCancel, setScheduleToCancel] = useState(null);
 
   // Check if user has pending schedules
   const checkPendingSchedules = useCallback(() => {
@@ -77,9 +87,39 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
     
     if (!schedules || schedules.length === 0) return [];
     
+    // Get today's date for filtering
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to beginning of day for proper comparison
+    
     return schedules.filter(schedule => {
       // First check that schedule and its necessary properties exist
       if (!schedule) return false;
+      
+      // Check if the visit is upcoming (today or future)
+      let isUpcoming = false;
+      if (schedule.visitDate) {
+        try {
+          // Use parseISO if the date is in ISO format string
+          const visitDate = typeof schedule.visitDate === 'string' 
+            ? parseISO(schedule.visitDate) 
+            : new Date(schedule.visitDate);
+            
+          visitDate.setHours(0, 0, 0, 0); // Reset time for comparison
+          
+          // A visit is upcoming if it's today or in the future
+          isUpcoming = visitDate >= today;
+        } catch (error) {
+          console.error("Error parsing date:", error);
+          isUpcoming = false;
+        }
+      }
+      
+      // Keep the visit if it's upcoming, regardless of status
+      // Or if it's pending (since those should always show)
+      const isPending = schedule.status?.toLowerCase() === 'pending';
+      const keepVisit = isUpcoming || isPending;
+      
+      if (!keepVisit) return false;
       
       // Check if schedule matches search query
       const matchesSearch = !searchQuery || searchQuery.trim() === '' || (
@@ -90,13 +130,48 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
         (schedule.purpose && schedule.purpose.toLowerCase().includes(searchQuery.toLowerCase()))
       );
 
-      // Check if schedule matches status filter
+      // Check if schedule matches status filter (if not "all")
       const matchesStatus = statusFilter === "all" || 
         (schedule.status && schedule.status.toLowerCase() === statusFilter.toLowerCase());
 
       return matchesSearch && matchesStatus;
+    }).sort((a, b) => {
+      // Sort by date (most recent first)
+      const dateA = new Date(a.visitDate);
+      const dateB = new Date(b.visitDate);
+      return dateA - dateB; // Ascending order (earliest first)
     });
   }, [schedules, searchQuery, statusFilter, version]);
+
+  // Calculate pagination - MOVED AFTER filteredSchedules is defined
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredSchedules.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredSchedules.length / itemsPerPage);
+
+  // Handle page changes
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const goToPage = (pageNumber) => {
+    if (pageNumber >= 1 && pageNumber <= totalPages) {
+      setCurrentPage(pageNumber);
+    }
+  };
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, searchQuery]);
 
   // Fetch data on mount using useEffect with empty dependency array
   useEffect(() => {
@@ -140,9 +215,9 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
     if (!schedule) return 'Unknown Visitor';
     
     if (schedule.visitorId) {
-      return `${schedule.visitorId.firstName || ''} ${schedule.visitorId.lastName || ''}`.trim() || 'Unknown Visitor';
-    } else if (schedule.firstName || schedule.lastName) {
-      return `${schedule.firstName || ''} ${schedule.lastName || ''}`.trim() || 'Unknown Visitor';
+      return `${schedule.visitorId.firstName || ''} ${schedule.visitorId.middleName || ''} ${schedule.visitorId.lastName || ''}`.trim() || 'Unknown Visitor';
+    } else if (schedule.firstName || schedule.middleName || schedule.lastName) {
+      return `${schedule.firstName || ''} ${schedule.middleName || ''} ${schedule.lastName || ''}`.trim() || 'Unknown Visitor';
     }
     return 'Unknown Visitor';
   }, []);
@@ -169,7 +244,9 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
       relationship: schedule.relationship || schedule.visitorId?.relation || 'Not specified',
       // Include date information
       createdAt: schedule.createdAt,
-      approvedAt: schedule.approvedAt || schedule.updatedAt
+      approvedAt: schedule.approvedAt || schedule.updatedAt,
+      // Add full name for easy access
+      fullName: `${schedule.visitorId?.firstName || schedule.firstName || ''} ${schedule.visitorId?.middleName || schedule.middleName || ''} ${schedule.visitorId?.lastName || schedule.lastName || ''}`.trim()
     };
     
     setSelectedSchedule(enrichedSchedule);
@@ -206,7 +283,9 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
       visitDuration: schedule.visitDuration || schedule.duration || "30",
       purpose: schedule.purpose || '',
       relationship: schedule.relationship || schedule.visitorId?.relation || '',
-      inmateId: schedule.inmateId?._id ? { _id: schedule.inmateId._id } : schedule.inmateId
+      inmateId: schedule.inmateId?._id ? { _id: schedule.inmateId._id } : schedule.inmateId,
+      // Add full name for easy access
+      fullName: `${schedule.visitorId?.firstName || schedule.firstName || ''} ${schedule.visitorId?.middleName || schedule.middleName || ''} ${schedule.visitorId?.lastName || schedule.lastName || ''}`.trim()
     };
     
     console.log("Editing schedule with complete data:", completeSchedule);
@@ -222,6 +301,7 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
       ...schedule,
       // Ensure visitor information is populated
       firstName: schedule.visitorId?.firstName || schedule.firstName || "",
+      middleName: schedule.visitorId?.middleName || schedule.middleName || "",
       lastName: schedule.visitorId?.lastName || schedule.lastName || "",
       phone: schedule.visitorId?.phone || schedule.phone || "",
       email: schedule.visitorId?.email || schedule.email || "",
@@ -241,6 +321,9 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
         ? new Date(schedule.visitDate).toISOString().split('T')[0] 
         : "",
       visitTime: schedule.visitTime || "",
+      
+      // Add full name for easy access
+      fullName: `${schedule.visitorId?.firstName || schedule.firstName || ''} ${schedule.visitorId?.middleName || schedule.middleName || ''} ${schedule.visitorId?.lastName || schedule.lastName || ''}`.trim()
     };
     
     console.log("Prepared schedule for editing:", completeSchedule);
@@ -299,30 +382,46 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
   }, []);
 
   const handleCancelSchedule = useCallback((scheduleId) => {
-    if (window.confirm("Are you sure you want to cancel this visit?")) {
       const loadingToast = toast.loading("Cancelling visit...");
-      cancelSchedule(scheduleId)
-        .then(success => {
+      
+      // Get user ID from localStorage
+      let userId = null;
+      try {
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          const userData = JSON.parse(userStr);
+          userId = userData.id || userData._id;
+        }
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+      }
+
+      // Make direct API call with userId as query parameter
+      axiosInstance.put(`/visitor/schedule/${scheduleId}/cancel${userId ? `?userId=${userId}` : ''}`)
+        .then(response => {
           toast.dismiss(loadingToast);
-          if (success) {
+          if (response.data.success) {
             // If modal is open, close it
             if (showDetailModal) {
               setShowDetailModal(false);
             }
+          // Close the cancel modal too
+          setShowCancelModal(false);
+          setScheduleToCancel(null);
+          
             toast.success("Visit cancelled successfully");
             // Refresh data after cancellation
             fetchSchedules();
           } else {
-            toast.error("Failed to cancel visit");
+            toast.error(response.data.message || "Failed to cancel visit");
           }
         })
-        .catch(err => {
+        .catch(error => {
           toast.dismiss(loadingToast);
-          console.error("Error cancelling visit:", err);
-          toast.error("Failed to cancel visit");
+          console.error("Error cancelling visit:", error);
+          toast.error(error.response?.data?.message || "Failed to cancel visit");
         });
-    }
-  }, [cancelSchedule, showDetailModal, fetchSchedules]);
+  }, [showDetailModal, fetchSchedules]);
   
   // Handle deleting a schedule
   const handleDeleteSchedule = useCallback((scheduleId) => {
@@ -452,85 +551,272 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
     fetchInmates();
   }, [fetchInmates]);
 
+  // Handle rescheduling a visit
+  const handleRescheduleVisit = useCallback((schedule) => {
+    // First check if the user has any pending schedules
+    const hasPending = schedules.some(s => s.status?.toLowerCase() === 'pending');
+    
+    if (hasPending) {
+      toast.error("You already have a pending visit schedule. Please wait for approval or cancel your existing pending schedule before rescheduling.");
+      return;
+    }
+    
+    // Create a copy of the schedule with reset status for rescheduling
+    const scheduleForReschedule = {
+      // Do NOT include all properties from the original schedule
+      // Only copy specific fields we need
+      
+      // Explicitly mark this as a reschedule
+      isReschedule: true,
+      
+      // Keep visitor and inmate information
+      firstName: schedule.visitorId?.firstName || schedule.firstName || "",
+      middleName: schedule.visitorId?.middleName || schedule.middleName || "",
+      lastName: schedule.visitorId?.lastName || schedule.lastName || "",
+      phone: schedule.visitorId?.phone || schedule.phone || "",
+      idType: schedule.idType || schedule.visitorId?.idType || "",
+      idNumber: schedule.idNumber || schedule.visitorId?.idNumber || "",
+      
+      // Reset visit date to make it clear it needs to be changed
+      visitDate: "",
+      visitTime: "",
+      
+      // Keep other details for convenience
+      purpose: `Rescheduled: ${schedule.purpose || "Visit"}`,
+      relationship: schedule.relationship || "",
+      visitDuration: schedule.visitDuration || schedule.duration || 30,
+      
+      // Ensure inmate ID is in the right format
+      inmateId: schedule.inmateId?._id || schedule.inmateId || "",
+      
+      // Include reference to original schedule
+      originalScheduleId: schedule._id,
+      notes: `Rescheduled from previous visit on ${new Date(schedule.visitDate).toLocaleDateString()} at ${schedule.visitTime}`,
+      
+      // Set default status
+      status: "Pending",
+      
+      // Add full name for easy access
+      fullName: `${schedule.visitorId?.firstName || schedule.firstName || ''} ${schedule.visitorId?.middleName || schedule.middleName || ''} ${schedule.visitorId?.lastName || schedule.lastName || ''}`.trim()
+    };
+    
+    console.log("Rescheduling visit with data:", scheduleForReschedule);
+    
+    // Set the schedule to edit and open the form
+    setScheduleToEdit(scheduleForReschedule);
+    setShowScheduleForm(true);
+    toast.info("Please select a new date and time for this visit");
+  }, [schedules]);
+
+  // Add this function to open the cancel confirmation modal
+  const openCancelModal = useCallback((schedule) => {
+    setScheduleToCancel(schedule);
+    setShowCancelModal(true);
+  }, []);
+
   // Render functions for different card states
   const renderLoading = () => (
-    <div className="flex justify-center items-center py-12">
+    <div className="flex justify-center items-center py-12 bg-white rounded-lg shadow-md w-full my-4">
       <Loader size="lg" message="Loading schedules..." />
-          </div>
+    </div>
   );
 
   const renderEmptyState = () => (
-    <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
-      <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-      </svg>
-      <h3 className="mt-2 text-sm font-medium text-gray-900">No schedules found</h3>
-      <p className="mt-1 text-sm text-gray-500">
+    <div className="flex flex-col items-center justify-center py-12 bg-white rounded-lg shadow-md w-full my-4 border border-gray-200">
+      <div className="bg-gray-100 p-4 rounded-full mb-4">
+        <svg className="h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+      </div>
+      <h3 className="text-lg font-medium text-gray-900 mb-2">No schedules found</h3>
+      <p className="mt-1 text-sm text-gray-500 text-center max-w-md px-4">
         {statusFilter !== "all" || searchQuery
           ? "Try changing your filters or search criteria."
           : "Get started by creating a new visit schedule."}
       </p>
       {!isCapacityReached && !hasPendingSchedule && (
         <div className="mt-6">
-            <button
+          <button
             onClick={openScheduleForm}
-            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
           >
             <FaBook className="-ml-1 mr-2 h-5 w-5" />
             Schedule New Visit
-            </button>
-          </div>
-      )}
-      {hasPendingSchedule && (
-        <div className="mt-4 text-sm text-yellow-600 bg-yellow-50 p-3 rounded-md border border-yellow-200">
-          <FaExclamationTriangle className="inline-block mr-1" />
-          You already have a pending visit schedule. You cannot create a new schedule until your current one is approved, rejected, or canceled.
+          </button>
         </div>
       )}
-      </div>
+      {hasPendingSchedule && (
+        <div className="mt-6 text-sm text-yellow-600 bg-yellow-50 p-4 rounded-md border border-yellow-200 max-w-md">
+          <div className="flex">
+            <FaExclamationTriangle className="h-5 w-5 text-yellow-500 mr-2 flex-shrink-0" />
+            <p>You already have a pending visit schedule. You cannot create a new schedule until your current one is approved, rejected, or canceled.</p>
+          </div>
+        </div>
+      )}
+    </div>
   );
 
-  const renderScheduleCard = (schedule) => {
+  const renderScheduleCard = (schedule, index) => {
     const visitorName = getVisitorName(schedule);
     // Find the inmate in the inmates array using the inmateId
     const inmate = inmates.find(i => i._id === schedule.inmateId?._id);
     const inmateName = inmate ? inmate.inmate_name : "Unknown Inmate";
     const canEdit = schedule.status?.toLowerCase() === 'pending';
+    // Can reschedule if it's not pending (handled separately) and it's upcoming
+    const canReschedule = schedule.status?.toLowerCase() !== 'pending';
 
-  return (
-      <div key={schedule._id} className="visitor-item-card">
-        <div className="flex justify-between items-start mb-2">
-          <h3 className="font-medium text-sm">{visitorName}</h3>
-          <span className={`visitor-badge ${schedule.status?.toLowerCase() === 'pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' : 
-                                               schedule.status?.toLowerCase() === 'approved' ? 'bg-green-100 text-green-800 border-green-300' : 
-                                               schedule.status?.toLowerCase() === 'cancelled' ? 'bg-gray-100 text-gray-700 border-gray-300' :
-                                               schedule.status?.toLowerCase() === 'rejected' ? 'bg-red-100 text-red-800 border-red-300' :
-                                               'bg-blue-100 text-blue-800 border-blue-300'}`}>
-            {schedule.status}
-          </span>
+    // Calculate the actual display index based on pagination
+    const displayIndex = indexOfFirstItem + index + 1;
+    
+    // Color theme based on status
+    let statusColors = {
+      bg: "from-blue-50 to-white",
+      badge: "bg-blue-100 text-blue-800",
+      icon: "text-blue-500",
+      accent: "border-blue-200"
+    };
+    
+    // Set colors based on status
+    switch(schedule.status?.toLowerCase()) {
+      case 'pending':
+        statusColors = {
+          bg: "from-yellow-50 to-white",
+          badge: "bg-yellow-100 text-yellow-800",
+          icon: "text-yellow-600",
+          accent: "border-yellow-200"
+        };
+        break;
+      case 'approved':
+        statusColors = {
+          bg: "from-green-50 to-white",
+          badge: "bg-green-100 text-green-800",
+          icon: "text-green-600",
+          accent: "border-green-200"
+        };
+        break;
+      case 'rejected':
+        statusColors = {
+          bg: "from-red-50 to-white",
+          badge: "bg-red-100 text-red-800",
+          icon: "text-red-500",
+          accent: "border-red-200"
+        };
+        break;
+      case 'cancelled':
+        statusColors = {
+          bg: "from-gray-50 to-white",
+          badge: "bg-gray-100 text-gray-700",
+          icon: "text-gray-500",
+          accent: "border-gray-200"
+        };
+        break;
+    }
+
+    return (
+      <div className={`bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden transform hover:-translate-y-1 border ${statusColors.accent}`}>
+        {/* Card header with gradient */}
+        <div className={`relative border-b border-gray-100 bg-gradient-to-r ${statusColors.bg} p-3`}>
+          {/* Number badge in left */}
+          <div className={`absolute top-2.5 left-2.5 flex items-center justify-center w-7 h-7 rounded-full ${statusColors.badge} text-xs font-bold shadow-sm`}>
+            {displayIndex}
+          </div>
+          
+          <div className="flex flex-col items-start ml-10">
+            <h3 className="font-semibold text-gray-900 text-base">{visitorName}</h3>
+            <div className="flex items-center mt-1">
+              <span className={`px-2 py-0.5 text-xs font-medium rounded-full border ${
+                schedule.status?.toLowerCase() === 'pending' ? 'bg-yellow-50 text-yellow-800 border-yellow-200' : 
+                schedule.status?.toLowerCase() === 'approved' ? 'bg-green-50 text-green-800 border-green-200' : 
+                schedule.status?.toLowerCase() === 'cancelled' ? 'bg-gray-50 text-gray-700 border-gray-200' :
+                schedule.status?.toLowerCase() === 'rejected' ? 'bg-red-50 text-red-800 border-red-200' :
+                'bg-blue-50 text-blue-800 border-blue-200'
+            }`}>
+              {schedule.status}
+            </span>
+            </div>
+          </div>
         </div>
         
-        <div className="text-xs text-gray-600 mb-3">
-          <p><span className="font-medium">Visit Date:</span> {new Date(schedule.visitDate).toLocaleDateString()}</p>
-          <p><span className="font-medium">Time:</span> {schedule.visitTime}</p>
-          <p><span className="font-medium">Duration:</span> {schedule.visitDuration || schedule.duration || 30} minutes</p>
-          <p><span className="font-medium">Inmate:</span> {inmateName}</p>
-          <p><span className="font-medium">Purpose:</span> {schedule.purpose}</p>
+        {/* Card body with information */}
+        <div className="p-3 text-sm">
+          <div className="text-gray-600 space-y-2.5">
+            <div className="flex items-center">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${statusColors.badge} mr-2.5`}>
+                <FaCalendarAlt className={statusColors.icon} size={14} />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 font-medium">Visit Date</p>
+                <p className="font-semibold text-gray-800">{new Date(schedule.visitDate).toLocaleDateString()}</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${statusColors.badge} mr-2.5`}>
+                <FaClock className={statusColors.icon} size={14} />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 font-medium">Visit Time</p>
+                <p className="font-semibold text-gray-800">{schedule.visitTime}</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${statusColors.badge} mr-2.5`}>
+                <FaUser className={statusColors.icon} size={14} />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 font-medium">Inmate</p>
+                <p className="font-semibold text-gray-800 truncate max-w-[180px]">{inmateName}</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${statusColors.badge} mr-2.5`}>
+                <FaClipboardCheck className={statusColors.icon} size={14} />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 font-medium">Purpose</p>
+                <p className="font-semibold text-gray-800 truncate max-w-[180px]" title={schedule.purpose}>
+                {schedule.purpose}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
         
-        <div className="flex justify-end gap-1 mt-2">
+        {/* Card footer with actions */}
+        <div className="bg-gray-50 p-2.5 flex flex-wrap justify-end gap-2 border-t border-gray-200">
           <button 
             onClick={() => viewScheduleDetails(schedule)}
-            className="visitor-button visitor-button-light text-xs"
+            className="inline-flex items-center px-2.5 py-1.5 border border-gray-300 text-xs font-medium rounded-md bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors shadow-sm"
           >
-            <FaEye className="mr-1" /> View
+            <FaEye className="mr-1.5 text-blue-600" size={12} /> View
           </button>
+          
           {canEdit && (
             <button 
               onClick={() => editSchedule(schedule)}
-              className="visitor-button visitor-button-primary text-xs"
+              className="inline-flex items-center px-2.5 py-1.5 border border-green-300 text-xs font-medium rounded-md bg-green-50 text-green-700 hover:bg-green-100 focus:outline-none focus:ring-1 focus:ring-green-500 transition-colors shadow-sm"
             >
-              <FaEdit className="mr-1" /> Edit
+              <FaEdit className="mr-1.5 text-green-600" size={12} /> Edit
+            </button>
+          )}
+          
+          {schedule.status?.toLowerCase() === 'pending' && (
+            <button 
+              onClick={() => openCancelModal(schedule)}
+              className="inline-flex items-center px-2.5 py-1.5 border border-red-300 text-xs font-medium rounded-md bg-red-50 text-red-700 hover:bg-red-100 focus:outline-none focus:ring-1 focus:ring-red-500 transition-colors shadow-sm"
+            >
+              <FaTimes className="mr-1.5 text-red-600" size={12} /> Cancel
+            </button>
+          )}
+          
+          {canReschedule && (
+            <button 
+              onClick={() => handleRescheduleVisit(schedule)}
+              className="inline-flex items-center px-2.5 py-1.5 border border-purple-300 text-xs font-medium rounded-md bg-purple-50 text-purple-700 hover:bg-purple-100 focus:outline-none focus:ring-1 focus:ring-purple-500 transition-colors shadow-sm"
+            >
+              <FaCalendarAlt className="mr-1.5 text-purple-600" size={12} /> Reschedule
             </button>
           )}
         </div>
@@ -540,247 +826,517 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
 
   const renderTableView = (schedules) => {
     return (
-      <div className="visitor-table-container">
-        <table className="visitor-table">
-          <thead className="bg-gray-50">
-            <tr>
-              <th>Visitor</th>
-              <th>Inmate</th>
-              <th className="hidden sm:table-cell">Visit Date & Time</th>
-              <th className="hidden md:table-cell">Duration</th>
-              <th className="hidden md:table-cell">Purpose</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {schedules.map((schedule) => {
-              const visitorName = getVisitorName(schedule);
-              // Find the inmate in the inmates array using the inmateId
-              const inmate = inmates.find(i => i._id === schedule.inmateId?._id);
-              const inmateName = inmate ? inmate.inmate_name : "Unknown Inmate";
-              const canEdit = schedule.status?.toLowerCase() === 'pending';
-              
-              return (
-                <tr key={schedule._id}>
-                  <td className="font-medium">{visitorName}</td>
-                  <td>{inmateName}</td>
-                  <td className="hidden sm:table-cell">
-                    {new Date(schedule.visitDate).toLocaleDateString()} <br />
-                    <span className="text-xs text-gray-500">{schedule.visitTime}</span>
-                  </td>
-                  <td className="hidden md:table-cell">{schedule.visitDuration || schedule.duration || 30} min</td>
-                  <td className="hidden md:table-cell">{schedule.purpose}</td>
-                  <td>
-                    <span className={`visitor-badge ${schedule.status?.toLowerCase() === 'pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' : 
-                                                    schedule.status?.toLowerCase() === 'approved' ? 'bg-green-100 text-green-800 border-green-300' : 
-                                                    schedule.status?.toLowerCase() === 'cancelled' ? 'bg-gray-100 text-gray-700 border-gray-300' :
-                                                    schedule.status?.toLowerCase() === 'rejected' ? 'bg-red-100 text-red-800 border-red-300' :
-                                                    'bg-blue-100 text-blue-800 border-blue-300'}`}>
-                      {schedule.status}
-                    </span>
-                  </td>
-                  <td>
-                    <div className="flex gap-1">
-                      <button 
-                        onClick={() => viewScheduleDetails(schedule)}
-                        className="visitor-button visitor-button-light text-xs"
-                      >
-                        <FaEye />
-                      </button>
-                      {canEdit && (
-                        <button 
-                          onClick={() => editSchedule(schedule)}
-                          className="visitor-button visitor-button-primary text-xs"
-                        >
-                          <FaEdit />
-                        </button>
-                      )}
-                    </div>
+      <div className="w-full bg-white rounded-lg shadow-md overflow-hidden mb-6">
+        {loading && (
+          <div className="p-4 text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p className="mt-2 text-gray-600">Loading schedules...</p>
+          </div>
+        )}
+        
+        <div className="w-full overflow-x-auto" style={{ maxHeight: 'calc(100vh - 280px)', overflowY: 'auto' }}>
+          <table className="w-full table-fixed divide-y divide-gray-200 shadow-sm border border-gray-200">
+            <thead className="bg-gradient-to-r from-blue-600 to-blue-800 text-white sticky top-0 z-10 shadow-md">
+              <tr>
+                <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider w-[5%]">
+                  #
+                </th>
+                <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider w-[15%]">
+                  Visitor
+                </th>
+                <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider w-[15%]">
+                  Inmate
+                </th>
+                <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider w-[15%] hidden sm:table-cell">
+                  Visit Date & Time
+                </th>
+                <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider w-[10%] hidden md:table-cell">
+                  Duration
+                </th>
+                <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider w-[15%] hidden lg:table-cell">
+                  Purpose
+                </th>
+                <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider w-[10%]">
+                  Status
+                </th>
+                <th className="px-2 sm:px-4 py-3 text-center text-xs font-medium uppercase tracking-wider w-[10%]">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {schedules.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="px-4 py-4 text-center text-gray-500 italic">
+                    No visits scheduled
                   </td>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              ) : (
+                schedules.map((schedule, index) => {
+                const visitorName = getVisitorName(schedule);
+                const inmate = inmates.find(i => i._id === schedule.inmateId?._id);
+                const inmateName = inmate ? inmate.inmate_name : "Unknown Inmate";
+                  const isPending = schedule.status?.toLowerCase() === 'pending';
+                
+                return (
+                  <tr 
+                    key={schedule._id}
+                      className="hover:bg-gray-50 cursor-pointer"
+                    onClick={() => viewScheduleDetails(schedule)}
+                  >
+                      <td className="px-2 sm:px-4 py-3 text-sm">
+                        {indexOfFirstItem + index + 1}
+                    </td>
+                      <td className="px-2 sm:px-4 py-3 text-sm">
+                        <div className="font-medium text-gray-900">{visitorName || "Unknown"}</div>
+                        <div className="text-gray-500 text-xs truncate">
+                          {schedule.phone || "No phone"}
+                      </div>
+                    </td>
+                      <td className="px-2 sm:px-4 py-3 text-sm">
+                        <div className="font-medium text-gray-900">{inmateName}</div>
+                        <div className="text-gray-500 text-xs capitalize">
+                          {schedule.relationship || "Not specified"}
+                      </div>
+                    </td>
+                      <td className="px-2 sm:px-4 py-3 text-sm hidden sm:table-cell">
+                        <div className="font-medium text-gray-900">
+                        {new Date(schedule.visitDate).toLocaleDateString()}
+                        </div>
+                        <div className="text-gray-500 text-xs">
+                          {schedule.visitTime || "Not specified"}
+                      </div>
+                    </td>
+                      <td className="px-2 sm:px-4 py-3 text-sm hidden md:table-cell">
+                        <div className="text-gray-900 font-medium">
+                          {schedule.visitDuration ? `${schedule.visitDuration} minutes` : "30 minutes"}
+                      </div>
+                    </td>
+                      <td className="px-2 sm:px-4 py-3 text-sm hidden lg:table-cell">
+                        <div className="max-w-xs truncate">
+                          {schedule.purpose || "Not specified"}
+                        </div>
+                      </td>
+                      <td className="px-2 sm:px-4 py-3 text-sm">
+                        <span
+                          className={getStatusBadge(schedule.status)}
+                        >
+                        {schedule.status}
+                      </span>
+                    </td>
+                      <td className="px-2 sm:px-4 py-3 text-sm text-right">
+                        <div 
+                          className="flex justify-end gap-1 sm:gap-2"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                        <button 
+                            title="View details"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            viewScheduleDetails(schedule);
+                          }}
+                          className="text-blue-600 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 p-1 sm:p-1.5 rounded-full transition-all duration-150 hover:shadow-md transform hover:-translate-y-1"
+                        >
+                            <FaEye className="h-3 w-3 sm:h-4 sm:w-4" />
+                        </button>
+                        
+                          {isPending && (
+                            <>
+                          <button
+                                title="Edit visit"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              editSchedule(schedule);
+                            }}
+                            className="text-green-600 hover:text-green-900 bg-green-50 hover:bg-green-100 p-1 sm:p-1.5 rounded-full transition-all duration-150 hover:shadow-md transform hover:-translate-y-1"
+                          >
+                                <FaEdit className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </button>
+                        
+                          <button
+                                title="Cancel visit"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                                  openCancelModal(schedule);
+                            }}
+                            className="text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100 p-1 sm:p-1.5 rounded-full transition-all duration-150 hover:shadow-md transform hover:-translate-y-1"
+                          >
+                                <FaTimes className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </button>
+                            </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+                })
+              )}
+            </tbody>
+            <tfoot className="bg-gray-50 border-t border-gray-200">
+              <tr>
+                <td colSpan="7" className="px-4 py-3 text-left text-xs font-medium text-gray-500">
+                  Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredSchedules.length)} of {filteredSchedules.length} records
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        
+        {/* Pagination Controls */}
+        {filteredSchedules.length > itemsPerPage && (
+          <div className="flex justify-center p-4 border-t border-gray-200">
+            <nav className="flex items-center">
+              <button
+                onClick={goToPreviousPage}
+                disabled={currentPage === 1}
+                className={`px-3 py-1 rounded-l-md border ${
+                  currentPage === 1 
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                  : 'bg-white text-blue-600 hover:bg-blue-50'
+                } focus:outline-none`}
+              >
+                <FaChevronLeft className="w-4 h-4" />
+              </button>
+              
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(page => {
+                  // Show current page, first page, last page, and 1 page on either side of current
+                  return page === 1 || 
+                    page === totalPages || 
+                    Math.abs(page - currentPage) <= 1;
+                })
+                .map((page, index, array) => {
+                  // If there's a gap in sequence, show ellipsis
+                  const showEllipsisBefore = index > 0 && page - array[index - 1] > 1;
+                  
+                  return (
+                    <React.Fragment key={page}>
+                      {showEllipsisBefore && (
+                        <span className="px-3 py-1 border-t border-b bg-gray-50 text-gray-500">...</span>
+                      )}
+                      <button
+                        onClick={() => goToPage(page)}
+                        className={`px-3 py-1 border-t border-b ${
+                          currentPage === page
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-white text-blue-600 hover:bg-blue-50'
+                        } focus:outline-none`}
+                      >
+                        {page}
+                      </button>
+                    </React.Fragment>
+                  );
+                })}
+              
+              <button
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages}
+                className={`px-3 py-1 rounded-r-md border ${
+                  currentPage === totalPages
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-white text-blue-600 hover:bg-blue-50'
+                } focus:outline-none`}
+              >
+                <FaChevronRight className="w-4 h-4" />
+              </button>
+            </nav>
+          </div>
+        )}
       </div>
     );
   };
 
   const renderCardView = (schedules) => {
     return (
-      <div className="visitor-card-grid">
-        {schedules.map(renderScheduleCard)}
+      <div className="w-full mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {schedules.map((schedule, index) => (
+            <div key={schedule._id} className="w-full">
+              {renderScheduleCard(schedule, index)}
+        </div>
+          ))}
+        </div>
+        {schedules.length > 0 && (
+          <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-md text-sm text-gray-600">
+            Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredSchedules.length)} of {filteredSchedules.length} records
+          </div>
+        )}
+        
+        {/* Pagination Controls */}
+        {filteredSchedules.length > itemsPerPage && (
+          <div className="flex justify-center mt-4">
+            <nav className="flex items-center shadow-sm">
+              <button
+                onClick={goToPreviousPage}
+                disabled={currentPage === 1}
+                className={`px-3 py-1 rounded-l-md border ${
+                  currentPage === 1 
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                  : 'bg-white text-blue-600 hover:bg-blue-50'
+                } focus:outline-none`}
+              >
+                <FaChevronLeft className="w-4 h-4" />
+              </button>
+              
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(page => {
+                  // Show current page, first page, last page, and 1 page on either side of current
+                  return page === 1 || 
+                    page === totalPages || 
+                    Math.abs(page - currentPage) <= 1;
+                })
+                .map((page, index, array) => {
+                  // If there's a gap in sequence, show ellipsis
+                  const showEllipsisBefore = index > 0 && page - array[index - 1] > 1;
+                  
+                  return (
+                    <React.Fragment key={page}>
+                      {showEllipsisBefore && (
+                        <span className="px-3 py-1 border-t border-b bg-gray-50 text-gray-500">...</span>
+                      )}
+                      <button
+                        onClick={() => goToPage(page)}
+                        className={`px-3 py-1 border-t border-b ${
+                          currentPage === page
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-white text-blue-600 hover:bg-blue-50'
+                        } focus:outline-none`}
+                      >
+                        {page}
+                      </button>
+                    </React.Fragment>
+                  );
+                })}
+              
+              <button
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages}
+                className={`px-3 py-1 rounded-r-md border ${
+                  currentPage === totalPages
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-white text-blue-600 hover:bg-blue-50'
+                } focus:outline-none`}
+              >
+                <FaChevronRight className="w-4 h-4" />
+              </button>
+            </nav>
+          </div>
+        )}
       </div>
     );
   };
 
   const renderScheduleList = () => {
     if (loading) {
-      return (
-        <div className="visitor-loading">
-          <div className="visitor-spinner"></div>
-        </div>
-      );
+      return renderLoading();
     }
 
     if (!filteredSchedules.length) {
-      return (
-        <div className="visitor-empty-state">
-          <FaBook className="visitor-empty-icon" />
-          <h3 className="text-lg font-medium text-gray-700 mb-2">No Visit Schedules</h3>
-          <p className="visitor-empty-text">
-            You don't have any visit schedules yet. Click the 'Create Schedule' button to start planning a visit.
-          </p>
-        </div>
-      );
+      return renderEmptyState();
     }
 
-    return displayMode === 'table' ? renderTableView(filteredSchedules) : renderCardView(filteredSchedules);
+    return displayMode === 'table' ? renderTableView(currentItems) : renderCardView(currentItems);
   };
 
   return (
     <div className={`visitor-container ${isCollapsed ? 'ml-16' : 'ml-64'}`}>
-      {/* Page Header */}
-      <div className="visitor-card mb-4 p-3 h-32 mt-10">
-        <div className="visitor-header">
-          <div className="visitor-title">
-            <FaClipboardCheck className="visitor-title-icon" />
-            <h2 className="visitor-title-text">Visit Schedules</h2>
-          </div>
-          
-          <div className="visitor-actions flex justify-end">
-            <button
-              onClick={() => {
-                if (!checkPendingSchedules() || hasPendingSchedule === false) {
-                  setShowScheduleForm(true);
-                } else {
-                  toast.error("You already have a pending visit schedule. You cannot create a new schedule until your current one is approved, rejected, or canceled.");
-                }
-              }}
-              disabled={loading || isCapacityReached || hasPendingSchedule}
-              className={`visitor-button visitor-button-primary ${(loading || isCapacityReached || hasPendingSchedule) ? "opacity-50 cursor-not-allowed" : ""}`}
-            >
-              <FaSave className="mr-1" /> Create Schedule
-            </button>
+      {/* Fixed Header Section */}
+      <div className={`bg-white shadow-md fixed top-14 z-20 transition-all duration-300 ${
+        isCollapsed ? "left-16 w-[calc(100%-4rem)]" : "left-64 w-[calc(100%-16rem)]"
+      }`}>
+        {/* Main header */}
+        <div className="border-b border-gray-200 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+                <FaClipboardCheck className="w-5 h-5" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-800">Upcoming Visits</h2>
+            </div>
             
-            <button
-              onClick={fetchSchedules}
-              disabled={loading}
-              className={`visitor-button visitor-button-secondary ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
-            >
-              <FaSync className={loading ? "animate-spin" : ""} /> Refresh
-            </button>
-            
-            <div className="flex gap-1 ml-1">
+            {/* Primary actions */}
+            <div className="flex items-center space-x-2">
               <button
-                onClick={() => setDisplayMode('card')}
-                className={`visitor-button ${displayMode === 'card' ? 'visitor-button-light bg-gray-300' : 'visitor-button-light'}`}
-                title="Card View"
+                onClick={handleRefresh}
+                className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200"
+                title="Refresh Data"
               >
-                <FaThLarge />
+                <FaSync className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
               </button>
+              
               <button
-                onClick={() => setDisplayMode('table')}
-                className={`visitor-button ${displayMode === 'table' ? 'visitor-button-light bg-gray-300' : 'visitor-button-light'}`}
-                title="Table View"
+                onClick={openScheduleForm}
+                disabled={loading || isCapacityReached || hasPendingSchedule}
+                className={`px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center space-x-1 shadow-sm ${
+                  (loading || isCapacityReached || hasPendingSchedule) ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+                title="Create New Schedule"
               >
-                <FaTable />
+                <FaSave className="w-4 h-4" />
+                <span className="hidden sm:inline text-sm font-medium">Schedule Visit</span>
               </button>
             </div>
           </div>
         </div>
-      </div>
+        
+        {/* Filter controls section */}
+        <div className="px-4 py-2 bg-gray-50 border-b border-gray-200">
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Left side filters */}
+            <div className="flex flex-1 flex-wrap items-center gap-2 min-w-0">
+              {/* Status Filter */}
+              <div className="relative">
+                <select
+                  id="statusFilter"
+                  name="statusFilter"
+                  value={statusFilter}
+                  onChange={(e) => handleStatusFilterChange(e.target.value)}
+                  className="appearance-none bg-white border border-gray-300 rounded-md pl-3 pr-8 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  aria-label="Filter by status"
+                >
+                  <option value="all">All Statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                  <option value="cancelled">Cancelled</option>
+                  <option value="completed">Completed</option>
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                  <FaChevronDown className="h-3 w-3" />
+                </div>
+              </div>
 
-      {/* Capacity Warning */}
-      {isCapacityReached && (
-        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 sm:p-4 mb-4 rounded-md">
-          <div className="flex">
-            <div className="flex-shrink-0">
-              <FaExclamationTriangle className="h-5 w-5 text-yellow-400" />
+              {/* Items per page selector */}
+              <div className="relative">
+                <select
+                  id="itemsPerPage"
+                  name="itemsPerPage"
+                  value={itemsPerPage}
+                  onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                  className="appearance-none bg-white border border-gray-300 rounded-md pl-3 pr-8 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  aria-label="Items per page"
+                >
+                  <option value="5">5 per page</option>
+                  <option value="10">10 per page</option>
+                  <option value="20">20 per page</option>
+                  <option value="50">50 per page</option>
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                  <FaChevronDown className="h-3 w-3" />
+                </div>
+              </div>
+
+              {/* Search */}
+              <div className="relative flex-1 min-w-[200px]">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                  <FaSearch className="h-4 w-4 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  name="search"
+                  id="search"
+                  value={searchQuery}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  placeholder="Search visits..."
+                  className="w-full bg-white border border-gray-300 rounded-md pl-9 pr-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                />
+                {searchQuery && (
+                  <button 
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+                    onClick={() => handleSearchChange("")}
+                  >
+                    <FaTimes className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
             </div>
-            <div className="ml-3">
+            
+            {/* Right side display controls */}
+            <div className="flex items-center space-x-2">
+              {/* View Toggle */}
+              <div className="inline-flex rounded-md shadow-sm" role="group">
+                <button
+                  onClick={setCardMode}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-l-md border ${
+                    displayMode === 'card' 
+                      ? 'bg-blue-50 text-blue-700 border-blue-300' 
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <FaThLarge className="mr-1 inline-block" /> Cards
+                </button>
+                <button
+                  onClick={setTableMode}
+                  className={`px-3 py-1.5 text-xs font-medium rounded-r-md border-t border-r border-b ${
+                    displayMode === 'table' 
+                      ? 'bg-blue-50 text-blue-700 border-blue-300' 
+                      : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  <FaTable className="mr-1 inline-block" /> Table
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Capacity Warning - show directly below header if capacity is reached */}
+        {isCapacityReached && (
+          <div className="px-4 py-2 bg-yellow-50 border-b border-yellow-200">
+            <div className="flex items-center">
+              <FaExclamationTriangle className="h-4 w-4 text-yellow-500 mr-2 flex-shrink-0" />
               <p className="text-sm text-yellow-700">
                 The prison has reached its visitor capacity for today. Please schedule a visit for another day.
               </p>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Filter and Search Controls */}
-      <div className="visitor-controls">
-        <div className="visitor-control-group">
-                    <div>
-            <label htmlFor="statusFilter" className="sr-only">Filter by Status</label>
-            <div className="flex">
-              <div className="flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500">
-                <FaFilter className="h-4 w-4" />
-              </div>
-              <select
-                id="statusFilter"
-                name="statusFilter"
-                value={statusFilter}
-                onChange={(e) => handleStatusFilterChange(e.target.value)}
-                className="visitor-select rounded-l-none"
-              >
-                <option value="all">All Statuses</option>
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-            </div>
-          </div>
-          
-          <div className="flex-1">
-            <label htmlFor="search" className="sr-only">Search</label>
-            <input
-              type="text"
-              name="search"
-              id="search"
-              value={searchQuery}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="visitor-input"
-              placeholder="Search by visitor name, inmate name, or purpose..."
-            />
-          </div>
-        </div>
+        )}
+        
       </div>
       
-      {/* Schedules Content */}
-      {renderScheduleList()}
+      {/* Push content down to prevent overlap with fixed header - adjust based on warnings */}
+      <div className={`pt-${isCapacityReached || hasPendingSchedule ? "44" : "36"} px-4 mt-40`}>
+        {/* Display the schedules */}
+        {renderScheduleList()}
       
-      {/* Modals */}
-      {showScheduleForm && (
-        <ScheduleForm
-          isOpen={showScheduleForm}
-          onClose={() => {
-            setShowScheduleForm(false);
-            setScheduleToEdit(null);
-          }}
-          onSuccess={handleScheduleSuccess}
-          schedule={scheduleToEdit}
-          inmates={inmates}
-          inmatesLoading={inmatesLoading}
+        {/* Modals */}
+        {showScheduleForm && (
+          <ScheduleForm
+            isOpen={showScheduleForm}
+            onClose={() => {
+              setShowScheduleForm(false);
+              setScheduleToEdit(null);
+            }}
+            onSuccess={handleScheduleSuccess}
+            schedule={scheduleToEdit}
+            inmates={inmates}
+            inmatesLoading={inmatesLoading}
+          />
+        )}
+      
+        {showDetailModal && selectedSchedule && (
+          <ScheduleDetailModal
+            isOpen={showDetailModal}
+            onClose={() => setShowDetailModal(false)}
+            schedule={selectedSchedule}
+            onEdit={handleUpdateFromDetail}
+            onCancel={openCancelModal}
+          />
+        )}
+      
+        {/* Cancel Confirmation Modal */}
+        <CancelConfirmationModal
+          isOpen={showCancelModal}
+          onClose={() => setShowCancelModal(false)}
+          schedule={scheduleToCancel}
+          onConfirm={() => scheduleToCancel && handleCancelSchedule(scheduleToCancel._id)}
         />
-      )}
       
-      {showDetailModal && selectedSchedule && (
-        <ScheduleDetailModal
-          isOpen={showDetailModal}
-          schedule={selectedSchedule}
-          onClose={() => setShowDetailModal(false)}
-          onCancel={handleCancelSchedule}
-          onUpdate={handleUpdateFromDetail}
-        />
-      )}
-      
-      {/* Mobile bottom spacing */}
-      <div className="visitor-page-bottom-space"></div>
+        {/* Mobile bottom spacing */}
+        <div className="pb-6"></div>
+      </div>
     </div>
   );
 });
 
-export default VisitSchedules; 
+export default VisitSchedules;

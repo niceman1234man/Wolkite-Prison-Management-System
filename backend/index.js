@@ -26,7 +26,7 @@ import { MessageRoutes } from "./router/hompage.router.js";
 import reportRoutes from "./router/reportRouter.js";
 import prisonerRoutes from "./router/prisonerRouter.js";
 import transferRoutes from "./router/transferRouter.js";
-import { woredaInmateRouter } from "./router/woredaInmate.router.js";
+import woredaInmateRouter from "./router/woredaInmate.router.js";
 import { notificationRouter } from "./router/notification.router.js";
 import woredaRouter from "./router/woreda.router.js";
 import dashboardRouter from "./router/dashboard.router.js";

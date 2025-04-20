@@ -134,3 +134,49 @@ export const deleteTransfer = async (req, res) => {
         });
     }
 };
+
+// Cancel Transfer Request
+export const cancelTransfer = async (req, res) => {
+    try {
+        const transferId = req.params.id;
+        console.log("Attempting to cancel transfer with ID:", transferId);
+        
+        // Find the transfer
+        const transfer = await Transfer.findById(transferId);
+        console.log("Found transfer:", transfer);
+        
+        if (!transfer) {
+            console.log("Transfer not found with ID:", transferId);
+            return res.status(404).json({
+                success: false,
+                message: "Transfer not found"
+            });
+        }
+
+        // Update transfer status to cancelled
+        transfer.status = "Cancelled"; // Changed to match the case used in frontend
+        transfer.updatedAt = new Date();
+        
+        // Save the updated transfer
+        const updatedTransfer = await transfer.save();
+        console.log("Successfully cancelled transfer:", updatedTransfer);
+
+        return res.status(200).json({
+            success: true,
+            message: "Transfer cancelled successfully",
+            data: updatedTransfer
+        });
+    } catch (error) {
+        console.error("Error in cancelTransfer:", error);
+        console.error("Error details:", {
+            message: error.message,
+            stack: error.stack
+        });
+        
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error while cancelling transfer",
+            error: error.message
+        });
+    }
+};

@@ -83,13 +83,22 @@ const woredaInmateSchema = new mongoose.Schema(
     ],
     status: {
       type: String,
-      enum: ["Active", "TransferRequested", "Transferred"],
+      enum: ["Active", "TransferRequested", "Transferred", "Released"],
       default: "Active",
     },
     woredaId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Woreda",
       required: false,
+    },
+    releaseDate: {
+      type: Date,
+      required: false,
+    },
+    releaseReason: {
+      type: String,
+      required: false,
+      trim: true,
     },
   },
   {

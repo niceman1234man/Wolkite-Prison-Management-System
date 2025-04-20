@@ -3,12 +3,14 @@ import { toast } from "react-hot-toast";
 import { useSelector, useDispatch } from "react-redux";
 import { FaUser, FaSave, FaKey, FaSpinner } from "react-icons/fa";
 import { updateUser } from "../../redux/userSlice";
+import axiosInstance from "../../utils/axiosInstance";
 import '../../styles/responsive.css';
 
 function VisitorProfile() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [hasActiveSchedules, setHasActiveSchedules] = useState(false);
   const [formData, setFormData] = useState({
     firstName: "",
     middleName: "",
@@ -24,6 +26,7 @@ function VisitorProfile() {
     firstName: "",
     middleName: "",
     lastName: "",
+    email: "",
     phone: "",
     currentPassword: "",
     newPassword: "",
@@ -36,6 +39,7 @@ function VisitorProfile() {
 
   useEffect(() => {
     fetchProfile();
+    checkActiveSchedules();
   }, []);
 
   const fetchProfile = async () => {
@@ -45,6 +49,7 @@ function VisitorProfile() {
       firstName: "",
       middleName: "",
       lastName: "",
+      email: "",
       phone: "",
       currentPassword: "",
       newPassword: "",
@@ -52,12 +57,55 @@ function VisitorProfile() {
     });
     
     try {
-      // Get data from redux store
-      if (user) {
-        // Remove console logs in production
-        // console.log("Using user data from Redux:", user);
-        // console.log("Middle name from Redux:", user.middleName);
+      // Try to fetch profile data from server - using the auth endpoint
+      const response = await axiosInstance.get('/auth/profile');
+      
+      if (response.data.success) {
+        const userData = response.data.user || response.data.data;
         
+        // Update Redux store with latest user data
+        dispatch(updateUser(userData));
+        
+        // Update local form data
+        setFormData(prev => ({
+          ...prev,
+          firstName: userData.firstName || "",
+          middleName: userData.middleName || "",
+          lastName: userData.lastName || "",
+          email: userData.email || "",
+          phone: userData.phone || "",
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        }));
+        
+        toast.success("Profile information loaded successfully");
+      } else {
+        // Fallback to Redux store if API fails
+        if (user) {
+          setFormData(prev => ({
+            ...prev,
+            firstName: user.firstName || "",
+            middleName: user.middleName || "",
+            lastName: user.lastName || "",
+            email: user.email || "",
+            phone: user.phone || "",
+            currentPassword: "",
+            newPassword: "",
+            confirmPassword: "",
+          }));
+          
+          toast.success("Form has been reset to original values");
+        } else {
+          setError("No user data found. Please log in again.");
+          toast.error("No user data found. Please log in again.");
+        }
+      }
+    } catch (error) {
+      console.error("Error loading profile:", error);
+      
+      // Fallback to Redux store if API fails
+      if (user) {
         setFormData(prev => ({
           ...prev,
           firstName: user.firstName || "",
@@ -70,18 +118,51 @@ function VisitorProfile() {
           confirmPassword: "",
         }));
         
-        // Show success message when form is reset
         toast.success("Form has been reset to original values");
       } else {
-        setError("No user data found. Please log in again.");
-        toast.error("No user data found. Please log in again.");
+        setError("Failed to load profile information");
+        toast.error("Failed to load profile information");
       }
-    } catch (error) {
-      console.error("Error loading profile:", error);
-      setError("Failed to load profile information");
-      toast.error("Failed to load profile information");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Check if visitor has any active/approved schedules
+  const checkActiveSchedules = async () => {
+    try {
+      const response = await axiosInstance.get('/visitor/schedule/schedules');
+      
+      if (response.data.success && response.data.schedules) {
+        // Check if there are any active schedules (approved or pending)
+        const activeSchedules = response.data.schedules.filter(schedule => 
+          ['pending', 'approved'].includes(schedule.status?.toLowerCase())
+        );
+        
+        setHasActiveSchedules(activeSchedules.length > 0);
+        
+        if (activeSchedules.length > 0) {
+          console.log("Visitor has active schedules. Name changes will be restricted.");
+          
+          // Show a warning toast to the user
+          toast(
+            "You cannot change your name while you have active or pending visit schedules",
+            {
+              icon: '⚠️',
+              style: {
+                borderRadius: '10px',
+                background: '#FEF3C7',
+                color: '#92400E',
+              },
+              duration: 7000,
+            }
+          );
+        }
+      }
+    } catch (error) {
+      console.error("Error checking active schedules:", error);
+      // Default to false if error occurs to not prevent form submission
+      setHasActiveSchedules(false);
     }
   };
 
@@ -123,6 +204,7 @@ function VisitorProfile() {
       }
     }
     
+    // Password complexity requirements
     if (formData.newPassword && formData.newPassword.length < 8) {
       setFieldErrors(prev => ({...prev, newPassword: "Password must be at least 8 characters long"}));
       return false;
@@ -139,10 +221,13 @@ function VisitorProfile() {
       setFieldErrors(prev => ({...prev, newPassword: "Password must contain at least one number"}));
       return false;
     }
+    
+    // Password confirmation check
     if (formData.newPassword !== formData.confirmPassword) {
       setFieldErrors(prev => ({...prev, confirmPassword: "Passwords do not match"}));
       return false;
     }
+    
     return true;
   };
   
@@ -152,11 +237,32 @@ function VisitorProfile() {
       firstName: "",
       middleName: "",
       lastName: "",
+      email: "",
       phone: "",
       currentPassword: "",
       newPassword: "",
       confirmPassword: "",
     };
+    
+    // Check for name changes if there are active schedules
+    if (hasActiveSchedules) {
+      if (user && formData.firstName !== user.firstName) {
+        newErrors.firstName = "Cannot change first name while you have active or pending schedules";
+        isValid = false;
+      }
+      
+      if (user && formData.lastName !== user.lastName) {
+        newErrors.lastName = "Cannot change last name while you have active or pending schedules";
+        isValid = false;
+      }
+      
+      if (user && formData.middleName !== user.middleName) {
+        newErrors.middleName = "Cannot change middle name while you have active or pending schedules";
+        isValid = false;
+      }
+    }
+    
+    // Regular validation for all fields
     
     // Validate first name
     if (!formData.firstName.trim()) {
@@ -185,6 +291,15 @@ function VisitorProfile() {
       isValid = false;
     } else if (!/^[A-Za-z\s'-]+$/.test(formData.lastName)) {
       newErrors.lastName = "Last name can only contain letters, spaces, hyphens and apostrophes";
+      isValid = false;
+    }
+    
+    // Validate email
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required";
+      isValid = false;
+    } else if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(formData.email)) {
+      newErrors.email = "Please enter a valid email address";
       isValid = false;
     }
     
@@ -219,56 +334,122 @@ function VisitorProfile() {
     setError(null);
 
     try {
-      // Check if user is trying to change password
-      if (formData.currentPassword || formData.newPassword || formData.confirmPassword) {
-        // Temporarily disable password changes 
-        toast("Password changes require server connection. Profile information will be updated locally.", {
-          icon: 'ℹ️',
-          style: {
-            background: '#3b82f6',
-            color: '#fff',
-          },
-        });
-        
-        // Clear password fields
-        setFormData(prev => ({
-          ...prev,
-          currentPassword: "",
-          newPassword: "",
-          confirmPassword: "",
-        }));
-      }
-
-      // Update profile information in Redux only
       const profileData = {
         firstName: formData.firstName,
         middleName: formData.middleName,
         lastName: formData.lastName,
+        email: formData.email,
         phone: formData.phone,
       };
       
-      // Update redux state
-      if (user) {
-        dispatch(updateUser({
-          ...user,
-          ...profileData
-        }));
+      console.log("Submitting profile data:", profileData);
+      
+      // Check if user is trying to change password
+      if (formData.currentPassword && formData.newPassword && formData.confirmPassword) {
+        try {
+          // Handle password change in a separate API call
+          const passwordResponse = await axiosInstance.put('/auth/change-password', {
+            currentPassword: formData.currentPassword,
+            newPassword: formData.newPassword
+          });
+          
+          if (passwordResponse.data.success) {
+            toast.success("Password updated successfully");
+            
+            // Clear password fields
+            setFormData(prev => ({
+              ...prev,
+              currentPassword: "",
+              newPassword: "",
+              confirmPassword: "",
+            }));
+          }
+        } catch (passwordError) {
+          console.error("Password update error details:", passwordError.response?.data);
+          if (passwordError.response?.data?.message === "Current password is incorrect") {
+            setFieldErrors(prev => ({...prev, currentPassword: "Current password is incorrect"}));
+            toast.error("Current password is incorrect");
+          } else {
+            console.error("Password update error:", passwordError);
+            toast.error("Failed to update password");
+          }
+          // Continue with profile update even if password update fails
+        }
+      }
+
+      // Update profile information
+      console.log("Sending profile update to:", '/auth/profile');
+      const response = await axiosInstance.put('/auth/profile', profileData);
+      console.log("Profile update response:", response.data);
+      
+      if (response.data.success) {
+        // Update redux state with the updated data
+        if (user) {
+          const updatedUser = {
+            ...user,
+            firstName: formData.firstName,
+            middleName: formData.middleName,
+            lastName: formData.lastName,
+            email: formData.email,
+            phone: formData.phone,
+          };
+          
+          dispatch(updateUser(updatedUser));
+          
+          // Update localStorage to persist changes
+          localStorage.setItem("user", JSON.stringify(updatedUser));
+        }
         
-        // Store in localStorage to persist changes
-        const updatedUser = {
-          ...user,
-          ...profileData
-        };
-        localStorage.setItem("user", JSON.stringify(updatedUser));
-        
-        toast.success("Profile updated locally");
+        toast.success("Profile updated successfully");
       } else {
-        toast.error("No user data found. Please log in again.");
+        throw new Error(response.data.message || "Failed to update profile");
       }
     } catch (error) {
       console.error("Error updating profile:", error);
-      setError("Failed to update profile");
-      toast.error("Failed to update profile");
+      console.error("Response data:", error.response?.data);
+      console.error("Status code:", error.response?.status);
+      
+      // Handle specific error cases
+      if (error.response?.data?.error === "Current password is incorrect") {
+        setFieldErrors(prev => ({...prev, currentPassword: "Current password is incorrect"}));
+        toast.error("Current password is incorrect");
+      } else if (error.response?.status === 409 || error.response?.data?.message === "Email already in use") {
+        // Handle duplicate email error (409 Conflict)
+        setFieldErrors(prev => ({...prev, email: "Email address is already in use"}));
+        toast.error("Email address is already in use");
+      } else if (error.response?.data?.field) {
+        // Handle field-specific errors from backend
+        const fieldName = error.response?.data.field;
+        const errorMessage = error.response?.data.message || `Invalid ${fieldName}`;
+        setFieldErrors(prev => ({...prev, [fieldName]: errorMessage}));
+        toast.error(errorMessage);
+      } else {
+        // Fallback error message
+        setError("Failed to update profile: " + (error.response?.data?.message || error.message || "Unknown error"));
+        toast.error("Failed to update profile");
+        
+        // Still update local state if server update fails
+        if (user) {
+          const updatedUser = {
+            ...user,
+            firstName: formData.firstName,
+            middleName: formData.middleName,
+            lastName: formData.lastName,
+            email: formData.email,
+            phone: formData.phone,
+          };
+          
+          dispatch(updateUser(updatedUser));
+          localStorage.setItem("user", JSON.stringify(updatedUser));
+          toast("Profile updated locally", {
+            icon: 'ℹ️',
+            style: {
+              background: '#3b82f6',
+              color: '#fff',
+            },
+          });
+        }
+      }
     } finally {
       setSaving(false);
     }
@@ -315,6 +496,25 @@ function VisitorProfile() {
           </details>
         </div>
 
+        {/* Active Schedules Warning */}
+        {hasActiveSchedules && (
+          <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-md mb-4 text-sm sm:text-base">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-amber-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="font-medium">Name Change Restriction</h3>
+                <div className="mt-1">
+                  <p>Your name fields cannot be changed while you have active or pending visit schedules. Please complete or cancel those schedules before changing your name.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Error Message */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-md mb-4 text-sm sm:text-base">
@@ -337,7 +537,7 @@ function VisitorProfile() {
                       First Name <span className="text-red-500">*</span>
                     </label>
                     <input
-                      className={`shadow appearance-none border ${fieldErrors.firstName ? 'border-red-500' : 'border-gray-300'} rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm`}
+                      className={`shadow appearance-none border ${fieldErrors.firstName ? 'border-red-500' : 'border-gray-300'} ${hasActiveSchedules ? 'bg-gray-100' : ''} rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm`}
                       id="firstName"
                       type="text"
                       placeholder="First Name"
@@ -345,23 +545,31 @@ function VisitorProfile() {
                       value={formData.firstName}
                       onChange={handleChange}
                       required
+                      readOnly={hasActiveSchedules}
                     />
                     {fieldErrors.firstName && <p className="text-red-500 text-xs mt-1">{fieldErrors.firstName}</p>}
+                    {hasActiveSchedules && !fieldErrors.firstName && (
+                      <p className="text-amber-600 text-xs mt-1">Cannot be changed while you have active schedules</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-gray-700 text-xs sm:text-sm font-bold mb-1 sm:mb-2" htmlFor="middleName">
                       Middle Name
                     </label>
                     <input
-                      className={`shadow appearance-none border ${fieldErrors.middleName ? 'border-red-500' : 'border-gray-300'} rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm`}
+                      className={`shadow appearance-none border ${fieldErrors.middleName ? 'border-red-500' : 'border-gray-300'} ${hasActiveSchedules ? 'bg-gray-100' : ''} rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm`}
                       id="middleName"
                       type="text"
                       placeholder="Middle Name"
                       name="middleName"
                       value={formData.middleName}
                       onChange={handleChange}
+                      readOnly={hasActiveSchedules}
                     />
                     {fieldErrors.middleName && <p className="text-red-500 text-xs mt-1">{fieldErrors.middleName}</p>}
+                    {hasActiveSchedules && !fieldErrors.middleName && (
+                      <p className="text-amber-600 text-xs mt-1">Cannot be changed while you have active schedules</p>
+                    )}
                   </div>
                 </div>
 
@@ -371,7 +579,7 @@ function VisitorProfile() {
                       Last Name <span className="text-red-500">*</span>
                     </label>
                     <input
-                      className={`shadow appearance-none border ${fieldErrors.lastName ? 'border-red-500' : 'border-gray-300'} rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm`}
+                      className={`shadow appearance-none border ${fieldErrors.lastName ? 'border-red-500' : 'border-gray-300'} ${hasActiveSchedules ? 'bg-gray-100' : ''} rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm`}
                       id="lastName"
                       type="text"
                       placeholder="Last Name"
@@ -379,22 +587,26 @@ function VisitorProfile() {
                       value={formData.lastName}
                       onChange={handleChange}
                       required
+                      readOnly={hasActiveSchedules}
                     />
                     {fieldErrors.lastName && <p className="text-red-500 text-xs mt-1">{fieldErrors.lastName}</p>}
+                    {hasActiveSchedules && !fieldErrors.lastName && (
+                      <p className="text-amber-600 text-xs mt-1">Cannot be changed while you have active schedules</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-gray-700 text-xs sm:text-sm font-bold mb-1 sm:mb-2" htmlFor="email">
                       Email
                     </label>
                     <input
-                      className="shadow appearance-none border border-gray-300 rounded w-full py-2 px-3 bg-gray-100 text-gray-600 leading-tight focus:outline-none text-sm"
+                      className={`shadow appearance-none border ${fieldErrors.email ? 'border-red-500' : 'border-gray-300'} rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline text-sm`}
                       id="email"
                       type="email"
                       name="email"
                       value={formData.email}
-                      disabled
+                      onChange={handleChange}
                     />
-                    <p className="text-xs text-gray-500 mt-1">Email cannot be changed</p>
+                    {fieldErrors.email && <p className="text-red-500 text-xs mt-1">{fieldErrors.email}</p>}
                   </div>
                 </div>
 
@@ -413,6 +625,7 @@ function VisitorProfile() {
                     required
                   />
                   {fieldErrors.phone && <p className="text-red-500 text-xs mt-1">{fieldErrors.phone}</p>}
+                  <p className="text-xs text-gray-500 mt-1">Format: +1234567890 or 0912345678</p>
                 </div>
 
                 <div className="mt-4 sm:mt-6">
@@ -448,6 +661,7 @@ function VisitorProfile() {
                         onChange={handleChange}
                       />
                       {fieldErrors.newPassword && <p className="text-red-500 text-xs mt-1">{fieldErrors.newPassword}</p>}
+                      <p className="text-xs text-gray-500 mt-1">Minimum 8 characters with uppercase, lowercase, and number</p>
                     </div>
                     <div className="sm:col-span-2 md:col-span-1">
                       <label className="block text-gray-700 text-xs sm:text-sm font-bold mb-1 sm:mb-2" htmlFor="confirmPassword">

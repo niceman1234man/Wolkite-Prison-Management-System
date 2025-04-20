@@ -22,7 +22,8 @@ const ScheduleForm = ({
   schedule,
   onSuccess,
   inmates,
-  inmatesLoading
+  inmatesLoading,
+  visitors
 }) => {
   const [formData, setFormData] = useState({
     firstName: "",
@@ -98,6 +99,31 @@ const ScheduleForm = ({
       // Debug user data
       debugUserData();
       
+      // First, try to populate from the passed schedule (highest priority)
+      if (schedule) {
+        setFormData({
+          firstName: schedule.firstName || "",
+          middleName: schedule.middleName || "",
+          lastName: schedule.lastName || "",
+          phone: schedule.phone || "",
+          idType: schedule.idType || "",
+          idNumber: schedule.idNumber || "",
+          idExpiryDate: schedule.idExpiryDate ? new Date(schedule.idExpiryDate).toISOString().split('T')[0] : "",
+          purpose: schedule.purpose || "",
+          relationship: schedule.relationship || "",
+          inmateId: schedule.inmateId?.id || schedule.inmateId?._id || schedule.inmateId || "",
+          visitDate: schedule.visitDate ? new Date(schedule.visitDate).toISOString().split('T')[0] : "",
+          visitTime: schedule.visitTime || "",
+          visitDuration: schedule.visitDuration || 30,
+          notes: schedule.notes || "",
+          visitorPhoto: null,
+          idPhoto: null
+        });
+        return; // Exit early since we've populated from schedule
+      }
+      
+      // If no schedule data, try to get visitor information from different sources
+      
       // Check if user is logged in and set up localStorage
       const userStr = localStorage.getItem("user");
       const token = localStorage.getItem("token");
@@ -108,20 +134,71 @@ const ScheduleForm = ({
         return;
       }
       
+      // If we have visitors data passed in, use it to pre-populate (second priority)
+      if (visitors && visitors.length > 0) {
+        // Try to find the visitor that matches the current user
+        try {
+          if (userStr) {
+            const userData = JSON.parse(userStr);
+            const userId = userData.id || userData._id || userData.userId;
+            
+            // Find the visitor that matches this user ID
+            const currentVisitor = visitors.find(visitor => 
+              visitor._id === userId || 
+              visitor.userId === userId || 
+              visitor.user === userId
+            );
+            
+            if (currentVisitor) {
+              console.log("Found matching visitor in visitors data:", currentVisitor);
+              setFormData(prev => ({
+                ...prev,
+                firstName: currentVisitor.firstName || "",
+                middleName: currentVisitor.middleName || "",
+                lastName: currentVisitor.lastName || "",
+                phone: currentVisitor.phone || "",
+                idType: currentVisitor.idType || "",
+                idNumber: currentVisitor.idNumber || "",
+                idExpiryDate: currentVisitor.idExpiryDate ? 
+                  new Date(currentVisitor.idExpiryDate).toISOString().split('T')[0] : "",
+              }));
+            }
+          }
+        } catch (error) {
+          console.error("Error finding visitor in visitors data:", error);
+        }
+      }
+      
+      // Continue with regular initialization (third priority)
       let userId = null;
       let userRole = "unknown";
       let isVisitor = false;
+      let userData = null;
       
       // Try to get user data from localStorage
       try {
         if (userStr) {
-          const user = JSON.parse(userStr);
+          userData = JSON.parse(userStr);
           // Use id or _id, whichever is available
-          userId = user.id || user._id || user.userId || null;
-          userRole = user.role || user.userType || "unknown";
+          userId = userData.id || userData._id || userData.userId || null;
+          userRole = userData.role || userData.userType || "unknown";
           isVisitor = userRole.toLowerCase().includes('visitor');
           
           console.log("User data found:", { userId, userRole, isVisitor });
+
+          // Auto-populate visitor details from user data for new schedules
+          if (!schedule) {
+            setFormData(prev => ({
+              ...prev,
+              firstName: userData.firstName || "",
+              middleName: userData.middleName || "",
+              lastName: userData.lastName || "",
+              phone: userData.phone || "",
+              idType: userData.idType || "",
+              idNumber: userData.idNumber || "",
+              idExpiryDate: userData.idExpiryDate ? new Date(userData.idExpiryDate).toISOString().split('T')[0] : "",
+            }));
+          }
         } else {
           console.log("No user data found in localStorage");
         }
@@ -141,6 +218,22 @@ const ScheduleForm = ({
                 userId = value.id || value._id || value.userId;
                 userRole = value.role || value.userType || "unknown";
                 isVisitor = userRole.toLowerCase().includes('visitor');
+                userData = value;
+                
+                // If we found visitor data in another key, auto-populate
+                if (!schedule && isVisitor) {
+                  setFormData(prev => ({
+                    ...prev,
+                    firstName: value.firstName || "",
+                    middleName: value.middleName || "",
+                    lastName: value.lastName || "",
+                    phone: value.phone || "",
+                    idType: value.idType || "",
+                    idNumber: value.idNumber || "",
+                    idExpiryDate: value.idExpiryDate ? new Date(value.idExpiryDate).toISOString().split('T')[0] : "",
+                  }));
+                }
+                
                 console.log(`Found user data in localStorage key "${key}":`, { userId, userRole, isVisitor });
                 break;
               }
@@ -209,26 +302,25 @@ const ScheduleForm = ({
           visitorPhoto: null,
           idPhoto: null
         });
-      } else {
-        // For new schedules, reset form
-        setFormData({
-          firstName: "",
-          middleName: "",
-          lastName: "",
-          phone: "",
-          idType: "",
-          idNumber: "",
-          idExpiryDate: "",
+      } else if (!userData) {
+        // For new schedules without user data, reset form fields except visitor info
+        setFormData(prev => ({
+          ...prev,
           purpose: "",
           relationship: "",
           inmateId: "",
-          visitDate: "",
-          visitTime: "",
+          visitDate: format(new Date(), "yyyy-MM-dd"),
+          visitTime: "09:00",
           visitDuration: 30,
           notes: "",
           visitorPhoto: null,
           idPhoto: null
-        });
+        }));
+      }
+      
+      // If we don't have visitor details yet, try to fetch them from the API
+      if (!schedule && (!formData.firstName || !formData.phone)) {
+        fetchVisitorProfile(userId);
       }
     }
     
@@ -237,7 +329,7 @@ const ScheduleForm = ({
       // Clear any pending state updates that might cause errors
       // This helps prevent React state updates on unmounted component
     };
-  }, [isOpen, schedule]);
+  }, [isOpen, schedule, formData.firstName, formData.phone, visitors]);
 
   useEffect(() => {
     if (capacityInfo.currentDailyVisits && Object.keys(capacityInfo.currentDailyVisits).length > 0) {
@@ -286,19 +378,121 @@ const ScheduleForm = ({
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value
-    });
+    const { name, value, type, checked } = e.target;
+    const newValue = type === "checkbox" ? checked : value;
     
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors({
-        ...errors,
-        [name]: ""
-      });
+    // Special handling for select fields to handle null vs empty string
+    const fieldValue = (name === "inmateId" && value === "") ? null : newValue;
+    
+    setFormData((prev) => ({
+      ...prev,
+      [name]: fieldValue,
+    }));
+    
+    // Real-time validation for important fields
+    let fieldError = null;
+    
+    // First name validation
+    if (name === "firstName") {
+      if (!value.trim()) {
+        fieldError = "First name is required";
+      } else if (value.trim().length < 2) {
+        fieldError = "First name must be at least 2 characters";
+      } else if (!/^[a-zA-Z\s\-']+$/.test(value.trim())) {
+        fieldError = "First name should contain only letters, spaces, hyphens, and apostrophes";
+      }
     }
+    
+    // Last name validation
+    if (name === "lastName") {
+      if (!value.trim()) {
+        fieldError = "Last name is required";
+      } else if (value.trim().length < 2) {
+        fieldError = "Last name must be at least 2 characters";
+      } else if (!/^[a-zA-Z\s\-']+$/.test(value.trim())) {
+        fieldError = "Last name should contain only letters, spaces, hyphens, and apostrophes";
+      }
+    }
+    
+    // Middle name validation (optional field)
+    if (name === "middleName" && value.trim()) {
+      if (!/^[a-zA-Z\s\-']+$/.test(value.trim())) {
+        fieldError = "Middle name should contain only letters, spaces, hyphens, and apostrophes";
+      }
+    }
+    
+    // Phone number validation
+    if (name === "phone") {
+      if (!value.trim()) {
+        fieldError = "Phone number is required";
+      } else if (value.trim().length < 10) {
+        fieldError = "Phone number must be at least 10 digits";
+      } else if (!/^[0-9+\-\s()]+$/.test(value.trim())) {
+        fieldError = "Phone number should contain only digits, +, -, spaces, and parentheses";
+      }
+    }
+    
+    // ID number validation
+    if (name === "idNumber" && value.trim()) {
+      if (value.trim().length < 5) {
+        fieldError = "ID number must be at least 5 characters";
+      } else {
+        // Different validation based on ID type
+        const idType = formData.idType;
+        if (idType === "passport") {
+          if (!/^[A-Z0-9]{6,15}$/i.test(value.trim())) {
+            fieldError = "Passport number should be 6-15 alphanumeric characters";
+          }
+        } else if (idType === "national_id") {
+          if (!/^[A-Z0-9\-\/]{5,20}$/i.test(value.trim())) {
+            fieldError = "National ID should be 5-20 characters (letters, numbers, hyphens, or slashes)";
+          }
+        } else if (idType === "drivers_license") {
+          if (!/^[A-Z0-9\-\/]{5,20}$/i.test(value.trim())) {
+            fieldError = "Driver's license should be 5-20 characters (letters, numbers, hyphens, or slashes)";
+          }
+        }
+      }
+    }
+    
+    // Visit date validation
+    if (name === "visitDate" && value.trim()) {
+      const selectedDate = new Date(value);
+      const currentDate = new Date();
+      
+      // Set time to start of day for date-only comparison
+      selectedDate.setHours(0, 0, 0, 0);
+      currentDate.setHours(0, 0, 0, 0);
+      
+      if (selectedDate < currentDate) {
+        fieldError = "Visit date cannot be in the past";
+      } else if (isDateDisabled(value)) {
+        fieldError = "This date has reached visitor capacity. Please select another date.";
+      }
+    }
+    
+    // Visit time validation
+    if (name === "visitTime" && value.trim()) {
+      const [hours, minutes] = value.split(':').map(Number);
+      if (hours < 9 || hours > 16 || (hours === 16 && minutes > 0)) {
+        fieldError = "Visit time must be between 9:00 AM and 4:00 PM";
+      }
+    }
+    
+    // Purpose validation
+    if (name === "purpose" && value.trim()) {
+      if (value.trim().length < 5) {
+        fieldError = "Please provide a more detailed purpose (at least 5 characters)";
+      } else if (value.trim().length > 200) {
+        fieldError = "Purpose is too long (maximum 200 characters)";
+      }
+    }
+    
+    // Update the specific field error or clear it if validation passes
+    setErrors(prev => ({
+      ...prev,
+      [name]: fieldError,
+    }));
   };
 
   const handleFileChange = (e) => {
@@ -327,48 +521,147 @@ const ScheduleForm = ({
   };
 
   const validateStep = (stepNumber) => {
-    const newErrors = {};
-    
+    const stepErrors = {};
+
     if (stepNumber === 1) {
-      if (!formData.firstName) newErrors.firstName = "First name is required";
-      if (!formData.lastName) newErrors.lastName = "Last name is required";
-      if (!formData.phone) newErrors.phone = "Phone number is required";
-      if (!formData.idType) newErrors.idType = "ID type is required";
-      if (!formData.idNumber) newErrors.idNumber = "ID number is required";
+      // Personal information validations
+      if (!formData.firstName.trim()) {
+        stepErrors.firstName = "First name is required";
+      } else if (formData.firstName.trim().length < 2) {
+        stepErrors.firstName = "First name must be at least 2 characters";
+      } else if (!/^[a-zA-Z\s\-']+$/.test(formData.firstName.trim())) {
+        stepErrors.firstName = "First name should contain only letters, spaces, hyphens, and apostrophes";
+      }
+
+      if (!formData.lastName.trim()) {
+        stepErrors.lastName = "Last name is required";
+      } else if (formData.lastName.trim().length < 2) {
+        stepErrors.lastName = "Last name must be at least 2 characters";
+      } else if (!/^[a-zA-Z\s\-']+$/.test(formData.lastName.trim())) {
+        stepErrors.lastName = "Last name should contain only letters, spaces, hyphens, and apostrophes";
+      }
+
+      // Middle name validation (optional field)
+      if (formData.middleName.trim() && !/^[a-zA-Z\s\-']+$/.test(formData.middleName.trim())) {
+        stepErrors.middleName = "Middle name should contain only letters, spaces, hyphens, and apostrophes";
+      }
       
-      // Only require photos for new schedules, not edits
-      if (!schedule) {
-        if (!formData.visitorPhoto) newErrors.visitorPhoto = "Visitor photo is required";
-        if (!formData.idPhoto) newErrors.idPhoto = "ID photo is required";
+      // Phone number validation
+      if (!formData.phone.trim()) {
+        stepErrors.phone = "Phone number is required";
+      } else if (formData.phone.trim().length < 10) {
+        stepErrors.phone = "Phone number must be at least 10 digits";
+      } else if (!/^[0-9+\-\s()]+$/.test(formData.phone.trim())) {
+        stepErrors.phone = "Phone number should contain only digits, +, -, spaces, and parentheses";
+      }
+      
+      // ID validations
+      if (!formData.idType.trim()) {
+        stepErrors.idType = "ID type is required";
+      }
+      
+      if (!formData.idNumber.trim()) {
+        stepErrors.idNumber = "ID number is required";
+      } else if (formData.idNumber.trim().length < 5) {
+        stepErrors.idNumber = "ID number must be at least 5 characters";
+      } else {
+        // Different validation based on ID type
+        if (formData.idType === "passport") {
+          if (!/^[A-Z0-9]{6,15}$/i.test(formData.idNumber.trim())) {
+            stepErrors.idNumber = "Passport number should be 6-15 alphanumeric characters";
+          }
+        } else if (formData.idType === "national_id") {
+          if (!/^[A-Z0-9\-\/]{5,20}$/i.test(formData.idNumber.trim())) {
+            stepErrors.idNumber = "National ID should be 5-20 characters (letters, numbers, hyphens, or slashes)";
+          }
+        } else if (formData.idType === "drivers_license") {
+          if (!/^[A-Z0-9\-\/]{5,20}$/i.test(formData.idNumber.trim())) {
+            stepErrors.idNumber = "Driver's license should be 5-20 characters (letters, numbers, hyphens, or slashes)";
+          }
+        }
+      }
+      
+      // ID Expiry date validation (if provided)
+      if (formData.idExpiryDate.trim()) {
+        const expiryDate = new Date(formData.idExpiryDate);
+        const currentDate = new Date();
+        
+        if (isNaN(expiryDate.getTime())) {
+          stepErrors.idExpiryDate = "Please enter a valid date";
+        } else if (expiryDate < currentDate) {
+          stepErrors.idExpiryDate = "ID has expired. Please provide a valid ID";
+        }
       }
     } else if (stepNumber === 2) {
-      if (!formData.purpose) newErrors.purpose = "Purpose is required";
-      if (!formData.relationship) newErrors.relationship = "Relationship is required";
-      
-      // Only require inmate selection if inmates are available and not in demo mode
-      if (inmates && Array.isArray(inmates) && inmates.length > 0 && 
-          !inmates.some(inmate => inmate._id === "default-inmate") && 
-          !formData.inmateId) {
-        newErrors.inmateId = "Please select an inmate";
+      // Visit details validations for step 2
+      if (!formData.inmateId) {
+        stepErrors.inmateId = "Please select an inmate to visit";
       }
       
-      if (!formData.visitDate) newErrors.visitDate = "Visit date is required";
-      if (!formData.visitTime) newErrors.visitTime = "Visit time is required";
+      if (!formData.purpose.trim()) {
+        stepErrors.purpose = "Purpose is required";
+      } else if (formData.purpose.trim().length < 5) {
+        stepErrors.purpose = "Please provide a more detailed purpose (at least 5 characters)";
+      } else if (formData.purpose.trim().length > 200) {
+        stepErrors.purpose = "Purpose is too long (maximum 200 characters)";
+      }
       
-      // Check if selected date is disabled (at capacity)
-      if (formData.visitDate && isDateDisabled(formData.visitDate)) {
-        newErrors.visitDate = "This date has reached maximum visitor capacity. Please select another date.";
+      if (!formData.relationship.trim()) {
+        stepErrors.relationship = "Relationship is required";
+      }
+    } else if (stepNumber === 3) {
+      // Visit scheduling validations for step 3
+      if (!formData.visitDate.trim()) {
+        stepErrors.visitDate = "Visit date is required";
+      } else {
+        // Validate date is not in the past
+        const selectedDate = new Date(formData.visitDate);
+        const currentDate = new Date();
         
-        // Suggest next available date
-        const nextDate = getNextAvailableDate();
-        if (nextDate) {
-          newErrors.visitDate += ` Next available date is ${new Date(nextDate).toLocaleDateString()}.`;
+        // Set time to start of day for date-only comparison
+        selectedDate.setHours(0, 0, 0, 0);
+        currentDate.setHours(0, 0, 0, 0);
+        
+        if (selectedDate < currentDate) {
+          stepErrors.visitDate = "Visit date cannot be in the past";
+        }
+        
+        // Check if date is disabled due to capacity
+        if (isDateDisabled(formData.visitDate)) {
+          stepErrors.visitDate = "This date has reached visitor capacity. Please select another date.";
+        }
+        
+        // Validate date is not too far in the future
+        const maxDate = new Date();
+        maxDate.setMonth(maxDate.getMonth() + 3);
+        if (selectedDate > maxDate) {
+          stepErrors.visitDate = "Visit date cannot be more than 3 months in the future";
+        }
+      }
+      
+      if (!formData.visitTime.trim()) {
+        stepErrors.visitTime = "Visit time is required";
+      } else {
+        // Validate visit time is within allowed hours
+        const [hours, minutes] = formData.visitTime.split(':').map(Number);
+        if (hours < 9 || hours > 16 || (hours === 16 && minutes > 0)) {
+          stepErrors.visitTime = "Visit time must be between 9:00 AM and 4:00 PM";
+        }
+      }
+      
+      // Validate visit duration
+      if (!formData.visitDuration) {
+        stepErrors.visitDuration = "Visit duration is required";
+      } else {
+        const duration = parseInt(formData.visitDuration);
+        if (isNaN(duration) || duration < 15 || duration > 120) {
+          stepErrors.visitDuration = "Visit duration must be between 15 and 120 minutes";
         }
       }
     }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+
+    setErrors(stepErrors);
+    return Object.keys(stepErrors).length === 0;
   };
 
   const handleNextStep = () => {
@@ -385,7 +678,9 @@ const ScheduleForm = ({
     e.preventDefault();
     
     // Don't allow new schedule creation if there's a pending schedule
-    if (!schedule && hasPendingSchedule) {
+    // But make an exception for rescheduling
+    const isRescheduling = schedule?.isReschedule;
+    if (!schedule && hasPendingSchedule && !isRescheduling) {
       toast.error("You already have a pending visit schedule. Please wait for approval or cancel your existing schedule before creating a new one.");
       return;
     }
@@ -423,13 +718,32 @@ const ScheduleForm = ({
         userId: userId
       };
 
+      // Add special flags for rescheduling to bypass backend validations
+      if (isRescheduling) {
+        submitData.isReschedule = true;
+        submitData.bypassPendingCheck = true;
+        // Include original schedule ID to help backend tracking
+        if (schedule.originalScheduleId) {
+          submitData.originalScheduleId = schedule.originalScheduleId;
+        }
+      }
+      
+      // Determine if this is a rescheduling (no _id) or updating an existing schedule
+      const hasId = !!schedule?._id;
+      
       // Use different endpoints for update vs create
-      const endpoint = schedule ? `/visitor/schedule/${schedule._id}` : '/visitor/schedule';
-      const method = schedule ? 'put' : 'post';
+      const endpoint = schedule && hasId && !isRescheduling ? `/visitor/schedule/${schedule._id}` : '/visitor/schedule';
+      const method = schedule && hasId && !isRescheduling ? 'put' : 'post';
+      
+      console.log(`Using ${method.toUpperCase()} to ${isRescheduling ? 'reschedule visit' : (schedule ? 'update schedule' : 'create schedule')} at endpoint: ${endpoint}`);
+      console.log("Schedule data:", schedule ? { hasId: hasId, isReschedule: isRescheduling } : "No schedule");
+      console.log("Submit data includes special flags:", { isReschedule: submitData.isReschedule, bypassPendingCheck: submitData.bypassPendingCheck });
 
       const response = await axiosInstance[method](endpoint, submitData);
       if (response.data.success) {
-        toast.success(schedule ? "Schedule updated successfully!" : "Schedule created successfully!");
+        toast.success(isRescheduling 
+          ? "Visit rescheduled successfully!" 
+          : (schedule ? "Schedule updated successfully!" : "Schedule created successfully!"));
         onSuccess(response.data.schedule);
         onClose();
       } else {
@@ -610,22 +924,95 @@ const ScheduleForm = ({
     const errors = {};
     
     // Personal information validations
-    if (!formData.firstName.trim()) errors.firstName = "First name is required";
-    if (!formData.lastName.trim()) errors.lastName = "Last name is required";
-    if (!formData.phone.trim()) errors.phone = "Phone number is required";
+    if (!formData.firstName.trim()) {
+      errors.firstName = "First name is required";
+    } else if (formData.firstName.trim().length < 2) {
+      errors.firstName = "First name must be at least 2 characters";
+    } else if (!/^[a-zA-Z\s\-']+$/.test(formData.firstName.trim())) {
+      errors.firstName = "First name should contain only letters, spaces, hyphens, and apostrophes";
+    }
+
+    if (!formData.lastName.trim()) {
+      errors.lastName = "Last name is required";
+    } else if (formData.lastName.trim().length < 2) {
+      errors.lastName = "Last name must be at least 2 characters";
+    } else if (!/^[a-zA-Z\s\-']+$/.test(formData.lastName.trim())) {
+      errors.lastName = "Last name should contain only letters, spaces, hyphens, and apostrophes";
+    }
+
+    // Middle name validation (optional field)
+    if (formData.middleName.trim() && !/^[a-zA-Z\s\-']+$/.test(formData.middleName.trim())) {
+      errors.middleName = "Middle name should contain only letters, spaces, hyphens, and apostrophes";
+    }
+    
+    // Phone number validation
+    if (!formData.phone.trim()) {
+      errors.phone = "Phone number is required";
+    } else if (formData.phone.trim().length < 10) {
+      errors.phone = "Phone number must be at least 10 digits";
+    } else if (!/^[0-9+\-\s()]+$/.test(formData.phone.trim())) {
+      errors.phone = "Phone number should contain only digits, +, -, spaces, and parentheses";
+    }
     
     // ID validations
-    if (!formData.idType.trim()) errors.idType = "ID type is required";
-    if (!formData.idNumber.trim()) errors.idNumber = "ID number is required";
+    if (!formData.idType.trim()) {
+      errors.idType = "ID type is required";
+    }
+    
+    if (!formData.idNumber.trim()) {
+      errors.idNumber = "ID number is required";
+    } else if (formData.idNumber.trim().length < 5) {
+      errors.idNumber = "ID number must be at least 5 characters";
+    } else {
+      // Different validation based on ID type
+      if (formData.idType === "passport") {
+        if (!/^[A-Z0-9]{6,15}$/i.test(formData.idNumber.trim())) {
+          errors.idNumber = "Passport number should be 6-15 alphanumeric characters";
+        }
+      } else if (formData.idType === "national_id") {
+        if (!/^[A-Z0-9\-\/]{5,20}$/i.test(formData.idNumber.trim())) {
+          errors.idNumber = "National ID should be 5-20 characters (letters, numbers, hyphens, or slashes)";
+        }
+      } else if (formData.idType === "drivers_license") {
+        if (!/^[A-Z0-9\-\/]{5,20}$/i.test(formData.idNumber.trim())) {
+          errors.idNumber = "Driver's license should be 5-20 characters (letters, numbers, hyphens, or slashes)";
+        }
+      }
+    }
+    
+    // ID Expiry date validation
+    if (formData.idExpiryDate.trim()) {
+      const expiryDate = new Date(formData.idExpiryDate);
+      const currentDate = new Date();
+      
+      if (isNaN(expiryDate.getTime())) {
+        errors.idExpiryDate = "Please enter a valid date";
+      } else if (expiryDate < currentDate) {
+        errors.idExpiryDate = "ID has expired. Please provide a valid ID";
+      }
+    }
     
     // Visit details validations
-    if (!formData.purpose.trim()) errors.purpose = "Purpose is required";
-    if (!formData.relationship.trim()) errors.relationship = "Relationship is required";
-    if (!formData.visitDate.trim()) errors.visitDate = "Visit date is required";
-    if (!formData.visitTime.trim()) errors.visitTime = "Visit time is required";
+    if (!formData.purpose.trim()) {
+      errors.purpose = "Purpose is required";
+    } else if (formData.purpose.trim().length < 5) {
+      errors.purpose = "Please provide a more detailed purpose (at least 5 characters)";
+    } else if (formData.purpose.trim().length > 200) {
+      errors.purpose = "Purpose is too long (maximum 200 characters)";
+    }
     
-    // Validate date is not in the past
-    if (formData.visitDate) {
+    if (!formData.relationship.trim()) {
+      errors.relationship = "Relationship is required";
+    }
+    
+    if (!formData.inmateId) {
+      errors.inmateId = "Please select an inmate to visit";
+    }
+    
+    if (!formData.visitDate.trim()) {
+      errors.visitDate = "Visit date is required";
+    } else {
+      // Validate date is not in the past
       const selectedDate = new Date(formData.visitDate);
       const currentDate = new Date();
       
@@ -636,9 +1023,70 @@ const ScheduleForm = ({
       if (selectedDate < currentDate) {
         errors.visitDate = "Visit date cannot be in the past";
       }
+      
+      // Check if date is disabled due to capacity
+      if (isDateDisabled(formData.visitDate)) {
+        errors.visitDate = "This date has reached visitor capacity. Please select another date.";
+      }
+      
+      // Validate date is not too far in the future (e.g., within 3 months)
+      const maxDate = new Date();
+      maxDate.setMonth(maxDate.getMonth() + 3);
+      if (selectedDate > maxDate) {
+        errors.visitDate = "Visit date cannot be more than 3 months in the future";
+      }
+    }
+    
+    if (!formData.visitTime.trim()) {
+      errors.visitTime = "Visit time is required";
+    } else {
+      // Validate visit time is within allowed hours (e.g., 9 AM to 4 PM)
+      const [hours, minutes] = formData.visitTime.split(':').map(Number);
+      if (hours < 9 || hours > 16 || (hours === 16 && minutes > 0)) {
+        errors.visitTime = "Visit time must be between 9:00 AM and 4:00 PM";
+      }
+    }
+    
+    // Validate visit duration
+    if (!formData.visitDuration) {
+      errors.visitDuration = "Visit duration is required";
+    } else {
+      const duration = parseInt(formData.visitDuration);
+      if (isNaN(duration) || duration < 15 || duration > 120) {
+        errors.visitDuration = "Visit duration must be between 15 and 120 minutes";
+      }
     }
     
     return errors;
+  };
+
+  // Add function to fetch visitor profile
+  const fetchVisitorProfile = async (userId) => {
+    if (!userId) return;
+    
+    try {
+      const response = await axiosInstance.get('/user/profile');
+      if (response.data.success) {
+        const visitorData = response.data.data;
+        
+        // Update form with visitor profile data
+        setFormData(prev => ({
+          ...prev,
+          firstName: visitorData.firstName || prev.firstName || "",
+          middleName: visitorData.middleName || prev.middleName || "",
+          lastName: visitorData.lastName || prev.lastName || "",
+          phone: visitorData.phone || prev.phone || "",
+          idType: visitorData.idType || prev.idType || "",
+          idNumber: visitorData.idNumber || prev.idNumber || "",
+          idExpiryDate: visitorData.idExpiryDate ? 
+            new Date(visitorData.idExpiryDate).toISOString().split('T')[0] : 
+            prev.idExpiryDate || "",
+        }));
+      }
+    } catch (error) {
+      console.error("Error fetching visitor profile:", error);
+      // Don't show an error toast since this is a background operation
+    }
   };
 
   if (!isOpen) return null;

@@ -25,6 +25,7 @@
     "date-fns": "^4.1.0",
     "face-api.js": "^0.20.0",
     "framer-motion": "^12.5.0",
+    "html2canvas": "^1.4.1",
     "jspdf": "^3.0.1",
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.479.0",
@@ -43,12 +44,14 @@
     "react-router": "^7.1.1",
     "react-router-dom": "^7.1.1",
     "react-slideshow-image": "^4.3.2",
+    "react-to-print": "^3.0.6",
     "react-toastify": "^11.0.3",
     "recharts": "^2.15.1",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
     "tailwind-merge": "^3.0.2",
-    "tailwindcss-animate": "^1.0.7"
+    "tailwindcss-animate": "^1.0.7",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@eslint/js": "^9.15.0",

@@ -25,7 +25,7 @@ const ScheduleDetailModal = ({
   isOpen,
   onClose,
   schedule,
-  onUpdate,
+  onEdit,
   onCancel,
   onApprove,
   onReject,
@@ -99,15 +99,15 @@ const ScheduleDetailModal = ({
 
   // Handle cancel button click
   const handleCancelClick = () => {
-    if (onCancel && schedule._id) {
-      onCancel(schedule._id);
+    if (onCancel && schedule) {
+      onCancel(schedule);
     }
   };
 
   // Handle update button click
   const handleUpdateClick = () => {
-    if (onUpdate && schedule) {
-      onUpdate(schedule);
+    if (onEdit && schedule) {
+      onEdit(schedule);
     }
   };
   
@@ -488,7 +488,7 @@ const ScheduleDetailModal = ({
             </button>
           )}
           
-          {isPending && onUpdate && (
+          {isPending && onEdit && (
             <button
               onClick={handleUpdateClick}
               className="inline-flex items-center gap-1 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-md bg-teal-600 text-white text-xs sm:text-sm font-medium hover:bg-teal-700 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"

@@ -1,11 +1,12 @@
 import { WoredaInmate } from "../model/woredaInmate.model.js";
 import { uploadToCloudinary } from "../utils/cloudinary.js";
+import fs from "fs";
 
 // Register new inmate
 export const registerWoredaInmate = async (req, res) => {
   try {
     console.log("Received request body:", req.body);
-    console.log("Received files:", req.files);
+    console.log("Received files:", req.files ? req.files.length : 0);
 
     const inmateData = req.body;
     const files = req.files;
@@ -39,23 +40,36 @@ export const registerWoredaInmate = async (req, res) => {
     let documentUrls = [];
     if (files && files.length > 0) {
       try {
-        documentUrls = await Promise.all(
-          files.map(async (file) => {
-            try {
-              const result = await uploadToCloudinary(file.path);
-              return result.secure_url;
-            } catch (uploadError) {
-              console.error(
-                `Error uploading file ${file.originalname}:`,
-                uploadError
-              );
-              throw new Error(
-                `Failed to upload ${file.originalname}: ${uploadError.message}`
-              );
+        console.log(`Attempting to upload ${files.length} files`);
+        
+        // Process files one by one to better handle errors
+        for (const file of files) {
+          try {
+            console.log(`Processing file: ${file.originalname}, size: ${file.size} bytes, path: ${file.path}`);
+            
+            // Check if the file exists
+            if (!fs.existsSync(file.path)) {
+              console.error(`File not found at path: ${file.path}`);
+              continue;
             }
-          })
-        );
+            
+            const result = await uploadToCloudinary(file.path);
+            console.log(`Successfully uploaded ${file.originalname} to Cloudinary: ${result.secure_url}`);
+            documentUrls.push(result.secure_url);
+          } catch (fileError) {
+            console.error(`Error uploading file ${file.originalname}:`, fileError);
+            // Don't throw here - continue with other files and log the error
+          }
+        }
+        
+        if (documentUrls.length === 0 && files.length > 0) {
+          return res.status(400).json({
+            success: false,
+            error: "Failed to upload any of the provided files",
+          });
+        }
       } catch (uploadError) {
+        console.error("Error in bulk file processing:", uploadError);
         return res.status(400).json({
           success: false,
           error: uploadError.message || "Failed to upload files",
@@ -70,7 +84,10 @@ export const registerWoredaInmate = async (req, res) => {
       status: "Active",
     });
 
-    console.log("Creating new inmate with data:", newInmate);
+    console.log("Creating new inmate with data:", {
+      ...newInmate.toObject(),
+      documents: documentUrls.length ? `${documentUrls.length} documents uploaded` : "No documents",
+    });
 
     await newInmate.save();
 
@@ -198,6 +215,57 @@ export const deleteWoredaInmate = async (req, res) => {
     res.status(500).json({
       success: false,
       error: error.message || "Failed to delete inmate",
+    });
+  }
+};
+
+// Release inmate
+export const releaseInmate = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { releaseReason } = req.body;
+    
+    // Find inmate
+    const inmate = await WoredaInmate.findById(id);
+    
+    if (!inmate) {
+      return res.status(404).json({
+        success: false,
+        error: "Inmate not found",
+      });
+    }
+    
+    // Check if inmate has an approved or under review transfer
+    if (inmate.transferStatus) {
+      const status = typeof inmate.transferStatus === 'string' 
+        ? inmate.transferStatus.toLowerCase() 
+        : (inmate.transferStatus.status || '').toLowerCase();
+      
+      if (status.includes('approve') || status.includes('review')) {
+        return res.status(400).json({
+          success: false,
+          error: "Cannot release an inmate with an approved or under review transfer",
+        });
+      }
+    }
+    
+    // Update inmate status to Released
+    inmate.status = "Released";
+    inmate.releaseDate = new Date();
+    inmate.releaseReason = releaseReason || "Sentence completed";
+    
+    await inmate.save();
+    
+    res.status(200).json({
+      success: true,
+      message: "Inmate released successfully",
+      inmate,
+    });
+  } catch (error) {
+    console.error("Error releasing inmate:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message || "Failed to release inmate",
     });
   }
 };

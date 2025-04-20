@@ -1,7 +1,12 @@
 {
   "dependencies": {
     "compression": "^1.8.0",
+    "exceljs": "^4.4.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.1",
+    "react-to-print": "^3.0.6",
     "socket.io": "^4.8.1",
-    "socket.io-client": "^4.8.1"
+    "socket.io-client": "^4.8.1",
+    "xlsx": "^0.18.5"
   }
 }

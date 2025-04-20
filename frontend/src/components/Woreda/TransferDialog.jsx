@@ -24,6 +24,7 @@ const TransferDialog = ({
   inmate,
   onTransferComplete,
   currentPrison,
+  prisonMap,
 }) => {
   const [prisons, setPrisons] = useState([]);
   const [selectedPrison, setSelectedPrison] = useState("");
@@ -39,10 +40,15 @@ const TransferDialog = ({
 
   useEffect(() => {
     if (inmate?.assignedPrison) {
-      fetchPrisons();
+      // If we already have a prison map, use it instead of fetching
+      if (prisonMap && Object.keys(prisonMap).length > 0 && inmate.assignedPrison in prisonMap) {
+        setCurrentPrisonName(prisonMap[inmate.assignedPrison]);
+      } else {
+        fetchPrisons();
+      }
       checkExistingTransfers();
     }
-  }, [inmate?.assignedPrison]);
+  }, [inmate?.assignedPrison, prisonMap]);
 
   const fetchPrisons = async () => {
     try {
@@ -156,8 +162,17 @@ const TransferDialog = ({
   };
 
   const handleTransfer = async () => {
-    if (!selectedPrison || !transferReason) {
-      toast.error("Please fill in all fields");
+    // Enhanced validation
+    if (!selectedPrison) {
+      toast.error("Please select a destination prison");
+      return;
+    }
+    if (!transferReason || transferReason.trim() === "") {
+      toast.error("Please provide a reason for transfer");
+      return;
+    }
+    if (!inmate?._id) {
+      toast.error("Invalid inmate data");
       return;
     }
 
@@ -171,47 +186,63 @@ const TransferDialog = ({
 
       const transferData = {
         inmateId: inmate._id,
-        fromPrison: currentPrisonName,
-        toPrison: selectedPrisonData.prison_name, // Use prison name instead of ID
-        reason: transferReason,
+        fromPrison: inmate.assignedPrison,
+        toPrison: selectedPrison,
+        reason: transferReason.trim(),
+        status: "Pending",
         inmateData: {
-          firstName: inmate.firstName,
-          lastName: inmate.lastName,
-          crime: inmate.crime,
-          intakeDate: inmate.intakeDate,
-          timeRemaining: inmate.timeRemaining,
-          age: inmate.age,
-          gender: inmate.gender,
-          address: inmate.address,
-          phoneNumber: inmate.phoneNumber,
-          emergencyContact: inmate.emergencyContact,
-          medicalConditions: inmate.medicalConditions,
+          firstName: inmate.firstName || "",
+          lastName: inmate.lastName || "",
+          middleName: inmate.middleName || "",
+          crime: inmate.crime || "",
+          intakeDate: inmate.intakeDate || new Date().toISOString(),
+          timeRemaining: inmate.timeRemaining || 0,
+          age: inmate.age || 0,
+          gender: inmate.gender || "",
+          address: inmate.address || "",
+          phoneNumber: inmate.phoneNumber || "",
+          emergencyContact: inmate.emergencyContact || "",
+          medicalConditions: inmate.medicalConditions || "",
+          sentenceStart: inmate.sentenceStart || new Date().toISOString(),
+          sentenceEnd: inmate.sentenceEnd || new Date().toISOString(),
+          riskLevel: inmate.riskLevel || "Low",
+          status: inmate.status || "Active"
         },
         requestDetails: {
           requestedBy: {
             role: "Woreda",
-            prison: currentPrisonName
+            prison: inmate.assignedPrison
           },
-          requestDate: new Date().toISOString()
+          requestDate: new Date().toISOString(),
+          status: "Pending",
+          fromPrisonName: currentPrisonName,
+          toPrisonName: selectedPrisonData.prison_name
         }
       };
 
       console.log("Submitting transfer request:", transferData);
+
       const response = await axiosInstance.post(
-        "/transfer/new-transfer",
+        "/transfer/create-transfer",
         transferData
       );
 
       if (response.data?.success) {
-        toast.success("Transfer request submitted successfully. Waiting for security staff approval.");
+        toast.success("Transfer request submitted successfully");
         onClose();
-        onTransferComplete();
+        if (onTransferComplete) {
+          onTransferComplete();
+        }
       }
     } catch (error) {
       console.error("Error creating transfer:", error);
-      toast.error(
-        error.response?.data?.error || "Failed to submit transfer request"
-      );
+      const errorMessage = error.response?.data?.message || "Failed to submit transfer request";
+      toast.error(errorMessage);
+      
+      // Log detailed error information
+      if (error.response?.data) {
+        console.error("Server error details:", error.response.data);
+      }
     }
   };
 
@@ -239,6 +270,16 @@ const TransferDialog = ({
     );
   };
 
+  // Add this function to handle Cloudinary URLs
+  const getSecureUrl = (url) => {
+    if (!url) return null;
+    // Convert http to https for Cloudinary URLs
+    if (url.startsWith('http://res.cloudinary.com')) {
+      return url.replace('http://', 'https://');
+    }
+    return url;
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -262,21 +303,37 @@ const TransferDialog = ({
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-4">
                   <div className="relative w-48 h-48">
-                    {inmate?.documents?.length > 0 ? (
-                      <img
-                        src={inmate.documents[0]}
-                        alt={`${inmate.firstName} ${inmate.lastName}`}
-                        className="w-full h-full rounded-lg object-cover border-4 border-green-600 shadow-lg"
-                        onError={(e) => {
-                          e.target.src =
-                            "https://via.placeholder.com/200?text=No+Photo";
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-full rounded-lg bg-gray-200 border-4 border-green-600 shadow-lg flex items-center justify-center">
-                        <FaUser className="w-24 h-24 text-gray-400" />
-                      </div>
-                    )}
+                    <div className="h-full w-full rounded-full overflow-hidden">
+                      {inmate?.photo ? (
+                        <>
+                          <img
+                            src={getSecureUrl(inmate.photo)}
+                            alt={`${inmate.firstName} ${inmate.lastName}`}
+                            className="h-full w-full object-cover"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextElementSibling.style.display = 'flex';
+                            }}
+                          />
+                          <div 
+                            className="h-full w-full absolute top-0 left-0 bg-blue-100 items-center justify-center hidden"
+                            style={{ display: 'none' }}
+                          >
+                            <FaUser 
+                              className={inmate?.gender === 'female' ? "text-pink-500" : "text-blue-500"} 
+                              size={48} 
+                            />
+                          </div>
+                        </>
+                      ) : (
+                        <div className="h-full w-full bg-blue-100 flex items-center justify-center">
+                          <FaUser 
+                            className={inmate?.gender === 'female' ? "text-pink-500" : "text-blue-500"} 
+                            size={48} 
+                          />
+                        </div>
+                      )}
+                    </div>
                     <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-center py-2 text-sm">
                       {inmate.firstName} {inmate.lastName}
                     </div>

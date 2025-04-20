@@ -193,13 +193,32 @@ export const updateVisitorProfile = async (req, res) => {
   }
 
   try {
-    const { firstName, middleName, lastName, phone } = req.body;
+    const { firstName, middleName, lastName, email, phone } = req.body;
     
     const updates = {};
     if (firstName) updates.firstName = firstName;
     if (middleName !== undefined) updates.middleName = middleName;
     if (lastName) updates.lastName = lastName;
     if (phone) updates.phone = phone;
+    
+    // If email is being updated, check if it's already in use
+    if (email) {
+      // First get the current user to check if email is actually changing
+      const currentUser = await VisitorAccount.findById(req.user.id);
+      if (currentUser.email !== email) {
+        // Check if email is already in use by another account
+        const existingUser = await VisitorAccount.findOne({ email, _id: { $ne: req.user.id } });
+        if (existingUser) {
+          return res.status(409).json({
+            success: false,
+            message: "Email already in use",
+            field: "email"
+          });
+        }
+        // If email is not in use, add it to updates
+        updates.email = email;
+      }
+    }
 
     const visitor = await VisitorAccount.findByIdAndUpdate(
       req.user.id,
