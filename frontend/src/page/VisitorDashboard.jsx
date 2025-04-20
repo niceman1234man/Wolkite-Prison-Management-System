@@ -29,7 +29,7 @@ function VisitorDashboard() {
     } catch (error) {
       console.error('Error logging logout activity:', error);
     } finally {
-      localStorage.clear();
+    localStorage.clear();
       navigate("/login");
     }
   };

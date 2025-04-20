@@ -1,7 +1,7 @@
 import express from 'express';
 import { authenticateToken } from '../utilities.js';
 import { upload } from '../fileMiddleware.js';
-import { addInstruction, deleteInstruction, getAllInstruction, getInstruction, updateInstruction } from '../controller/instruction.controller.js';
+import { addInstruction, deleteInstruction, getAllInstruction, getInstruction, updateInstruction, sendInstruction } from '../controller/instruction.controller.js';
 
 export const instructionRouter = express.Router();
 
@@ -26,3 +26,4 @@ instructionRouter.put(
     updateInstruction
   );
 instructionRouter.delete('/delete/:id',authenticateToken,deleteInstruction);
+instructionRouter.post('/send/:id',authenticateToken,sendInstruction);

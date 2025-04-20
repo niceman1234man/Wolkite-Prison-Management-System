@@ -14,6 +14,8 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line
 } from "recharts";
+import { format } from "date-fns";
+import { toast } from "react-hot-toast";
 
 const SecurityStaffReport = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -53,6 +55,7 @@ const SecurityStaffReport = () => {
       active: 0,
       released: 0,
       byCategory: {},
+      sentenceDuration: {},
       recentInmates: []
     },
     clearanceStats: {
@@ -113,6 +116,7 @@ const SecurityStaffReport = () => {
           active: 0,
           released: 0,
           byCategory: {},
+          sentenceDuration: {},
           recentInmates: []
         },
         clearanceStats: {
@@ -155,9 +159,13 @@ const SecurityStaffReport = () => {
       
       try {
         // Fetch parole requests
-        const paroleResponse = await axiosInstance.get("/parole/getAll");
+        const paroleResponse = await axiosInstance.get("/parole-tracking/getall");
         if (paroleResponse.data?.paroles) {
           reportDataTemp.paroleStats = processParoleData(paroleResponse.data.paroles);
+        } else if (paroleResponse.data) {
+          // Handle alternate API response format
+          const paroleData = Array.isArray(paroleResponse.data) ? paroleResponse.data : [];
+          reportDataTemp.paroleStats = processParoleData(paroleData);
         }
       } catch (error) {
         console.error("Error fetching parole data:", error);
@@ -165,9 +173,13 @@ const SecurityStaffReport = () => {
       
       try {
         // Fetch court instructions
-        const courtResponse = await axiosInstance.get("/court/getAll");
+        const courtResponse = await axiosInstance.get("/instruction/all");
         if (courtResponse.data?.instructions) {
           reportDataTemp.courtStats = processCourtData(courtResponse.data.instructions);
+        } else if (courtResponse.data) {
+          // Handle alternate API response format
+          const instructionData = Array.isArray(courtResponse.data) ? courtResponse.data : [];
+          reportDataTemp.courtStats = processCourtData(instructionData);
         }
       } catch (error) {
         console.error("Error fetching court data:", error);
@@ -182,12 +194,12 @@ const SecurityStaffReport = () => {
             const processedInmates = inmatesData.map((inmate) => ({
               _id: inmate._id,
               name: [inmate.firstName, inmate.middleName, inmate.lastName].filter(Boolean).join(" ") || "Not available",
-              age: inmate.age || "N/A",
+              age: inmate.age || calculateAge(inmate.birthdate) || "N/A",
               gender: inmate.gender || "N/A",
               caseType: inmate.caseType || "Not specified",
               reason: inmate.sentenceReason || "",
               sentence: inmate.sentenceYear ? `${inmate.sentenceYear} ${inmate.sentenceYear === 1 ? 'year' : 'years'}` : "Not specified",
-              location: [inmate.currentWereda, inmate.currentZone].filter(Boolean).join(", ") || "Not specified",
+              location: [inmate.currentRegion, inmate.currentZone, inmate.currentWoreda].filter(Boolean).join(", ") || "Not specified",
               photo: inmate.photo,
               status: inmate.status || "active",
               admissionDate: inmate.createdAt
@@ -201,9 +213,13 @@ const SecurityStaffReport = () => {
 
       try {
         // Fetch clearance requests
-        const clearanceResponse = await axiosInstance.get("/clearance/getAll");
+        const clearanceResponse = await axiosInstance.get("/clearance/all");
         if (clearanceResponse.data?.clearances) {
           reportDataTemp.clearanceStats = processClearanceData(clearanceResponse.data.clearances);
+        } else if (clearanceResponse.data) {
+          // Handle alternate API response format
+          const clearanceData = Array.isArray(clearanceResponse.data) ? clearanceResponse.data : [];
+          reportDataTemp.clearanceStats = processClearanceData(clearanceData);
         }
       } catch (error) {
         console.error("Error fetching clearance data:", error);
@@ -218,6 +234,41 @@ const SecurityStaffReport = () => {
       setError("Some data might be unavailable. Please check your connection and try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Helper function to calculate age from birthdate
+  const calculateAge = (birthdate) => {
+    if (!birthdate) return null;
+    
+    try {
+      const birthDate = new Date(birthdate);
+      const today = new Date();
+      let age = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      
+      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+        age--;
+      }
+      
+      return isNaN(age) ? null : age;
+    } catch (error) {
+      console.error("Error calculating age:", error);
+      return null;
+    }
+  };
+
+  // Helper function to safely format date
+  const formatDate = (dateString) => {
+    if (!dateString) return "N/A";
+    try {
+      return new Date(dateString).toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    } catch (e) {
+      return "N/A";
     }
   };
 
@@ -242,38 +293,43 @@ const SecurityStaffReport = () => {
     rejected: transfers.filter(t => t?.status?.toLowerCase() === 'rejected').length,
     in_review: transfers.filter(t => t?.status?.toLowerCase() === 'in_review').length,
     recentTransfers: transfers.slice(0, 5).map(t => ({
-      inmateName: t.inmateData ? `${t.inmateData.firstName || ''} ${t.inmateData.middleName || ''} ${t.inmateData.lastName || ''}`.trim() : 'N/A',
+      inmateName: t.inmateData ? 
+        `${t.inmateData.firstName || ''} ${t.inmateData.middleName || ''} ${t.inmateData.lastName || ''}`.trim() : 
+        (t.inmateName || 'N/A'),
       fromPrison: t.fromPrison || 'N/A',
       toPrison: t.toPrison || 'N/A',
       status: t.status || 'pending',
-      date: t.transferDate ? new Date(t.transferDate).toLocaleDateString() : 'N/A',
+      date: formatDate(t.transferDate || t.createdAt),
       reason: t.reason || 'N/A'
     }))
   });
 
   const processParoleData = (paroles = []) => ({
     total: paroles.length,
-    pending: paroles.filter(p => p?.status?.toLowerCase() === 'pending').length,
-    approved: paroles.filter(p => p?.status?.toLowerCase() === 'approved').length,
+    pending: paroles.filter(p => !p.status || p?.status?.toLowerCase() === 'pending').length,
+    approved: paroles.filter(p => p?.status?.toLowerCase() === 'approved' || p?.status?.toLowerCase() === 'accepted').length,
     rejected: paroles.filter(p => p?.status?.toLowerCase() === 'rejected').length,
     recentParoles: paroles.slice(0, 5).map(p => ({
-      inmateName: p.inmateName || p.fullName || 'N/A',
+      inmateName: p.inmateName || p.fullName || 
+        (p.inmateData ? 
+          `${p.inmateData.firstName || ''} ${p.inmateData.middleName || ''} ${p.inmateData.lastName || ''}`.trim() : 
+          'N/A'),
       status: p.status || 'pending',
-      requestDate: p.requestDate ? new Date(p.requestDate).toLocaleDateString() : 'N/A',
-      eligibilityDate: p.paroleDate ? new Date(p.paroleDate).toLocaleDateString() : 'N/A'
+      requestDate: formatDate(p.requestDate || p.createdAt),
+      eligibilityDate: formatDate(p.paroleDate)
     }))
   });
 
   const processCourtData = (instructions = []) => ({
     total: instructions.length,
-    pending: instructions.filter(i => i?.status?.toLowerCase() === 'pending').length,
-    completed: instructions.filter(i => i?.status?.toLowerCase() === 'completed').length,
+    pending: instructions.filter(i => !i.status || i?.status?.toLowerCase() === 'pending' || i?.status?.toLowerCase() === 'draft').length,
+    completed: instructions.filter(i => i?.status?.toLowerCase() === 'completed' || i?.status?.toLowerCase() === 'sent').length,
     upcoming: instructions.filter(i => i.effectiveDate && new Date(i.effectiveDate) > new Date()).length,
     recentInstructions: instructions.slice(0, 5).map(i => ({
-      title: i.title || 'No Title',
+      title: i.title || i.courtCaseNumber || 'No Title',
       status: i.status || 'pending',
-      effectiveDate: i.effectiveDate ? new Date(i.effectiveDate).toLocaleDateString() : 'N/A',
-      sendDate: i.sendDate ? new Date(i.sendDate).toLocaleDateString() : 'N/A'
+      effectiveDate: formatDate(i.effectiveDate),
+      sendDate: formatDate(i.sendDate)
     }))
   });
 
@@ -284,22 +340,27 @@ const SecurityStaffReport = () => {
     
     inmates.forEach(inmate => {
       // Process case types (convert to lowercase for consistency)
-      const category = inmate.caseType.toLowerCase();
-      inmateCategories[category] = (inmateCategories[category] || 0) + 1;
+      if (inmate.caseType) {
+        const category = inmate.caseType.toLowerCase();
+        inmateCategories[category] = (inmateCategories[category] || 0) + 1;
+      }
       
       // Process sentence durations
       if (inmate.sentence && inmate.sentence !== "Not specified") {
-        const years = parseInt(inmate.sentence);
-        if (!isNaN(years)) {
-          sentenceDuration[years] = (sentenceDuration[years] || 0) + 1;
+        const match = inmate.sentence.match(/(\d+)/);
+        if (match) {
+          const years = parseInt(match[1]);
+          if (!isNaN(years)) {
+            sentenceDuration[years] = (sentenceDuration[years] || 0) + 1;
+          }
         }
       }
     });
 
     return {
       total: inmates.length,
-      active: inmates.filter(i => i.status.toLowerCase() === 'active').length,
-      released: inmates.filter(i => i.status.toLowerCase() === 'released').length,
+      active: inmates.filter(i => !i.status || i.status.toLowerCase() === 'active').length,
+      released: inmates.filter(i => i.status && i.status.toLowerCase() === 'released').length,
       byCategory: inmateCategories,
       sentenceDuration: sentenceDuration,
       recentInmates: inmates.slice(0, 5).map(i => ({
@@ -309,20 +370,22 @@ const SecurityStaffReport = () => {
         caseType: i.caseType,
         sentence: i.sentence,
         location: i.location,
-        status: i.status,
-        admissionDate: i.admissionDate ? new Date(i.admissionDate).toLocaleDateString() : 'N/A'
+        status: i.status || 'active',
+        admissionDate: formatDate(i.admissionDate)
       }))
     };
   };
 
   const processClearanceData = (clearances = []) => ({
     total: clearances.length,
-    pending: clearances.filter(c => c?.status?.toLowerCase() === 'pending').length,
-    approved: clearances.filter(c => c?.status?.toLowerCase() === 'approved').length,
+    pending: clearances.filter(c => !c.status || c?.status?.toLowerCase() === 'pending').length,
+    approved: clearances.filter(c => c?.status?.toLowerCase() === 'approved' || c?.status?.toLowerCase() === 'accepted').length,
     rejected: clearances.filter(c => c?.status?.toLowerCase() === 'rejected').length,
     recentClearances: clearances.slice(0, 5).map(c => ({
-      inmateName: c.inmateData ? `${c.inmateData.firstName || ''} ${c.inmateData.middleName || ''} ${c.inmateData.lastName || ''}`.trim() : 'N/A',
-      requestDate: c.requestDate ? new Date(c.requestDate).toLocaleDateString() : 'N/A',
+      inmateName: c.inmateData ? 
+        `${c.inmateData.firstName || ''} ${c.inmateData.middleName || ''} ${c.inmateData.lastName || ''}`.trim() : 
+        (c.inmateName || c.clearanceId || 'N/A'),
+      requestDate: formatDate(c.requestDate || c.clearanceDate || c.createdAt),
       status: c.status || 'pending',
       reason: c.reason || 'N/A'
     }))
@@ -387,7 +450,140 @@ const SecurityStaffReport = () => {
       styles: { fontSize: 10, cellPadding: 3 }
     });
 
+    // Add inmate statistics
+    doc.text("Inmate Overview", 14, doc.lastAutoTable.finalY + 15);
+    const inmateData = [
+      ["Total Inmates", reportData.inmateStats.total],
+      ["Active", reportData.inmateStats.active],
+      ["Released", reportData.inmateStats.released]
+    ];
+    doc.autoTable({
+      startY: doc.lastAutoTable.finalY + 20,
+      head: [["Category", "Count"]],
+      body: inmateData,
+      theme: 'striped',
+      styles: { fontSize: 10, cellPadding: 3 }
+    });
+
     doc.save("Security_Staff_Report.pdf");
+  };
+
+  // Update the getCSVData function to include more data categories
+  const getCSVData = () => {
+    // Create headers
+    const headers = [
+      'Report Date',
+      'Total Inmates',
+      'Active Inmates',
+      'Released Inmates',
+      'Criminal Cases',
+      'Civil Cases',
+      'Administrative Cases',
+      'Total Staff',
+      'Active Staff',
+      'Morning Shift',
+      'Afternoon Shift',
+      'Night Shift',
+      'Pending Transfers',
+      'Completed Transfers',
+      'Pending Paroles',
+      'Approved Paroles',
+      'Pending Court Instructions',
+      'Completed Court Instructions'
+    ];
+
+    // Create data row
+    const data = [
+      format(new Date(), 'yyyy-MM-dd'),
+      reportData.inmateStats.total,
+      reportData.inmateStats.active,
+      reportData.inmateStats.released,
+      reportData.inmateStats.byCategory['criminal'] || 0,
+      reportData.inmateStats.byCategory['civil'] || 0,
+      reportData.inmateStats.byCategory['administrative'] || 0,
+      reportData.staffStats.total,
+      reportData.staffStats.active,
+      reportData.staffStats.shifts.morning || 0,
+      reportData.staffStats.shifts.afternoon || 0,
+      reportData.staffStats.shifts.night || 0,
+      reportData.transferStats.pending,
+      reportData.transferStats.completed,
+      reportData.paroleStats.pending,
+      reportData.paroleStats.approved,
+      reportData.courtStats.pending,
+      reportData.courtStats.completed
+    ];
+
+    return {
+      headers,
+      data: [data]
+    };
+  };
+
+  // Update the handleExportCSV function to use the improved getCSVData
+  const handleExportCSV = () => {
+    try {
+      const { headers, data } = getCSVData();
+      
+      // Create CSV content
+      let csvContent = headers.join(',') + '\n';
+      
+      // Add data rows
+      data.forEach(row => {
+        csvContent += row.join(',') + '\n';
+      });
+      
+      // Create detailed inmate data if available
+      if (reportData.inmateStats.recentInmates && reportData.inmateStats.recentInmates.length > 0) {
+        // Add a blank line
+        csvContent += '\n';
+        
+        // Add inmate details section title
+        csvContent += 'INMATE DETAILS\n';
+        
+        // Add inmate headers
+        const inmateHeaders = [
+          'Name',
+          'Age',
+          'Gender',
+          'Case Type',
+          'Sentence',
+          'Location',
+          'Status'
+        ];
+        csvContent += inmateHeaders.join(',') + '\n';
+        
+        // Add inmate data rows
+        reportData.inmateStats.recentInmates.forEach(inmate => {
+          const rowData = [
+            `"${inmate.name || 'N/A'}"`,
+            inmate.age || 'N/A',
+            `"${inmate.gender || 'N/A'}"`,
+            `"${inmate.caseType || 'Not specified'}"`,
+            `"${inmate.sentence || 'Not specified'}"`,
+            `"${inmate.location || 'Not specified'}"`,
+            `"${inmate.status || 'N/A'}"`
+          ];
+          csvContent += rowData.join(',') + '\n';
+        });
+      }
+      
+      // Create blob and download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `prison_report_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success('Report exported successfully');
+    } catch (error) {
+      console.error('Error exporting CSV:', error);
+      toast.error('Failed to export report');
+    }
   };
 
   const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
@@ -414,6 +610,12 @@ const SecurityStaffReport = () => {
     return (
       <div className="p-4 bg-red-50 text-red-600 rounded-lg">
         {error}
+        <button 
+          onClick={fetchReportData}
+          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+        >
+          Retry
+        </button>
       </div>
     );
   }
@@ -501,10 +703,10 @@ const SecurityStaffReport = () => {
               <PieChart>
                 <Pie
                   data={[
-                    { name: "Morning", value: reportData.staffStats.shifts.morning },
-                    { name: "Afternoon", value: reportData.staffStats.shifts.afternoon },
-                    { name: "Night", value: reportData.staffStats.shifts.night }
-                  ]}
+                    { name: "Morning", value: reportData.staffStats.shifts.morning || 0 },
+                    { name: "Afternoon", value: reportData.staffStats.shifts.afternoon || 0 },
+                    { name: "Night", value: reportData.staffStats.shifts.night || 0 }
+                  ].filter(item => item.value > 0)}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
@@ -512,8 +714,12 @@ const SecurityStaffReport = () => {
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {Object.entries(reportData.staffStats.shifts).map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  {[
+                    { name: "Morning", color: "#0088FE" },
+                    { name: "Afternoon", color: "#00C49F" },
+                    { name: "Night", color: "#FFBB28" }
+                  ].map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
                 <Tooltip />
@@ -527,21 +733,27 @@ const SecurityStaffReport = () => {
         <div className="bg-white p-4 rounded-lg shadow-md border border-gray-100">
           <h3 className="text-lg font-semibold mb-4 text-gray-800">Inmate Categories</h3>
           <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={Object.entries(reportData.inmateStats.byCategory).map(([category, count]) => ({
-                  category,
-                  count
-                }))}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="category" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="count" fill="#8884d8" />
-              </BarChart>
-            </ResponsiveContainer>
+            {Object.keys(reportData.inmateStats.byCategory).length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={Object.entries(reportData.inmateStats.byCategory).map(([category, count]) => ({
+                    category: category.charAt(0).toUpperCase() + category.slice(1),
+                    count
+                  }))}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="category" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="count" fill="#8884d8" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex justify-center items-center h-full">
+                <p className="text-gray-500">No category data available</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -549,31 +761,37 @@ const SecurityStaffReport = () => {
       {/* Recent Activities */}
       <div className="bg-white rounded-lg shadow-md border border-gray-100 p-4">
         <h3 className="text-lg font-semibold mb-4 text-gray-800">Recent Activities</h3>
-        <div className="space-y-4">
-          {reportData.transferStats.recentTransfers.map((transfer, index) => (
-            <div key={`transfer-${index}`} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center">
-                <FaExchangeAlt className="text-blue-500 mr-3" />
-                <div>
-                  <p className="font-medium text-gray-800">{transfer.inmateName}</p>
-                  <p className="text-sm text-gray-500">Transfer: {transfer.fromPrison} → {transfer.toPrison}</p>
-                  <p className="text-xs text-gray-500 mt-1">Reason: {transfer.reason}</p>
+        {reportData.transferStats.recentTransfers.length > 0 ? (
+          <div className="space-y-4">
+            {reportData.transferStats.recentTransfers.map((transfer, index) => (
+              <div key={`transfer-${index}`} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                <div className="flex items-center">
+                  <FaExchangeAlt className="text-blue-500 mr-3" />
+                  <div>
+                    <p className="font-medium text-gray-800">{transfer.inmateName}</p>
+                    <p className="text-sm text-gray-500">Transfer: {transfer.fromPrison} → {transfer.toPrison}</p>
+                    <p className="text-xs text-gray-500 mt-1">Reason: {transfer.reason}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    transfer.status === 'approved' || transfer.status === 'accepted' ? 'bg-green-100 text-green-800' :
+                    transfer.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                    transfer.status === 'in_review' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {transfer.status.charAt(0).toUpperCase() + transfer.status.slice(1)}
+                  </span>
+                  <p className="text-xs text-gray-500 mt-1">{transfer.date}</p>
                 </div>
               </div>
-              <div className="text-right">
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  transfer.status === 'approved' || transfer.status === 'accepted' ? 'bg-green-100 text-green-800' :
-                  transfer.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                  transfer.status === 'in_review' ? 'bg-yellow-100 text-yellow-800' :
-                  'bg-gray-100 text-gray-800'
-                }`}>
-                  {transfer.status.charAt(0).toUpperCase() + transfer.status.slice(1)}
-                </span>
-                <p className="text-xs text-gray-500 mt-1">{transfer.date}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="p-4 bg-gray-50 rounded-lg text-center">
+            <p className="text-gray-500">No recent activities</p>
+          </div>
+        )}
       </div>
     </>
   );
@@ -612,29 +830,39 @@ const SecurityStaffReport = () => {
         <div className="bg-white p-6 rounded-lg shadow-md border border-gray-100">
           <h3 className="text-xl font-semibold mb-4 text-gray-800">Shift Distribution</h3>
           <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={[
-                    { name: "Morning", value: reportData.staffStats.shifts.morning },
-                    { name: "Afternoon", value: reportData.staffStats.shifts.afternoon },
-                    { name: "Night", value: reportData.staffStats.shifts.night }
-                  ]}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {Object.entries(reportData.staffStats.shifts).map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+            {reportData.staffStats.total > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: "Morning", value: reportData.staffStats.shifts.morning || 0 },
+                      { name: "Afternoon", value: reportData.staffStats.shifts.afternoon || 0 },
+                      { name: "Night", value: reportData.staffStats.shifts.night || 0 }
+                    ].filter(item => item.value > 0)}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {[
+                      { name: "Morning", color: "#0088FE" },
+                      { name: "Afternoon", color: "#00C49F" },
+                      { name: "Night", color: "#FFBB28" }
+                    ].map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex justify-center items-center h-full">
+                <p className="text-gray-500">No shift data available</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -859,35 +1087,43 @@ const SecurityStaffReport = () => {
         <div className="bg-white p-6 rounded-lg shadow-md border border-gray-100">
           <h3 className="text-xl font-semibold mb-4 text-gray-800">Case Type Distribution</h3>
           <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={[
-                    { name: "Criminal", value: reportData.inmateStats.byCategory['criminal'] || 0, color: '#EF4444' },
-                    { name: "Civil", value: reportData.inmateStats.byCategory['civil'] || 0, color: '#3B82F6' },
-                    { name: "Administrative", value: reportData.inmateStats.byCategory['administrative'] || 0, color: '#10B981' },
-                    { name: "Other", value: reportData.inmateStats.byCategory['other'] || 0, color: '#6B7280' }
-                  ]}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {[
-                    { color: '#EF4444' },
-                    { color: '#3B82F6' },
-                    { color: '#10B981' },
-                    { color: '#6B7280' }
-                  ].map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
+            {Object.keys(reportData.inmateStats.byCategory).length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: "Criminal", value: reportData.inmateStats.byCategory['criminal'] || 0 },
+                      { name: "Civil", value: reportData.inmateStats.byCategory['civil'] || 0 },
+                      { name: "Administrative", value: reportData.inmateStats.byCategory['administrative'] || 0 },
+                      { name: "Other", value: Object.entries(reportData.inmateStats.byCategory)
+                        .filter(([key]) => !['criminal', 'civil', 'administrative'].includes(key))
+                        .reduce((total, [_, value]) => total + value, 0) }
+                    ].filter(item => item.value > 0)}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {[
+                      { name: "Criminal", color: '#EF4444' },
+                      { name: "Civil", color: '#3B82F6' },
+                      { name: "Administrative", color: '#10B981' },
+                      { name: "Other", color: '#6B7280' }
+                    ].map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex justify-center items-center h-full">
+                <p className="text-gray-500">No case type data available</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -895,83 +1131,97 @@ const SecurityStaffReport = () => {
       {/* Recent Inmates Table */}
       <div className="bg-white p-6 rounded-lg shadow-md border border-gray-100">
         <h3 className="text-xl font-semibold mb-4 text-gray-800">Recent Inmates</h3>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Age</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Case Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sentence</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {reportData.inmateStats.recentInmates.map((inmate, index) => (
-                <tr key={index} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="font-medium text-gray-900">{inmate.name}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {inmate.age || 'N/A'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">
-                    {inmate.gender || 'N/A'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      inmate.caseType?.toLowerCase() === 'criminal' ? 'bg-red-100 text-red-800' :
-                      inmate.caseType?.toLowerCase() === 'civil' ? 'bg-blue-100 text-blue-800' :
-                      inmate.caseType?.toLowerCase() === 'administrative' ? 'bg-green-100 text-green-800' :
-                      'bg-gray-100 text-gray-800'
-                    }`}>
-                      {inmate.caseType || 'Not specified'}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {inmate.sentence || 'Not specified'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {inmate.location || 'Not specified'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      inmate.status === 'active' ? 'bg-green-100 text-green-800' :
-                      inmate.status === 'released' ? 'bg-gray-100 text-gray-800' :
-                      'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {inmate.status.charAt(0).toUpperCase() + inmate.status.slice(1)}
-                    </span>
-                  </td>
+        {reportData.inmateStats.recentInmates.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Age</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Case Type</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sentence</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {reportData.inmateStats.recentInmates.map((inmate, index) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="font-medium text-gray-900">{inmate.name}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {inmate.age || 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">
+                      {inmate.gender || 'N/A'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        inmate.caseType?.toLowerCase() === 'criminal' ? 'bg-red-100 text-red-800' :
+                        inmate.caseType?.toLowerCase() === 'civil' ? 'bg-blue-100 text-blue-800' :
+                        inmate.caseType?.toLowerCase() === 'administrative' ? 'bg-green-100 text-green-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {inmate.caseType || 'Not specified'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {inmate.sentence || 'Not specified'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {inmate.location || 'Not specified'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        inmate.status === 'active' ? 'bg-green-100 text-green-800' :
+                        inmate.status === 'released' ? 'bg-gray-100 text-gray-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {inmate.status.charAt(0).toUpperCase() + inmate.status.slice(1)}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="p-4 bg-gray-50 rounded-lg text-center">
+            <p className="text-gray-500">No inmate data available</p>
+          </div>
+        )}
       </div>
 
       {/* Sentence Duration Distribution */}
       <div className="mt-6 bg-white p-6 rounded-lg shadow-md border border-gray-100">
         <h3 className="text-xl font-semibold mb-4 text-gray-800">Sentence Duration Distribution</h3>
         <div className="h-[300px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={Object.entries(reportData.inmateStats.sentenceDuration || {}).map(([duration, count]) => ({
-                duration: duration === '1' ? '1 year' : `${duration} years`,
-                count
-              }))}
-              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="duration" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="count" fill="#3B82F6" name="Inmates" />
-            </BarChart>
-          </ResponsiveContainer>
+          {Object.keys(reportData.inmateStats.sentenceDuration || {}).length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={Object.entries(reportData.inmateStats.sentenceDuration || {})
+                  .map(([duration, count]) => ({
+                    duration: duration === '1' ? '1 year' : `${duration} years`,
+                    count
+                  }))
+                  .sort((a, b) => parseInt(a.duration) - parseInt(b.duration))}
+                margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="duration" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="count" fill="#3B82F6" name="Inmates" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex justify-center items-center h-full">
+              <p className="text-gray-500">No sentence duration data available</p>
+            </div>
+          )}
         </div>
       </div>
     </>
@@ -1056,13 +1306,12 @@ const SecurityStaffReport = () => {
                 <FaFilePdf className="mr-2" /> Export PDF
               </button>
               
-              <CSVLink 
-                data={[]}
-                filename={"security_staff_report.csv"}
+              <button
+                onClick={handleExportCSV}
                 className="flex items-center px-3 md:px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition duration-300 text-sm md:text-base"
               >
                 <FaFileCsv className="mr-2" /> Export CSV
-              </CSVLink>
+              </button>
               
               <button
                 onClick={() => window.print()}

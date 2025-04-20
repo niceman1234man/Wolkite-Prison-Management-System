@@ -63,24 +63,36 @@ const CourtView = ({ id }) => {
  
   const handleAddToInmate = () => {
     const initialData = {
-      fullName: `${instruction.firstName} ${instruction.middleName} ${instruction.lastName}`, 
-      gender: instruction.gender,
+      firstName: instruction.firstName,
+      middleName: instruction.middleName,
+      lastName: instruction.lastName,
+      birthDate: instruction.birthdate,
       age: calculateAge(instruction.birthdate),
-      birthdate: instruction.birthdate,
-      nationality: instruction.nationality,
+      gender: instruction.gender,
+      nationality: instruction.nationality || "Ethiopian",
       maritalStatus: instruction.maritalStatus,
       educationLevel: instruction.educationLevel,
-      occupation: instruction.occupation,
-      // Address information can also be included
+      work: instruction.occupation,
+      
+      // Birth address information 
       birthRegion: instruction.birthRegion,
       birthZone: instruction.birthZone,
-      birthWoreda: instruction.birthWoreda,
+      birthWereda: instruction.birthWoreda,
       birthKebele: instruction.birthKebele,
+      
+      // Current address information
       currentRegion: instruction.currentRegion,
       currentZone: instruction.currentZone,
-      currentWoreda: instruction.currentWoreda,
+      currentWereda: instruction.currentWoreda,
       currentKebele: instruction.currentKebele,
+      
+      // Case information
+      caseType: instruction.caseType,
+      startDate: instruction.effectiveDate,
+      sentenceYear: instruction.sentenceYear,
+      sentenceReason: instruction.instructions,
     };
+    
     navigate("/securityStaff-dashboard/add-inmate", { state: { initialData } });
     toast.success("Inmate details prepared for adding");
   };
@@ -206,19 +218,19 @@ const CourtView = ({ id }) => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className="text-xs text-gray-500">Region</p>
-                  <p className="font-medium">{instruction.birthRegion || "N/A"}</p>
+                  <p className="text-gray-800 font-medium">{instruction.birthRegion || "N/A"}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Zone</p>
-                  <p className="font-medium">{instruction.birthZone || "N/A"}</p>
+                  <p className="text-gray-800 font-medium">{instruction.birthZone || "N/A"}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Woreda</p>
-                  <p className="font-medium">{instruction.birthWoreda || "N/A"}</p>
+                  <p className="text-gray-800 font-medium">{instruction.birthWoreda || "N/A"}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Kebele</p>
-                  <p className="font-medium">{instruction.birthKebele || "N/A"}</p>
+                  <p className="text-gray-800 font-medium">{instruction.birthKebele || "N/A"}</p>
                 </div>
               </div>
             </div>
@@ -228,19 +240,19 @@ const CourtView = ({ id }) => {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className="text-xs text-gray-500">Region</p>
-                  <p className="font-medium">{instruction.currentRegion || "N/A"}</p>
+                  <p className="text-gray-800 font-medium">{instruction.currentRegion || "N/A"}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Zone</p>
-                  <p className="font-medium">{instruction.currentZone || "N/A"}</p>
+                  <p className="text-gray-800 font-medium">{instruction.currentZone || "N/A"}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Woreda</p>
-                  <p className="font-medium">{instruction.currentWoreda || "N/A"}</p>
+                  <p className="text-gray-800 font-medium">{instruction.currentWoreda || "N/A"}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Kebele</p>
-                  <p className="font-medium">{instruction.currentKebele || "N/A"}</p>
+                  <p className="text-gray-800 font-medium">{instruction.currentKebele || "N/A"}</p>
                 </div>
               </div>
             </div>
@@ -328,9 +340,13 @@ const CourtView = ({ id }) => {
             </h3>
             <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 flex justify-center">
               <img
-                src={`https://localhost:4000/uploads/${instruction.attachment}`}
+                src={`http://localhost:5001/uploads/${instruction.attachment}`}
                 alt="Attachment"
                 className="max-h-[300px] object-contain"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = "https://via.placeholder.com/300x200?text=Document+Not+Available";
+                }}
               />
             </div>
           </div>
@@ -341,9 +357,13 @@ const CourtView = ({ id }) => {
             </h3>
             <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 flex justify-center">
               <img
-                src={`https://localhost:4000/uploads/${instruction.signature}`}
+                src={`http://localhost:5001/uploads/${instruction.signature}`}
                 alt="Signature"
                 className="max-h-[200px] object-contain"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = "https://via.placeholder.com/300x200?text=Signature+Not+Available";
+                }}
               />
             </div>
           </div>

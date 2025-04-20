@@ -49,6 +49,7 @@ const InmateBehavior = () => {
   });
   const [alreadyTrackedThisMonth, setAlreadyTrackedThisMonth] = useState(false);
   const [lastTrackedDate, setLastTrackedDate] = useState(null);
+  const [isOneMonthPassed, setIsOneMonthPassed] = useState(true);
   
   // Sidebar collapse state from Redux
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
@@ -82,6 +83,24 @@ const InmateBehavior = () => {
           durationToParole: inmate.durationToParole || "N/A",
           durationFromParoleToEnd: inmate.durationFromParoleToEnd || "N/A"
         });
+        
+        // Check if one month has passed since start date
+        const startDate = new Date(inmate.startDate);
+        const currentDate = new Date();
+        
+        // Calculate the date that is one month after the start date
+        const oneMonthAfterStart = new Date(startDate);
+        oneMonthAfterStart.setMonth(oneMonthAfterStart.getMonth() + 1);
+        
+        // Check if current date is after one month from start date
+        const hasOneMonthPassed = currentDate >= oneMonthAfterStart;
+        setIsOneMonthPassed(hasOneMonthPassed);
+        
+        if (!hasOneMonthPassed) {
+          setTimeout(() => {
+            alert("Parole tracking can only begin after one month from the inmate's start date.");
+          }, 1000);
+        }
         
         // Check for monthly tracking right after getting inmate details
         fetchBehaviorLogs();
@@ -312,6 +331,14 @@ const InmateBehavior = () => {
             </p>
           </div>
         )}
+        {!isOneMonthPassed && (
+          <div className="mt-3 bg-yellow-800 text-white p-3 rounded-md text-center shadow-md">
+            <p className="font-bold flex items-center justify-center">
+              <FaExclamationTriangle className="text-yellow-300 text-xl mr-2" />
+              <span className="text-lg uppercase tracking-wider">One month must pass since start date before tracking</span>
+            </p>
+          </div>
+        )}
       </div>
 
       {loadingInmates ? (
@@ -337,6 +364,28 @@ const InmateBehavior = () => {
                   </p>
                   <p className="text-red-600 mt-2 font-medium">
                     The next tracking period will be available starting next month.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {!isOneMonthPassed && (
+            <div className="mb-6 p-4 bg-gradient-to-r from-yellow-50 to-yellow-100 border-l-4 border-yellow-500 rounded-lg shadow-md">
+              <div className="flex items-center">
+                <div className="bg-yellow-500 rounded-full p-2 mr-4">
+                  <FaExclamationTriangle className="text-white text-2xl" />
+                </div>
+                <div>
+                  <h3 className="text-yellow-700 font-bold text-lg mb-1">Too Early for Parole Tracking</h3>
+                  <p className="text-yellow-600">
+                    Parole tracking for <span className="font-bold">{inmateDetails.inmate_name}</span> can only begin after one month from the start date.
+                  </p>
+                  <p className="text-yellow-600 mt-2">
+                    <span className="font-semibold">Start Date:</span> {formatToLocalDate(inmateDetails.startDate)}
+                  </p>
+                  <p className="text-yellow-600 mt-2">
+                    <span className="font-semibold">Earliest Tracking Date:</span> {formatToLocalDate(new Date(new Date(inmateDetails.startDate).setMonth(new Date(inmateDetails.startDate).getMonth() + 1)))}
                   </p>
                 </div>
               </div>
@@ -473,21 +522,38 @@ const InmateBehavior = () => {
               </div>
             </div>
             
-            {alreadyTrackedThisMonth && (
+            {(alreadyTrackedThisMonth || !isOneMonthPassed) && (
               <div className="fixed inset-0 bg-black bg-opacity-20 z-10 flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
                 <div className="bg-white p-6 rounded-lg shadow-lg max-w-2xl w-full m-4 border-2 border-red-500">
                   <h2 className="text-xl font-bold text-red-600 mb-4 flex items-center">
-                    <FaExclamationTriangle className="mr-2 text-2xl" /> Form Locked - Monthly Tracking Limit Reached
+                    <FaExclamationTriangle className="mr-2 text-2xl" /> 
+                    {alreadyTrackedThisMonth ? "Form Locked - Monthly Tracking Limit Reached" : "Form Locked - Too Early for Tracking"}
                   </h2>
-                  <p className="mb-3">
-                    You have already submitted behavior tracking for <span className="font-bold">{inmateDetails.inmate_name}</span> on <span className="font-bold">{formatToLocalDate(lastTrackedDate)}</span>.
-                  </p>
-                  <p className="mb-3">
-                    According to the system policy, behavior tracking can only be done once per month for each inmate.
-                  </p>
-                  <p className="mb-4 font-medium">
-                    The next tracking period will be available starting next month.
-                  </p>
+                  {alreadyTrackedThisMonth ? (
+                    <>
+                      <p className="mb-3">
+                        You have already submitted behavior tracking for <span className="font-bold">{inmateDetails.inmate_name}</span> on <span className="font-bold">{formatToLocalDate(lastTrackedDate)}</span>.
+                      </p>
+                      <p className="mb-3">
+                        According to the system policy, behavior tracking can only be done once per month for each inmate.
+                      </p>
+                      <p className="mb-4 font-medium">
+                        The next tracking period will be available starting next month.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="mb-3">
+                        Parole tracking for <span className="font-bold">{inmateDetails.inmate_name}</span> cannot be performed yet.
+                      </p>
+                      <p className="mb-3">
+                        According to the system policy, behavior tracking can only begin after one month from the inmate's start date.
+                      </p>
+                      <p className="mb-4 font-medium">
+                        This inmate's start date is <span className="font-bold">{formatToLocalDate(inmateDetails.startDate)}</span>. Tracking will be available after <span className="font-bold">{formatToLocalDate(new Date(new Date(inmateDetails.startDate).setMonth(new Date(inmateDetails.startDate).getMonth() + 1)))}</span>.
+                      </p>
+                    </>
+                  )}
                   <div className="mt-4 text-center">
                     <button 
                       type="button" 
@@ -513,16 +579,33 @@ const InmateBehavior = () => {
                   </p>
                 </div>
               )}
+              
+              {!isOneMonthPassed && !alreadyTrackedThisMonth && (
+                <div className="mb-4 p-4 bg-yellow-50 border-2 border-yellow-300 rounded-lg shadow">
+                  <p className="text-yellow-600 font-bold flex items-center justify-center">
+                    <FaExclamationTriangle className="text-yellow-500 text-xl mr-2" />
+                    <span className="text-lg">Form locked: One month must pass since start date</span>
+                  </p>
+                  <p className="text-yellow-600 mt-2">
+                    Tracking will be available after {formatToLocalDate(new Date(new Date(inmateDetails.startDate).setMonth(new Date(inmateDetails.startDate).getMonth() + 1)))}.
+                  </p>
+                </div>
+              )}
+              
               <button
                 type="submit"
                 className={`${
-                  alreadyTrackedThisMonth 
+                  alreadyTrackedThisMonth || !isOneMonthPassed
                     ? "bg-gray-400 cursor-not-allowed" 
                     : "bg-teal-600 hover:bg-teal-700 transform hover:scale-105"
                 } text-white font-bold py-3 px-8 rounded-lg transition duration-200 ease-in-out shadow-md`}
-                disabled={alreadyTrackedThisMonth}
+                disabled={alreadyTrackedThisMonth || !isOneMonthPassed}
               >
-                {alreadyTrackedThisMonth ? "Monthly Tracking Already Completed" : "Submit Behavior Log"}
+                {alreadyTrackedThisMonth 
+                  ? "Monthly Tracking Already Completed" 
+                  : !isOneMonthPassed 
+                    ? "Too Early for Tracking" 
+                    : "Submit Behavior Log"}
               </button>
             </div>
           </form>

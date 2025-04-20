@@ -20,15 +20,25 @@ const ViewIncident = ({setView, id}) => {
 
   const deleteIncident = async () => {
     try {
-        const deletedIncident = await axiosInstance.delete(`/incidents/delete-incident/${id}`);
-        if (deletedIncident) {
-          toast.success("Incident deleted successfully!");
+      console.log("Attempting to delete incident with ID:", id);
+      const response = await axiosInstance.delete(`/incidents/update-incident/${id}`);
+      console.log("Delete response:", response.data);
+      
+      if (response.data && response.status === 200) {
+        toast.success("Incident deleted successfully!");
         setOpenDelete(false);
-        navigate("/admin-dashboard/incidents");
-        }
+        navigate("/policeOfficer-dashboard/incident");
+      } else {
+        const errorMsg = response.data?.message || "Failed to delete incident. Please try again.";
+        console.error("Delete failed:", errorMsg);
+        setError(errorMsg);
+        toast.error(errorMsg);
+      }
     } catch (error) {
-      setError(error.response?.data?.error || "Error deleting incident");
-      toast.error(error.response?.data?.error || "Error deleting incident");
+      console.error("Error deleting incident:", error);
+      const errorMsg = error.response?.data?.error || "Error deleting incident";
+      setError(errorMsg);
+      toast.error(errorMsg);
     }
   };
 
@@ -180,7 +190,7 @@ const ViewIncident = ({setView, id}) => {
                       {incident.reporter}
                     </div>
                   </div>
-            <div>
+            <div> 
                     <div className="text-sm text-gray-500 mb-1">Inmate Involved</div>
                     <div className="font-medium text-gray-900 p-3 bg-gray-50 rounded-md">
                       {incident.inmate}
@@ -282,11 +292,14 @@ const ViewIncident = ({setView, id}) => {
       )}
 
                <ConfirmModal
-                        open={openDelete}
-                        setOpen={setOpenDelete}
-                        onDelete={deleteIncident}
-                        message="Do you really want to delete this Incident? This action cannot be undone."
-                      />
+                 open={openDelete}
+                 message="Do you really want to delete this Incident? This action cannot be undone."
+                 onConfirm={() => {
+                   deleteIncident();
+                   setOpenDelete(false);
+                 }}
+                 onCancel={() => setOpenDelete(false)}
+               />
     </div>
   );
 };

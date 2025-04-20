@@ -164,9 +164,9 @@ const Navbar = () => {
                           console.error('Error logging logout activity:', error);
                         } finally {
                           // Handle logout (clear storage and redirect)
-                          localStorage.removeItem('token');
-                          localStorage.removeItem('user');
-                          window.location.href = '/login';
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('user');
+                        window.location.href = '/login';
                         }
                       }}
                       className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"

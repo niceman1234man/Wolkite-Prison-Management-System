@@ -69,15 +69,26 @@ function ViewClearance({id}) {
 
       const deleteClearance = async () => {
         try {
+          console.log("Attempting to delete clearance with ID:", id);
+          // Updated to use the correct API endpoint defined in backend routes
+          const response = await axiosInstance.delete(`/clearance/deleteClearance/${id}`);
           
-            const deletedClearance = await axiosInstance.delete(`/clearance/delete-clearance/${id}`);
-            if (deletedClearance) {
-              toast.success("clearance deleted successfully!");
-              navigate("/securityStaff-dashboard/clearance");  // Ensure you redirect to the correct page
-            
+          console.log("Delete response:", response.data);
+          
+          if (response.data && response.data.success) {
+            toast.success("Clearance deleted successfully!");
+            navigate("/securityStaff-dashboard/clearance");
+          } else {
+            const errorMsg = response.data?.message || "Failed to delete clearance. Please try again.";
+            console.error("Delete failed:", errorMsg);
+            setError(errorMsg);
+            toast.error(errorMsg);
           }
         } catch (error) {
-          setError(error.response?.data?.error || "Error deleting Instruction");
+          console.error("Error deleting clearance:", error);
+          const errorMsg = error.response?.data?.message || "Error deleting clearance";
+          setError(errorMsg);
+          toast.error(errorMsg);
         }
       };
 
@@ -467,12 +478,7 @@ function ViewClearance({id}) {
 
           {/* Action Buttons */}
           <div className="flex space-x-3 mt-8">
-            <button
-              className="bg-teal-600 text-white py-2 px-4 rounded font-medium flex items-center hover:bg-teal-700 transition duration-200"
-              onClick={() => navigate(`/securityStaff-dashboard/update-clearance/${id}`)}
-            >
-              <FaEdit className="mr-2" /> Edit
-            </button>
+            
                <button
               className="bg-red-600 text-white py-2 px-4 rounded font-medium flex items-center hover:bg-red-700 transition duration-200"
               onClick={() => setOpenDelete(true)}
@@ -481,18 +487,17 @@ function ViewClearance({id}) {
                </button>
           </div>
 
-               {/* Conditional rendering of the ConfirmModal */}
-               {openDelete && (
-                 <ConfirmModal
-                   message="Do you want to delete this clearance? This action cannot be undone."
-                   onConfirm={() => {
-                     deleteClearance();
-                     setOpenDelete(false);
-                   }}
-                   onCancel={() => setOpenDelete(false)}
-                 />
-               )}
-             </div>
+          {/* ConfirmModal - always render it but control visibility with open prop */}
+          <ConfirmModal
+            open={openDelete}
+            message="Do you want to delete this clearance? This action cannot be undone."
+            onConfirm={() => {
+              deleteClearance();
+              setOpenDelete(false);
+            }}
+            onCancel={() => setOpenDelete(false)}
+          />
+        </div>
       );
 }
 

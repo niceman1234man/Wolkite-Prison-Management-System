@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../utils/axiosInstance";
 import { toast } from 'react-toastify'; // Import toast
@@ -31,10 +31,24 @@ const styles = {
   `
 };
 
+// Debounce function for changes
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
 const UpdateInmate = ({setOpen, _id}) => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("personal");
+  const formRef = useRef(null); // Add a form reference
   
   const [formData, setFormData] = useState({
     firstName: "",
@@ -100,7 +114,21 @@ const UpdateInmate = ({setOpen, _id}) => {
 
   // Navigate between tabs
   const handleTabChange = (tabId) => {
-    setActiveTab(tabId);
+    if (formRef.current) {
+      // Ensure any ongoing form submission is canceled
+      formRef.current.onsubmit = (e) => e.preventDefault();
+      
+      // Delay setting to prevent race conditions
+      setTimeout(() => {
+        setActiveTab(tabId);
+        // Restore the proper form submission handler
+        if (formRef.current) {
+          formRef.current.onsubmit = handleSubmit;
+        }
+      }, 0);
+    } else {
+      setActiveTab(tabId);
+    }
   };
 
   // Navigate to next/previous tab
@@ -158,9 +186,9 @@ const UpdateInmate = ({setOpen, _id}) => {
         
         setFormData(updatedFormData);
         
-        // Validate the initial form data
-        const initialErrors = validateInmateForm(updatedFormData);
-        setErrors(initialErrors);
+        // Don't validate on initial load to prevent unnecessary updates
+        // const initialErrors = validateInmateForm(updatedFormData);
+        // setErrors(initialErrors);
       } catch (error) {
         console.error("Error fetching inmate data:", error);
         toast.error("Failed to fetch inmate data.");
@@ -182,48 +210,46 @@ const UpdateInmate = ({setOpen, _id}) => {
     };
   }, []);
 
+  // Create a debounced update function
+  const debouncedSetFormData = useCallback(
+    debounce((name, value, isDate = false) => {
+      setFormData(prevData => {
+        if (isDate) {
+          const age = calculateAge(value);
+          return {
+            ...prevData,
+            [name]: value,
+            age: age
+          };
+        }
+        return {
+          ...prevData,
+          [name]: value
+        };
+      });
+    }, 200),
+    []
+  );
+
   // Handle changes for both text and file inputs
   const handleChange = (e) => {
     const { name, value, files } = e.target;
+    
+    // Prevent default only for buttons and submits, not for inputs
+    if (e.target.type === 'button' || e.target.type === 'submit') {
+      e.preventDefault();
+    }
+    
     if (name === "signature") {
       setSignature(files[0]);
     } else if (name === "profileImage") {
       setProfileImage(files[0]);
     } else if (name === "birthDate") {
-      // Update age when birth date changes
-      const age = calculateAge(value);
-      setFormData((prevData) => ({
-        ...prevData,
-        [name]: value,
-        age: age
-      }));
-      
-      // Validate the field as user types
-      const error = validateInmateField(name, value);
-      setErrors(prev => ({
-        ...prev,
-        [name]: error
-      }));
+      // Directly update UI without triggering validation
+      debouncedSetFormData(name, value, true);
     } else {
-      setFormData((prevData) => ({
-        ...prevData,
-        [name]: value,
-      }));
-      
-      // Validate the field as user types
-      const error = validateInmateField(name, value);
-      setErrors(prev => ({
-        ...prev,
-        [name]: error
-      }));
-    }
-    
-    // Mark field as touched
-    if (!touched[name]) {
-      setTouched(prev => ({
-        ...prev,
-        [name]: true
-      }));
+      // Directly update UI without triggering validation
+      debouncedSetFormData(name, value);
     }
   };
 
@@ -348,104 +374,28 @@ const UpdateInmate = ({setOpen, _id}) => {
     return null;
   };
 
+  // Prevent form submission on key press events
+  const handleKeyDown = (e) => {
+    // Prevent form submission on arrow keys
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || 
+        e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      // Only prevent if it's inside a form control
+      if (e.target.tagName === 'INPUT' || 
+          e.target.tagName === 'SELECT' || 
+          e.target.tagName === 'TEXTAREA') {
+        // Don't prevent default arrow behavior for navigating inputs
+        // Just prevent propagation to stop it from submitting the form
+        e.stopPropagation();
+      }
+    }
+  };
+
+  // Tab content component
+  const TabContent = () => {
+    switch(activeTab) {
+      case "personal":
   return (
-    <div className="max-w-5xl mx-auto bg-white p-8 rounded-lg shadow-lg">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Update Inmate</h2>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Tab Navigation */}
-        <div className="bg-white rounded-xl shadow-md mb-6 overflow-hidden border border-gray-200">
-          <div className="flex justify-between items-center border-b border-gray-200">
-            <div className="flex overflow-x-auto hide-scrollbar">
-              {tabs.map(tab => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => handleTabChange(tab.id)}
-                  className={`px-6 py-4 flex items-center whitespace-nowrap ${
-                    activeTab === tab.id
-                      ? 'text-blue-600 border-b-2 border-blue-600 font-medium'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
-                >
-                  {tab.icon}
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-            
-            <div className="flex pr-2">
-              <button
-                type="button"
-                onClick={() => navigateTab('prev')}
-                disabled={activeTab === tabs[0].id}
-                className={`p-2 rounded-full ${
-                  activeTab === tabs[0].id
-                    ? 'text-gray-300 cursor-not-allowed'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <FaArrowLeft />
-              </button>
-              <button
-                type="button"
-                onClick={() => navigateTab('next')}
-                disabled={activeTab === tabs[tabs.length - 1].id}
-                className={`p-2 rounded-full ${
-                  activeTab === tabs[tabs.length - 1].id
-                    ? 'text-gray-300 cursor-not-allowed'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <FaArrowRight />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Profile Image Upload */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h3 className="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">Profile Image</h3>
-          <div className="flex items-center space-x-6">
-            <div className="shrink-0">
-              {profileImage ? (
-                <img className="h-16 w-16 object-cover rounded-full" 
-                     src={URL.createObjectURL(profileImage)} 
-                     alt="Profile preview" />
-              ) : (
-                formData.profileImageUrl ? (
-                  <img className="h-16 w-16 object-cover rounded-full" 
-                       src={formData.profileImageUrl} 
-                       alt="Current profile" />
-                ) : (
-                  <div className="h-16 w-16 bg-gray-200 rounded-full flex items-center justify-center">
-                    <span className="text-gray-400">No image</span>
-                  </div>
-                )
-              )}
-            </div>
-            <label className="block">
-              <span className="sr-only">Choose profile photo</span>
-              <input 
-                type="file" 
-                name="profileImage"
-                onChange={handleChange}
-                className="block w-full text-sm text-gray-500
-                  file:mr-4 file:py-2 file:px-4
-                  file:rounded-full file:border-0
-                  file:text-sm file:font-semibold
-                  file:bg-blue-50 file:text-blue-700
-                  hover:file:bg-blue-100"
-              />
-            </label>
-          </div>
-        </div>
-
-        {/* Personal Information Section */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h3 className="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">Personal Information</h3>
+          <div className="animate-fadeIn">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
@@ -628,12 +578,9 @@ const UpdateInmate = ({setOpen, _id}) => {
             </div>
           </div>
         </div>
-
-        {/* Location Information Section */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h3 className="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">Location Information</h3>
-          {/* Location Tab */}
-          {activeTab === "location" && (
+        );
+      case "location":
+        return (
             <div className="animate-fadeIn">
               <h3 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2">Birth Address</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -747,14 +694,9 @@ const UpdateInmate = ({setOpen, _id}) => {
                 </div>
               </div>
             </div>
-          )}
-        </div>
-
-        {/* Physical Characteristics Section */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h3 className="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">Physical Characteristics</h3>
-          {/* Physical Characteristics Tab */}
-          {activeTab === "physical" && (
+        );
+      case "physical":
+        return (
             <div className="animate-fadeIn">
               <h3 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2">Physical Characteristics</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -882,7 +824,7 @@ const UpdateInmate = ({setOpen, _id}) => {
                     value={formData.specialSymbol}
                     placeholder="Describe any special symbols, birthmarks, scars, etc."
                     onChange={handleChange}
-                    onBlur={handleBlur}
+                    onBlur={handleBlur} 
                     rows="3"
                     className={`w-full px-4 py-2 border ${errors.specialSymbol ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
                   ></textarea>
@@ -890,14 +832,9 @@ const UpdateInmate = ({setOpen, _id}) => {
                 </div>
               </div>
             </div>
-          )}
-        </div>
-
-        {/* Contact Information Section */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h3 className="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">Contact Information</h3>
-          {/* Contact Information Tab */}
-          {activeTab === "contact" && (
+        );
+      case "contact":
+        return (
             <div className="animate-fadeIn">
               <h3 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2">Emergency Contact Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1025,14 +962,9 @@ const UpdateInmate = ({setOpen, _id}) => {
                 </div>
               </div>
             </div>
-          )}
-        </div>
-
-        {/* Case Information Section */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h3 className="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">Case Information</h3>
-          {/* Case Information Tab */}
-          {activeTab === "case" && (
+        );
+      case "case":
+        return (
             <div className="animate-fadeIn">
               <h3 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2">Case Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -1107,10 +1039,135 @@ const UpdateInmate = ({setOpen, _id}) => {
                 </div>
               </div>
             </div>
-          )}
+        );
+      default:
+        return <div>Select a tab to view content</div>;
+    }
+  };
+
+  return (
+    <div className="max-w-5xl mx-auto bg-white p-8 rounded-lg shadow-lg">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-800">Update Inmate</h2>
+      </div>
+
+      <form 
+        ref={formRef} 
+        onSubmit={handleSubmit} 
+        onKeyDown={handleKeyDown}
+        className="space-y-6" 
+        noValidate
+      >
+        {/* Tab Navigation */}
+        <div className="bg-white rounded-xl shadow-md mb-6 overflow-hidden border border-gray-200">
+          <div className="flex justify-between items-center border-b border-gray-200">
+            <div className="flex overflow-x-auto hide-scrollbar">
+              {tabs.map(tab => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation(); // Stop event bubbling
+                    handleTabChange(tab.id);
+                    return false; // Prevent any default behavior
+                  }}
+                  className={`px-6 py-4 flex items-center whitespace-nowrap ${
+                    activeTab === tab.id
+                      ? 'text-blue-600 border-b-2 border-blue-600 font-medium'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  {tab.icon}
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+            
+            <div className="flex pr-2">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation(); // Stop event bubbling
+                  navigateTab('prev');
+                }}
+                disabled={activeTab === tabs[0].id}
+                className={`p-2 rounded-full ${
+                  activeTab === tabs[0].id
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <FaArrowLeft />
+              </button>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation(); // Stop event bubbling
+                  navigateTab('next');
+                }}
+                disabled={activeTab === tabs[tabs.length - 1].id}
+                className={`p-2 rounded-full ${
+                  activeTab === tabs[tabs.length - 1].id
+                    ? 'text-gray-300 cursor-not-allowed'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <FaArrowRight />
+              </button>
+            </div>
+          </div>
         </div>
 
-        {/* Signature Upload */}
+        {/* Profile Image Upload - Always visible */}
+        <div className="bg-gray-50 p-6 rounded-lg">
+          <h3 className="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">Profile Image</h3>
+          <div className="flex items-center space-x-6">
+            <div className="shrink-0">
+              {profileImage ? (
+                <img className="h-16 w-16 object-cover rounded-full" 
+                     src={URL.createObjectURL(profileImage)} 
+                     alt="Profile preview" />
+              ) : (
+                formData.profileImageUrl ? (
+                  <img className="h-16 w-16 object-cover rounded-full" 
+                       src={formData.profileImageUrl} 
+                       alt="Current profile" />
+                ) : (
+                  <div className="h-16 w-16 bg-gray-200 rounded-full flex items-center justify-center">
+                    <span className="text-gray-400">No image</span>
+                  </div>
+                )
+              )}
+            </div>
+            <label className="block">
+              <span className="sr-only">Choose profile photo</span>
+              <input 
+                type="file" 
+                name="profileImage"
+                onChange={handleChange}
+                className="block w-full text-sm text-gray-500
+                  file:mr-4 file:py-2 file:px-4
+                  file:rounded-full file:border-0
+                  file:text-sm file:font-semibold
+                  file:bg-blue-50 file:text-blue-700
+                  hover:file:bg-blue-100"
+              />
+            </label>
+          </div>
+        </div>
+
+        {/* Main content section - dynamically rendered based on active tab */}
+        <div className="bg-gray-50 p-6 rounded-lg">
+          <h3 className="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">
+            {tabs.find(tab => tab.id === activeTab)?.label || "Form Information"}
+          </h3>
+          <TabContent />
+        </div>
+
+        {/* Signature Upload - Always visible */}
         <div className="bg-gray-50 p-6 rounded-lg">
           <h3 className="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">Signature</h3>
           <div className="flex items-center space-x-6">
@@ -1153,14 +1210,18 @@ const UpdateInmate = ({setOpen, _id}) => {
         <div className="flex justify-end space-x-4 pt-6">
           <button
             type="button"
-            onClick={() => setOpen && setOpen(false)}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation(); // Stop event bubbling
+              setOpen && setOpen(false);
+            }}
             className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            className="px-6 py-2 bg-blue-600 text-black rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
             disabled={isSubmitting}
           >
             {isSubmitting ? (

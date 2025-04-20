@@ -101,8 +101,8 @@ const Navbar = ({ toggleSidebar }) => {
     } catch (error) {
       console.error('Error during logout:', error);
       // Fallback: Clear storage and navigate anyway
-      localStorage.clear();
-      navigate("/", { state: { fromLogout: true } });
+    localStorage.clear();
+    navigate("/", { state: { fromLogout: true } });
     }
   };
 

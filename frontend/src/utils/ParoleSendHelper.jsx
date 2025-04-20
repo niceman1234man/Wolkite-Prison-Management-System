@@ -31,7 +31,18 @@ export const columns = [
   },
   {
     name: "Parole Date",
-    selector: (row) => row.paroleDate || "N/A",
+    selector: (row) => {
+      if (!row.paroleDate) return "N/A";
+      try {
+        return new Date(row.paroleDate).toLocaleDateString(undefined, {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+      } catch (e) {
+        return row.paroleDate || "N/A";
+      }
+    },
     sortable: true,
     width: "150px",
   },

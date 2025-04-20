@@ -76,7 +76,7 @@ axiosInstance.interceptors.request.use(
 
     // Always add token if available, regardless of route
     const token = localStorage.getItem("token");
-    if (token) {
+    if (token && !config.headers.Authorization) {
       config.headers.Authorization = `Bearer ${token}`;
       console.log("Added authorization token to request");
     } else {

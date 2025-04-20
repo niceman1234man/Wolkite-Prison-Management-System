@@ -33,6 +33,8 @@ const UpdateClearance = ({setOpen, id}) => {
   const [errorMessage, setErrorMessage] = useState("");
   const [sign, setSign] = useState("");
   const [signPreview, setSignPreview] = useState(null);
+  const [inmates, setInmates] = useState([]);
+  const [inmatesLoading, setInmatesLoading] = useState(false);
 
   // Handle input changes
   const handleChange = (e) => {
@@ -65,6 +67,29 @@ const UpdateClearance = ({setOpen, id}) => {
       setSignPreview(null);
     }
   };
+
+  // Fetch inmates data
+  useEffect(() => {
+    const fetchInmates = async () => {
+      setInmatesLoading(true);
+      try {
+        const response = await axiosInstance.get("/inmates/allInmates");
+        if (response.data?.inmates) {
+          setInmates(response.data.inmates);
+        } else {
+          console.error("Invalid API response:", response);
+          toast.error("Failed to fetch inmates data");
+        }
+      } catch (error) {
+        console.error("Error fetching inmates:", error);
+        toast.error(error.response?.data?.error || "Failed to fetch inmate data");
+      } finally {
+        setInmatesLoading(false);
+      }
+    };
+
+    fetchInmates();
+  }, []);
 
   // Pre-populate clearance data if id is available
   useEffect(() => {
@@ -208,14 +233,29 @@ const UpdateClearance = ({setOpen, id}) => {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Inmate Name <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
+              <select
                 name="inmate"
                 value={formData.inmate}
                 onChange={handleChange}
                 className="w-full p-3 border border-gray-300 rounded-md shadow-sm focus:ring-teal-500 focus:border-teal-500"
                 required
-              />
+                disabled={inmatesLoading}
+              >
+                <option value="">Select Inmate</option>
+                {inmatesLoading ? (
+                  <option disabled>Loading inmates...</option>
+                ) : (
+                  inmates.map((inmate) => (
+                    <option 
+                      key={inmate._id} 
+                      value={inmate.fullName || `${inmate.firstName} ${inmate.middleName} ${inmate.lastName}`.trim()}
+                    >
+                      {inmate.firstName} {inmate.middleName} {inmate.lastName}
+                    </option>
+                  ))
+                )}
+              </select>
+              <p className="mt-1 text-xs text-gray-500">Select an inmate from the list</p>
             </div>
 
           <div>

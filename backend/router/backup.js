@@ -94,7 +94,7 @@ const createMongoDBDump = async (type, referenceId = null) => {
     try {
       // Use MongoDB native driver to get all collections
       const collections = await mongoose.connection.db.listCollections().toArray();
-      
+    
       // Export each collection to a JSON file
       for (const collection of collections) {
         const collectionName = collection.name;
@@ -106,8 +106,8 @@ const createMongoDBDump = async (type, referenceId = null) => {
         const collectionDir = path.join(outputDir, dbName);
         if (!fs.existsSync(collectionDir)) {
           fs.mkdirSync(collectionDir, { recursive: true });
-        }
-        
+    }
+    
         // Get all documents from the collection
         const documents = await mongoose.connection.db.collection(collectionName).find({}).toArray();
         
@@ -116,7 +116,7 @@ const createMongoDBDump = async (type, referenceId = null) => {
           path.join(collectionDir, `${collectionName}.json`), 
           JSON.stringify(documents, null, 2)
         );
-      }
+        }
         
         // Compress the output directory
         const archive = archiver('zip', {
@@ -217,7 +217,7 @@ const restoreFromBackup = async (backupId) => {
       for (const file of files) {
         const collectionName = path.basename(file, '.json');
         const documents = JSON.parse(fs.readFileSync(path.join(restoreDir, file), 'utf8'));
-        
+      
         // Drop the collection if this is the first backup in chain (which should be a full backup)
       if (isFirst) {
           try {

@@ -96,10 +96,12 @@ const ViewParole = ({ id }) => {
             .field-value {
               display: inline-block;
               padding: 2px 6px;
-              background-color: #f9f9f9;
+              background-color: #f8fafc;
               border-radius: 4px;
-              font-weight: 500;
+              font-weight: 600;
               margin: 0 5px;
+              border: 1px solid #cbd5e1;
+              color: #1e293b;
             }
             
             .main-content {
@@ -213,8 +215,8 @@ const ViewParole = ({ id }) => {
       <div className="mb-6 bg-gray-50 p-4 rounded-lg shadow-sm">
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
           <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">
-        Parole Request Details
-      </h2>
+            Parole Request Details
+          </h2>
           
           <div className="flex items-center space-x-3">
             <div className="flex items-center bg-gray-200 px-3 py-1 rounded-md">
@@ -228,7 +230,7 @@ const ViewParole = ({ id }) => {
               }`}>
                 {inmateData.status ? inmateData.status.charAt(0).toUpperCase() + inmateData.status.slice(1) : "Pending"}
               </span>
-          </div>
+            </div>
             
             <button 
               onClick={handlePrint} 
@@ -247,12 +249,12 @@ const ViewParole = ({ id }) => {
             {/* Header with number and date - positioned to the right */}
             <div className="header-right float-end">
               <div className="flex mb-2 justify-end">
-                <span className="mr-3">ቁጥር</span>
-                <span className="field-value font-medium px-2 py-1 bg-gray-50 rounded shadow-sm">{inmateData.request.number}</span>
+                <span className="mr-3 font-medium text-slate-800">ቁጥር</span>
+                <span className="field-value font-medium px-2 py-1 bg-slate-100 rounded shadow-sm border border-slate-300 text-slate-900">{inmateData.request.number}</span>
               </div>
               <div className="flex mb-4 justify-end">
-                <span className="mr-3">ቀን</span> 
-                <span className="field-value font-medium px-2 py-1 bg-gray-50 rounded shadow-sm">{formatDate(inmateData.request.date)}</span>
+                <span className="mr-3 font-medium text-slate-800">ቀን</span> 
+                <span className="field-value font-medium px-2 py-1 bg-slate-100 rounded shadow-sm border border-slate-300 text-slate-900">{formatDate(inmateData.request.date)}</span>
               </div>
             </div>
             
@@ -261,71 +263,71 @@ const ViewParole = ({ id }) => {
               {/* Recipient section */}
               <div className="recipient-section mb-8">
                 <div className="flex mb-2">
-                  <span>ለ</span>
-                  <span className="field-value font-medium px-2 py-1 mx-2 bg-gray-50 rounded shadow-sm">{inmateData.request.receiverName}</span>
-                  <span>ፍ/ቤት</span>
+                  <span className="text-slate-800 font-medium">ለ</span>
+                  <span className="field-value font-medium px-2 py-1 mx-2 bg-slate-100 rounded shadow-sm border border-slate-300 text-slate-900">{inmateData.request.receiverName}</span>
+                  <span className="text-slate-800 font-medium">ፍ/ቤት</span>
                 </div>
                 
                 <div className="flex mb-4">
-                  <span>የወ/መ/ቁ</span>
-                  <span className="field-value font-medium px-2 py-1 mx-2 bg-gray-50 rounded shadow-sm">{inmateData.request.referenceNumber}</span>
-        </div>
-        </div>
+                  <span className="text-slate-800 font-medium">የወ/መ/ቁ</span>
+                  <span className="field-value font-medium px-2 py-1 mx-2 bg-slate-100 rounded shadow-sm border border-slate-300 text-slate-900">{inmateData.request.referenceNumber}</span>
+                </div>
+              </div>
               
               {/* Case details section */}
               <div className="case-details mt-10">
-                <p className="leading-loose">
-            የህግ ታራሚ ስም:
-                  <span className="field-value font-medium px-2 py-1 mx-2 bg-gray-50 rounded inline-block shadow-sm">{inmateData.fullName}</span>
-            የተባለው የህግ ታራሚ በአመክሮ መፈቻ ጥያቄ በተከሰሰበት
-                  <span className="field-value font-medium px-2 py-1 mx-2 bg-gray-50 rounded inline-block shadow-sm">{inmateData.caseType}</span>
-            ወንጀል እስራት እንዲቀጣ በወሰነው መሠረት ከዚህ ውስጥ 2/3ኛው
-                  <span className="field-value font-medium px-2 py-1 mx-2 bg-gray-50 rounded inline-block shadow-sm">{inmateData.durationToParole}</span>
-            በእስራት የፈጸመ ሲሆን 1/3ኛውን
-                  <span className="field-value font-medium px-2 py-1 mx-2 bg-gray-50 rounded inline-block shadow-sm">{inmateData.durationFromParoleToEnd}</span>
-            ቅናሽ አግጋቶዋል፡፡ አሁንም በጠቅላላው ከተፈረደበት የእስራት ጊዜ ውስጥ ወደፊት የሚቀረው
-                  <span className="field-value font-medium px-2 py-1 mx-2 bg-gray-50 rounded inline-block shadow-sm">{inmateData.durationFromParoleToEnd}</span>
-          </p>
-        </div>
+                <p className="leading-loose text-slate-800">
+                  የህግ ታራሚ ስም:
+                  <span className="field-value font-medium px-2 py-1 mx-2 bg-slate-100 rounded inline-block shadow-sm border border-slate-300 text-slate-900">{inmateData.fullName}</span>
+                  የተባለው የህግ ታራሚ በአመክሮ መፈቻ ጥያቄ በተከሰሰበት
+                  <span className="field-value font-medium px-2 py-1 mx-2 bg-slate-100 rounded inline-block shadow-sm border border-slate-300 text-slate-900">{inmateData.caseType}</span>
+                  ወንጀል እስራት እንዲቀጣ በወሰነው መሠረት ከዚህ ውስጥ 2/3ኛው
+                  <span className="field-value font-medium px-2 py-1 mx-2 bg-slate-100 rounded inline-block shadow-sm border border-slate-300 text-slate-900">{inmateData.durationToParole}</span>
+                  በእስራት የፈጸመ ሲሆን 1/3ኛውን
+                  <span className="field-value font-medium px-2 py-1 mx-2 bg-slate-100 rounded inline-block shadow-sm border border-slate-300 text-slate-900">{inmateData.durationFromParoleToEnd}</span>
+                  ቅናሽ አግጋቶዋል፡፡ አሁንም በጠቅላላው ከተፈረደበት የእስራት ጊዜ ውስጥ ወደፊት የሚቀረው
+                  <span className="field-value font-medium px-2 py-1 mx-2 bg-slate-100 rounded inline-block shadow-sm border border-slate-300 text-slate-900">{inmateData.durationFromParoleToEnd}</span>
+                </p>
+              </div>
               
-              <p className="my-4">
-        በዚህ መሠረት የህግ ታራሚው ጠቅላይ ፍርድ 2/3ኛውን የታሠረ በመሆኑ በአከሮ ለመፈታት የደረሰ ሆኖ
-        ተገኝቶዋል፡፡የኸውም የህግ ታራሚው በዚህ ማቤት በኖረባቸው ዘመኖች መልካም ፀባይ ይዞ የቆየ መሆኑንና የታዘዘውን
-        ሥራ በቅን የሠራ ነው እንዲሁም ፀባዩን ያረመና ወደ ማህበራዊ ኑሮ ተመልሶ ለመቀላቀል የሚበቃ ሆኖ ተገኝቶዋል፡፡
+              <p className="my-4 text-slate-800 font-medium">
+                በዚህ መሠረት የህግ ታራሚው ጠቅላይ ፍርድ 2/3ኛውን የታሠረ በመሆኑ በአከሮ ለመፈታት የደረሰ ሆኖ
+                ተገኝቶዋል፡፡የኸውም የህግ ታራሚው በዚህ ማቤት በኖረባቸው ዘመኖች መልካም ፀባይ ይዞ የቆየ መሆኑንና የታዘዘውን
+                ሥራ በቅን የሠራ ነው እንዲሁም ፀባዩን ያረመና ወደ ማህበራዊ ኑሮ ተመልሶ ለመቀላቀል የሚበቃ ሆኖ ተገኝቶዋል፡፡
               </p>
               
-              <p className="mt-3 mb-2">በዚሁ ረገድ በቆየበት ጊዜ ያሣየውን መልካም ፀባዩን የሚያረጋግጥ</p>
+              <p className="mt-3 mb-2 text-slate-800 font-medium">በዚሁ ረገድ በቆየበት ጊዜ ያሣየውን መልካም ፀባዩን የሚያረጋግጥ</p>
               
               <div className="flex mb-2 items-center">
-                <span>1/ታራሚው ማ/ቤት የገባበት</span>
-                <span className="field-value font-medium px-2 py-1 mx-2 bg-gray-50 rounded shadow-sm">{formatDate(inmateData.startDate)}</span>
-        </div>
+                <span className="text-slate-800 font-medium">1/ታራሚው ማ/ቤት የገባበት</span>
+                <span className="field-value font-medium px-2 py-1 mx-2 bg-slate-100 rounded shadow-sm border border-slate-300 text-slate-900">{formatDate(inmateData.startDate)}</span>
+              </div>
               
               <div className="flex mb-2 items-center">
-                <span>2/ ታራሚው አስራቱ ጨርሶ የሚፈታው</span>
-                <span className="field-value font-medium px-2 py-1 mx-2 bg-gray-50 rounded shadow-sm">{formatDate(inmateData.releasedDate)}</span>
-        </div>
+                <span className="text-slate-800 font-medium">2/ ታራሚው አስራቱ ጨርሶ የሚፈታው</span>
+                <span className="field-value font-medium px-2 py-1 mx-2 bg-slate-100 rounded shadow-sm border border-slate-300 text-slate-900">{formatDate(inmateData.releasedDate)}</span>
+              </div>
               
               <div className="flex mb-2 items-center">
-                <span>3/ በአመክሮ የሚፈታው</span>
-                <span className="field-value font-medium px-2 py-1 mx-2 bg-gray-50 rounded shadow-sm">{formatDate(inmateData.paroleDate)}</span>
-        </div>
+                <span className="text-slate-800 font-medium">3/ በአመክሮ የሚፈታው</span>
+                <span className="field-value font-medium px-2 py-1 mx-2 bg-slate-100 rounded shadow-sm border border-slate-300 text-slate-900">{formatDate(inmateData.paroleDate)}</span>
+              </div>
               
               <div className="flex mb-2 items-center">
-                <span>4/ በፀባይ ነጥብ መስጨ የተገኘ</span>
-                <span className="field-value font-medium px-2 py-1 mx-2 bg-gray-50 rounded shadow-sm">{inmateData.totalPoints}</span>
-        </div>
+                <span className="text-slate-800 font-medium">4/ በፀባይ ነጥብ መስጨ የተገኘ</span>
+                <span className="field-value font-medium px-2 py-1 mx-2 bg-slate-100 rounded shadow-sm border border-slate-300 text-slate-900">{inmateData.totalPoints}</span>
+              </div>
               
-              <p className="my-4">
-        5/ ስለጉዳት ካሣና እርቅ ማዉረድ የተሠጠ መግለጫ 6 ስለ ሙያና ሥራ ችሎታ ስለ መተዳደሪያ ከተቀመጠው ኮሚቴ
-        የተሠጠው የምስክርነት በአጠቃላይ ያቀረብን በ997 በወጣው የኢፊድሪ የወ/መ/ህ/ቁጥር 12 በአንቀጽ 13 በወ/መ/ቁ
-        206 በአንቀጽ 201207 በአንቀጽ 202 209 እና 204 በወንጀል ህጉ መሠረት በአመክሮ እንዲፈታ
-        እንጠይቃለን፡፡
+              <p className="my-4 text-slate-800 font-medium">
+                5/ ስለጉዳት ካሣና እርቅ ማዉረድ የተሠጠ መግለጫ 6 ስለ ሙያና ሥራ ችሎታ ስለ መተዳደሪያ ከተቀመጠው ኮሚቴ
+                የተሠጠው የምስክርነት በአጠቃላይ ያቀረብን በ997 በወጣው የኢፊድሪ የወ/መ/ህ/ቁጥር 12 በአንቀጽ 13 በወ/መ/ቁ
+                206 በአንቀጽ 201207 በአንቀጽ 202 209 እና 204 በወንጀል ህጉ መሠረት በአመክሮ እንዲፈታ
+                እንጠይቃለን፡፡
               </p>
               
-              <p className="signature text-right mt-4 mr-3">ከሠላምታ ጋር</p>
+              <p className="signature text-right mt-4 mr-3 font-semibold text-slate-800">ከሠላምታ ጋር</p>
             </div>
-      </CardContent>
+          </CardContent>
         </div>
       </div>
 
@@ -333,31 +335,31 @@ const ViewParole = ({ id }) => {
       <div className="bg-gray-50 p-6 rounded-lg shadow-md action-buttons-container">
         {/* Inmate info summary */}
         <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-white p-4 rounded-md shadow-sm">
+          <div className="bg-white p-4 rounded-md shadow-sm border border-slate-200">
             <h3 className="text-lg font-semibold mb-2 text-gray-800">Inmate Information</h3>
             <div className="grid grid-cols-2 gap-2">
-              <div className="text-sm text-gray-600">Name:</div>
-              <div className="text-sm font-medium">{inmateData.fullName}</div>
+              <div className="text-sm font-medium text-gray-700">Name:</div>
+              <div className="text-sm font-semibold text-slate-900 bg-slate-50 py-1 px-2 rounded border border-slate-200">{inmateData.fullName}</div>
               
-              <div className="text-sm text-gray-600">Crime Type:</div>
-              <div className="text-sm font-medium">{inmateData.caseType}</div>
+              <div className="text-sm font-medium text-gray-700">Crime Type:</div>
+              <div className="text-sm font-semibold text-slate-900 bg-slate-50 py-1 px-2 rounded border border-slate-200">{inmateData.caseType}</div>
               
-              <div className="text-sm text-gray-600">Total Points:</div>
-              <div className="text-sm font-medium">{inmateData.totalPoints}</div>
+              <div className="text-sm font-medium text-gray-700">Total Points:</div>
+              <div className="text-sm font-semibold text-slate-900 bg-slate-50 py-1 px-2 rounded border border-slate-200">{inmateData.totalPoints}</div>
             </div>
           </div>
           
-          <div className="bg-white p-4 rounded-md shadow-sm">
+          <div className="bg-white p-4 rounded-md shadow-sm border border-slate-200">
             <h3 className="text-lg font-semibold mb-2 text-gray-800">Important Dates</h3>
             <div className="grid grid-cols-2 gap-2">
-              <div className="text-sm text-gray-600">Start Date:</div>
-              <div className="text-sm font-medium">{formatDate(inmateData.startDate)}</div>
+              <div className="text-sm font-medium text-gray-700">Start Date:</div>
+              <div className="text-sm font-semibold text-slate-900 bg-slate-50 py-1 px-2 rounded border border-slate-200">{formatDate(inmateData.startDate)}</div>
               
-              <div className="text-sm text-gray-600">Parole Date:</div>
-              <div className="text-sm font-medium">{formatDate(inmateData.paroleDate)}</div>
+              <div className="text-sm font-medium text-gray-700">Parole Date:</div>
+              <div className="text-sm font-semibold text-slate-900 bg-slate-50 py-1 px-2 rounded border border-slate-200">{formatDate(inmateData.paroleDate)}</div>
               
-              <div className="text-sm text-gray-600">Release Date:</div>
-              <div className="text-sm font-medium">{formatDate(inmateData.releasedDate)}</div>
+              <div className="text-sm font-medium text-gray-700">Release Date:</div>
+              <div className="text-sm font-semibold text-slate-900 bg-slate-50 py-1 px-2 rounded border border-slate-200">{formatDate(inmateData.releasedDate)}</div>
             </div>
           </div>
         </div>
@@ -406,7 +408,7 @@ const ViewParole = ({ id }) => {
             <FaCheck className="mr-2" /> Accept Parole
           </button>
 
-        <button
+          <button
             onClick={() => {
               if (inmateData.status === "accepted" || inmateData.status === "rejected") {
                 toast.info(`This parole request has already been ${inmateData.status}`, {
@@ -425,16 +427,16 @@ const ViewParole = ({ id }) => {
             disabled={inmateData.status === "accepted" || inmateData.status === "rejected"}
           >
             <FaTimes className="mr-2" /> Reject Parole
-        </button>
+          </button>
         </div>
       </div>
 
       {/* Modals */}
-        <ParoleAccept
-          isOpen={openAccept}
-          onClose={() => setOpenAccept(false)}
-          onSubmit={acceptParole}
-        />
+      <ParoleAccept
+        isOpen={openAccept}
+        onClose={() => setOpenAccept(false)}
+        onSubmit={acceptParole}
+      />
 
       <ParoleRejectModal
         isOpen={isRejectModalOpen}
