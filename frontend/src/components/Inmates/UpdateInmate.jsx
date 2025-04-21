@@ -1,23 +1,29 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../utils/axiosInstance";
 import { toast } from 'react-toastify'; // Import toast
 import 'react-toastify/dist/ReactToastify.css'; // Import toast CS
 
 import { CloudCog } from "lucide-react";
+import { FaUser, FaMapMarkerAlt, FaIdCard, FaPhone, FaGavel, FaArrowLeft, FaArrowRight, FaSave } from "react-icons/fa";
 import { validateInmateField, validateInmateForm } from "../../utils/formValidation";
-
-import { FaUser, FaMapMarkerAlt, FaIdCard, FaPhone, FaGavel, FaArrowLeft, FaArrowRight } from "react-icons/fa";
+import { logActivity, ACTIONS, RESOURCES, STATUS } from "../../utils/activityLogger";
 
 // CSS for animations
 const styles = {
   fadeIn: `
     @keyframes fadeIn {
-      0% { opacity: 0; transform: translateY(10px); }
-      100% { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
     .animate-fadeIn {
-      animation: fadeIn 0.3s ease-out forwards;
+      animation: fadeIn 0.5s ease-out forwards;
     }
   `,
   hideScrollbar: `
@@ -31,24 +37,10 @@ const styles = {
   `
 };
 
-// Debounce function for changes
-function debounce(func, wait) {
-  let timeout;
-  return function executedFunction(...args) {
-    const later = () => {
-      clearTimeout(timeout);
-      func(...args);
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  };
-}
-
 const UpdateInmate = ({setOpen, _id}) => {
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("personal");
-  const formRef = useRef(null); // Add a form reference
   
   const [formData, setFormData] = useState({
     firstName: "",
@@ -114,21 +106,7 @@ const UpdateInmate = ({setOpen, _id}) => {
 
   // Navigate between tabs
   const handleTabChange = (tabId) => {
-    if (formRef.current) {
-      // Ensure any ongoing form submission is canceled
-      formRef.current.onsubmit = (e) => e.preventDefault();
-      
-      // Delay setting to prevent race conditions
-      setTimeout(() => {
-        setActiveTab(tabId);
-        // Restore the proper form submission handler
-        if (formRef.current) {
-          formRef.current.onsubmit = handleSubmit;
-        }
-      }, 0);
-    } else {
-      setActiveTab(tabId);
-    }
+    setActiveTab(tabId);
   };
 
   // Navigate to next/previous tab
@@ -172,26 +150,72 @@ const UpdateInmate = ({setOpen, _id}) => {
           return;
         }
 
+        console.log("Fetched inmate data:", inmateData);
+
         // Format dates with null checks
         const formattedBirthDate = inmateData.birthDate ? inmateData.birthDate.split('T')[0] : '';
         const formattedStartDate = inmateData.startDate ? inmateData.startDate.split('T')[0] : '';
         const formattedReleasedDate = inmateData.releasedDate ? inmateData.releasedDate.split('T')[0] : '';
+        const formattedParoleDate = inmateData.paroleDate ? inmateData.paroleDate.split('T')[0] : '';
 
+        // Ensure all required fields have values
         const updatedFormData = {
           ...inmateData,
+          firstName: inmateData.firstName || "",
+          lastName: inmateData.lastName || "",
+          gender: inmateData.gender || "",
           birthDate: formattedBirthDate,
           startDate: formattedStartDate,
-          releasedDate: formattedReleasedDate
+          caseType: inmateData.caseType || "",
+          sentenceYear: inmateData.sentenceYear || "",
+          releasedDate: formattedReleasedDate,
+          paroleDate: formattedParoleDate,
+          // Ensure other potential undefined fields are initialized
+          age: inmateData.age || calculateAge(formattedBirthDate) || "",
+          motherName: inmateData.motherName || "",
+          phoneNumber: inmateData.phoneNumber || ""
         };
         
+        console.log("Updated form data:", updatedFormData);
         setFormData(updatedFormData);
         
-        // Don't validate on initial load to prevent unnecessary updates
-        // const initialErrors = validateInmateForm(updatedFormData);
-        // setErrors(initialErrors);
+        // Validate the initial form data
+        const initialErrors = validateInmateForm(updatedFormData);
+        setErrors(initialErrors);
+        
+        // Log any validation errors found
+        if (Object.keys(initialErrors).length > 0) {
+          console.warn("Initial validation errors:", initialErrors);
+        }
+        
+        // Log activity for viewing inmate details
+        try {
+          await logActivity(
+            ACTIONS.VIEW,
+            `Viewed inmate details for ${updatedFormData.firstName} ${updatedFormData.lastName}`,
+            RESOURCES.INMATE,
+            _id,
+            STATUS.SUCCESS
+          );
+        } catch (logError) {
+          console.error('Failed to log view activity:', logError);
+        }
       } catch (error) {
         console.error("Error fetching inmate data:", error);
         toast.error("Failed to fetch inmate data.");
+        
+        // Log failed attempt to view inmate
+        try {
+          await logActivity(
+            ACTIONS.VIEW,
+            `Failed to view inmate details: ${error.response?.data?.message || error.message}`,
+            RESOURCES.INMATE,
+            _id,
+            STATUS.FAILURE
+          );
+        } catch (logError) {
+          console.error('Failed to log view failure activity:', logError);
+        }
       }
     };
     fetchInmateData();
@@ -210,46 +234,48 @@ const UpdateInmate = ({setOpen, _id}) => {
     };
   }, []);
 
-  // Create a debounced update function
-  const debouncedSetFormData = useCallback(
-    debounce((name, value, isDate = false) => {
-      setFormData(prevData => {
-        if (isDate) {
-          const age = calculateAge(value);
-          return {
-            ...prevData,
-            [name]: value,
-            age: age
-          };
-        }
-        return {
-          ...prevData,
-          [name]: value
-        };
-      });
-    }, 200),
-    []
-  );
-
   // Handle changes for both text and file inputs
   const handleChange = (e) => {
     const { name, value, files } = e.target;
-    
-    // Prevent default only for buttons and submits, not for inputs
-    if (e.target.type === 'button' || e.target.type === 'submit') {
-      e.preventDefault();
-    }
-    
     if (name === "signature") {
       setSignature(files[0]);
     } else if (name === "profileImage") {
       setProfileImage(files[0]);
     } else if (name === "birthDate") {
-      // Directly update UI without triggering validation
-      debouncedSetFormData(name, value, true);
+      // Update age when birth date changes
+      const age = calculateAge(value);
+      setFormData((prevData) => ({
+        ...prevData,
+        [name]: value,
+        age: age
+      }));
+      
+      // Validate the field as user types
+      const error = validateInmateField(name, value);
+      setErrors(prev => ({
+        ...prev,
+        [name]: error
+      }));
     } else {
-      // Directly update UI without triggering validation
-      debouncedSetFormData(name, value);
+      setFormData((prevData) => ({
+        ...prevData,
+        [name]: value,
+      }));
+      
+      // Validate the field as user types
+      const error = validateInmateField(name, value);
+      setErrors(prev => ({
+        ...prev,
+        [name]: error
+      }));
+    }
+    
+    // Mark field as touched
+    if (!touched[name]) {
+      setTouched(prev => ({
+        ...prev,
+        [name]: true
+      }));
     }
   };
 
@@ -330,6 +356,20 @@ const UpdateInmate = ({setOpen, _id}) => {
     setIsSubmitting(true);
     const data = new FormData();
     
+    // Log the form data before submission to debug
+    console.log("Form data before submission:", formData);
+    
+    // Check explicitly if required fields are present
+    const requiredFields = ['firstName', 'lastName', 'gender', 'birthDate', 'caseType', 'startDate', 'sentenceYear'];
+    const missingFields = requiredFields.filter(field => !formData[field]);
+    
+    if (missingFields.length > 0) {
+      console.error("Missing required fields:", missingFields);
+      toast.error(`Missing required fields: ${missingFields.join(', ')}`);
+      setIsSubmitting(false);
+      return;
+    }
+    
     // Add all form data directly without combining names
     Object.keys(formData).forEach((key) => {
       data.append(key, formData[key]);
@@ -344,12 +384,47 @@ const UpdateInmate = ({setOpen, _id}) => {
     }
 
     try {
+      // For debugging
+      const formDataObj = {};
+      data.forEach((value, key) => {
+        formDataObj[key] = value;
+      });
+      console.log("FormData being sent:", formDataObj);
+      
+      // Try with JSON instead of FormData if there are issues with FormData
+      const jsonData = {};
+      Object.keys(formData).forEach(key => {
+        jsonData[key] = formData[key];
+      });
+      
+      console.log("Sending request to:", `/inmates/update-inmate/${_id}`);
+      
+      // Try with application/json content type
       const response = await axiosInstance.put(
         `/inmates/update-inmate/${_id}`,
-        data,
+        jsonData,
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
       );
 
       if (response.data) {
+        // Log activity for successful inmate update
+        try {
+          await logActivity(
+            ACTIONS.UPDATE,
+            `Updated inmate information for ${formData.firstName} ${formData.lastName}`,
+            RESOURCES.INMATE,
+            _id,
+            STATUS.SUCCESS
+          );
+          console.log('Activity logged: Inmate update');
+        } catch (logError) {
+          console.error('Failed to log activity:', logError);
+        }
+        
         navigate("/securityStaff-dashboard/inmates");
         setOpen && setOpen(false);
         toast.success("Inmate updated successfully!");
@@ -358,7 +433,23 @@ const UpdateInmate = ({setOpen, _id}) => {
       }
     } catch (error) {
       console.error("Error updating inmate:", error);
-      toast.error(error.response?.data?.error || "An error occurred while updating the inmate.");
+      console.error("Error response:", error.response?.data);
+      
+      // Log activity for failed inmate update
+      try {
+        await logActivity(
+          ACTIONS.UPDATE,
+          `Failed to update inmate: ${error.response?.data?.message || error.message}`,
+          RESOURCES.INMATE,
+          _id,
+          STATUS.FAILURE
+        );
+        console.log('Activity logged: Inmate update failure');
+      } catch (logError) {
+        console.error('Failed to log activity:', logError);
+      }
+      
+      toast.error(error.response?.data?.message || "An error occurred while updating the inmate.");
     } finally {
       setIsSubmitting(false);
     }
@@ -374,334 +465,471 @@ const UpdateInmate = ({setOpen, _id}) => {
     return null;
   };
 
-  // Prevent form submission on key press events
-  const handleKeyDown = (e) => {
-    // Prevent form submission on arrow keys
-    if (e.key === 'ArrowUp' || e.key === 'ArrowDown' || 
-        e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-      // Only prevent if it's inside a form control
-      if (e.target.tagName === 'INPUT' || 
-          e.target.tagName === 'SELECT' || 
-          e.target.tagName === 'TEXTAREA') {
-        // Don't prevent default arrow behavior for navigating inputs
-        // Just prevent propagation to stop it from submitting the form
-        e.stopPropagation();
-      }
-    }
-  };
-
-  // Tab content component
-  const TabContent = () => {
-    switch(activeTab) {
-      case "personal":
   return (
-          <div className="animate-fadeIn">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-              <input
-                type="text"
-                name="firstName"
-                value={formData.firstName}
-                placeholder="Enter First Name"
-                onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-4 py-2 border ${errors.firstName ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                required
-              />
-              {renderError('firstName')}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Middle Name</label>
-              <input
-                type="text"
-                name="middleName"
-                value={formData.middleName}
-                placeholder="Enter Middle name"
-                onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-4 py-2 border ${errors.middleName ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                required
-              />
-              {renderError('middleName')}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-              <input
-                type="text"
-                name="lastName"
-                value={formData.lastName}
-                placeholder="Enter Last name"
-                onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-4 py-2 border ${errors.lastName ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                required
-              />
-              {renderError('lastName')}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Birth Date</label>
-              <input
-                type="date"
-                name="birthDate"
-                value={formData.birthDate}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-4 py-2 border ${errors.birthDate ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                required
-              />
-              {renderError('birthDate')}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Age</label>
-              <input
-                type="number"
-                name="age"
-                value={formData.age}
-                placeholder="Enter age"
-                onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-4 py-2 border ${errors.age ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                readOnly
-              />
-              {renderError('age')}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Mother's Name</label>
-              <input
-                type="text"
-                name="motherName"
-                value={formData.motherName}
-                placeholder="Enter mother's name"
-                onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-4 py-2 border ${errors.motherName ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              />
-              {renderError('motherName')}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
-              <select
-                name="gender"
-                value={formData.gender}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-4 py-2 border ${errors.gender ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                required
+    <div className="max-w-6xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
+      {/* Header with title and close button */}
+      <div className="bg-gradient-to-r from-blue-600 to-blue-800 px-8 py-6 flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-white">Update Inmate Information</h2>
+        {setOpen && (
+          <button 
+            onClick={() => setOpen(false)}
+            className="text-white hover:text-gray-200 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
+      </div>
+
+      <form onSubmit={handleSubmit} className="p-6">
+        {/* Tabs Navigation - Modern Style */}
+        <div className="mb-8 border-b border-gray-200">
+          <nav className="flex flex-wrap -mb-px" aria-label="Tabs">
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => handleTabChange(tab.id)}
+                className={`inline-flex items-center py-4 px-6 text-sm font-medium border-b-2 ${
+                  activeTab === tab.id
+                    ? 'border-blue-600 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
               >
-                <option value="">Select Gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-              </select>
-              {renderError('gender')}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nationality</label>
-              <input
-                type="text"
-                name="nationality"
-                value={formData.nationality}
-                placeholder="Enter nationality"
-                onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-4 py-2 border ${errors.nationality ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              />
-              {renderError('nationality')}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Religion</label>
-              <select
-                name="religion"
-                value={formData.religion}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-4 py-2 border ${errors.religion ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              >
-                <option value="">Select Religion</option>
-                <option value="Orthodox">Orthodox</option>
-                <option value="Muslim">Muslim</option>
-                <option value="Protestant">Protestant</option>
-                <option value="Catholic">Catholic</option>
-                <option value="Other">Other</option>
-              </select>
-              {renderError('religion')}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Marital Status</label>
-              <select
-                name="maritalStatus"
-                value={formData.maritalStatus}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-4 py-2 border ${errors.maritalStatus ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              >
-                <option value="">Select Marital Status</option>
-                <option value="Single">Single</option>
-                <option value="Married">Married</option>
-                <option value="Divorced">Divorced</option>
-                <option value="Widowed">Widowed</option>
-              </select>
-              {renderError('maritalStatus')}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Education Level</label>
-              <select
-                name="degreeLevel"
-                value={formData.degreeLevel}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-4 py-2 border ${errors.degreeLevel ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              >
-                <option value="">Select Education Level</option>
-                <option value="No Education">No Education</option>
-                <option value="Primary">Primary</option>
-                <option value="Secondary">Secondary</option>
-                <option value="Diploma">Diploma</option>
-                <option value="Bachelor">Bachelor</option>
-                <option value="Masters">Masters</option>
-                <option value="PhD">PhD</option>
-              </select>
-              {renderError('degreeLevel')}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Work/Occupation</label>
-              <input
-                type="text"
-                name="work"
-                value={formData.work}
-                placeholder="Enter previous occupation"
-                onChange={handleChange}
-                onBlur={handleBlur}
-                className={`w-full px-4 py-2 border ${errors.work ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-              />
-              {renderError('work')}
-            </div>
-          </div>
+                <span className="mr-2">{tab.icon}</span>
+                {tab.label}
+              </button>
+            ))}
+          </nav>
         </div>
-        );
-      case "location":
-        return (
-            <div className="animate-fadeIn">
-              <h3 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2">Birth Address</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Birth Region</label>
-                  <input
-                    type="text"
-                    name="birthRegion"
-                    value={formData.birthRegion}
-                    placeholder="Enter birth region"
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    className={`w-full px-4 py-2 border ${errors.birthRegion ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
-                  {renderError('birthRegion')}
+
+        {/* Form Content based on active tab */}
+        <div className="space-y-8">
+          {/* Profile Image Section - Always visible */}
+          {activeTab === "personal" && (
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+              <div className="flex items-center space-x-6">
+                <div className="shrink-0">
+                  {profileImage ? (
+                    <img className="h-24 w-24 object-cover rounded-full border-4 border-blue-100" 
+                        src={URL.createObjectURL(profileImage)} 
+                        alt="Profile preview" />
+                  ) : (
+                    formData.profileImageUrl ? (
+                      <img className="h-24 w-24 object-cover rounded-full border-4 border-blue-100" 
+                          src={formData.profileImageUrl} 
+                          alt="Current profile" />
+                    ) : (
+                      <div className="h-24 w-24 bg-blue-50 rounded-full flex items-center justify-center border-4 border-blue-100">
+                        <FaUser className="text-blue-300 text-4xl" />
+                      </div>
+                    )
+                  )}
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Birth Zone</label>
-                  <input
-                    type="text"
-                    name="birthZone"
-                    value={formData.birthZone}
-                    placeholder="Enter birth zone"
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    className={`w-full px-4 py-2 border ${errors.birthZone ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
-                  {renderError('birthZone')}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Birth Wereda</label>
-                  <input
-                    type="text"
-                    name="birthWereda"
-                    value={formData.birthWereda}
-                    placeholder="Enter birth wereda"
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    className={`w-full px-4 py-2 border ${errors.birthWereda ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
-                  {renderError('birthWereda')}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Birth Kebele</label>
-                  <input
-                    type="text"
-                    name="birthKebele"
-                    value={formData.birthKebele}
-                    placeholder="Enter birth kebele"
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    className={`w-full px-4 py-2 border ${errors.birthKebele ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
-                  {renderError('birthKebele')}
-                </div>
-              </div>
-              
-              <h3 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2">Current Address</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Current Region</label>
-                  <input
-                    type="text"
-                    name="currentRegion"
-                    value={formData.currentRegion}
-                    placeholder="Enter current region"
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    className={`w-full px-4 py-2 border ${errors.currentRegion ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
-                  {renderError('currentRegion')}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Current Zone</label>
-                  <input
-                    type="text"
-                    name="currentZone"
-                    value={formData.currentZone}
-                    placeholder="Enter current zone"
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    className={`w-full px-4 py-2 border ${errors.currentZone ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
-                  {renderError('currentZone')}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Current Wereda</label>
-                  <input
-                    type="text"
-                    name="currentWereda"
-                    value={formData.currentWereda}
-                    placeholder="Enter current wereda"
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    className={`w-full px-4 py-2 border ${errors.currentWereda ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
-                  {renderError('currentWereda')}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Current Kebele</label>
-                  <input
-                    type="text"
-                    name="currentKebele"
-                    value={formData.currentKebele}
-                    placeholder="Enter current kebele"
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    className={`w-full px-4 py-2 border ${errors.currentKebele ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
-                  {renderError('currentKebele')}
+                <div className="flex-1">
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Profile Photo</h3>
+                  <label className="inline-block cursor-pointer">
+                    <span className="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                      Choose new photo
+                    </span>
+                    <input 
+                      type="file" 
+                      name="profileImage"
+                      onChange={handleChange}
+                      className="hidden"
+                    />
+                  </label>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Recommended: Square image, at least 300x300 pixels
+                  </p>
                 </div>
               </div>
             </div>
-        );
-      case "physical":
-        return (
-            <div className="animate-fadeIn">
-              <h3 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2">Physical Characteristics</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          )}
+
+          {/* Personal Information Tab */}
+          {activeTab === "personal" && (
+            <div className="animate-fadeIn bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+              <h3 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2 flex items-center">
+                <FaUser className="mr-2 text-blue-600" />
+                Personal Information
+                <span className="ml-2 text-xs text-red-500">* Required fields</span>
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Height (cm)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    First Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="firstName"
+                    value={formData.firstName}
+                    placeholder="Enter First Name"
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.firstName ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                    required
+                  />
+                  {renderError('firstName')}
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Middle Name
+                  </label>
+                  <input
+                    type="text"
+                    name="middleName"
+                    value={formData.middleName}
+                    placeholder="Enter Middle name"
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.middleName ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  />
+                  {renderError('middleName')}
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Last Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="lastName"
+                    value={formData.lastName}
+                    placeholder="Enter Last name"
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.lastName ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                    required
+                  />
+                  {renderError('lastName')}
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Birth Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    name="birthDate"
+                    value={formData.birthDate}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.birthDate ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                    required
+                  />
+                  {renderError('birthDate')}
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Age (Calculated)
+                  </label>
+                  <input
+                    type="number"
+                    name="age"
+                    value={formData.age}
+                    className="w-full px-4 py-2 border border-gray-200 rounded-md bg-gray-50 text-gray-500 cursor-not-allowed"
+                    readOnly
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Gender <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="gender"
+                    value={formData.gender}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.gender ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                    required
+                  >
+                    <option value="">Select Gender</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                  </select>
+                  {renderError('gender')}
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Mother's Name
+                  </label>
+                  <input
+                    type="text"
+                    name="motherName"
+                    value={formData.motherName}
+                    placeholder="Enter mother's name"
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.motherName ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  />
+                  {renderError('motherName')}
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nationality
+                  </label>
+                  <input
+                    type="text"
+                    name="nationality"
+                    value={formData.nationality}
+                    placeholder="Enter nationality"
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.nationality ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  />
+                  {renderError('nationality')}
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Religion
+                  </label>
+                  <select
+                    name="religion"
+                    value={formData.religion}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.religion ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  >
+                    <option value="">Select Religion</option>
+                    <option value="Orthodox">Orthodox</option>
+                    <option value="Muslim">Muslim</option>
+                    <option value="Protestant">Protestant</option>
+                    <option value="Catholic">Catholic</option>
+                    <option value="Other">Other</option>
+                  </select>
+                  {renderError('religion')}
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Marital Status
+                  </label>
+                  <select
+                    name="maritalStatus"
+                    value={formData.maritalStatus}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.maritalStatus ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  >
+                    <option value="">Select Marital Status</option>
+                    <option value="Single">Single</option>
+                    <option value="Married">Married</option>
+                    <option value="Divorced">Divorced</option>
+                    <option value="Widowed">Widowed</option>
+                  </select>
+                  {renderError('maritalStatus')}
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Education Level
+                  </label>
+                  <select
+                    name="degreeLevel"
+                    value={formData.degreeLevel}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.degreeLevel ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  >
+                    <option value="">Select Education Level</option>
+                    <option value="No Education">No Education</option>
+                    <option value="Primary">Primary</option>
+                    <option value="Secondary">Secondary</option>
+                    <option value="Diploma">Diploma</option>
+                    <option value="Bachelor">Bachelor</option>
+                    <option value="Masters">Masters</option>
+                    <option value="PhD">PhD</option>
+                  </select>
+                  {renderError('degreeLevel')}
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Work/Occupation
+                  </label>
+                  <input
+                    type="text"
+                    name="work"
+                    value={formData.work}
+                    placeholder="Enter previous occupation"
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.work ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  />
+                  {renderError('work')}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Location Information Tab */}
+          {activeTab === "location" && (
+            <div className="animate-fadeIn bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+              <h3 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2 flex items-center">
+                <FaMapMarkerAlt className="mr-2 text-blue-600" />
+                Location Information
+              </h3>
+              
+              <div className="space-y-8">
+                {/* Birth Address Section */}
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h4 className="text-lg font-medium text-blue-800 mb-4">Birth Address</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Region
+                      </label>
+                      <input
+                        type="text"
+                        name="birthRegion"
+                        value={formData.birthRegion}
+                        placeholder="Enter birth region"
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        className={`w-full px-4 py-2 border ${errors.birthRegion ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white`}
+                      />
+                      {renderError('birthRegion')}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Zone
+                      </label>
+                      <input
+                        type="text"
+                        name="birthZone"
+                        value={formData.birthZone}
+                        placeholder="Enter birth zone"
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        className={`w-full px-4 py-2 border ${errors.birthZone ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white`}
+                      />
+                      {renderError('birthZone')}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Wereda
+                      </label>
+                      <input
+                        type="text"
+                        name="birthWereda"
+                        value={formData.birthWereda}
+                        placeholder="Enter birth wereda"
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        className={`w-full px-4 py-2 border ${errors.birthWereda ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white`}
+                      />
+                      {renderError('birthWereda')}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Kebele
+                      </label>
+                      <input
+                        type="text"
+                        name="birthKebele"
+                        value={formData.birthKebele}
+                        placeholder="Enter birth kebele"
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        className={`w-full px-4 py-2 border ${errors.birthKebele ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white`}
+                      />
+                      {renderError('birthKebele')}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Current Address Section */}
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <h4 className="text-lg font-medium text-green-800 mb-4">Current Address</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Region
+                      </label>
+                      <input
+                        type="text"
+                        name="currentRegion"
+                        value={formData.currentRegion}
+                        placeholder="Enter current region"
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        className={`w-full px-4 py-2 border ${errors.currentRegion ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white`}
+                      />
+                      {renderError('currentRegion')}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Zone
+                      </label>
+                      <input
+                        type="text"
+                        name="currentZone"
+                        value={formData.currentZone}
+                        placeholder="Enter current zone"
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        className={`w-full px-4 py-2 border ${errors.currentZone ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white`}
+                      />
+                      {renderError('currentZone')}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Wereda
+                      </label>
+                      <input
+                        type="text"
+                        name="currentWereda"
+                        value={formData.currentWereda}
+                        placeholder="Enter current wereda"
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        className={`w-full px-4 py-2 border ${errors.currentWereda ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white`}
+                      />
+                      {renderError('currentWereda')}
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Kebele
+                      </label>
+                      <input
+                        type="text"
+                        name="currentKebele"
+                        value={formData.currentKebele}
+                        placeholder="Enter current kebele"
+                        onChange={handleChange}
+                        onBlur={handleBlur}
+                        className={`w-full px-4 py-2 border ${errors.currentKebele ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white`}
+                      />
+                      {renderError('currentKebele')}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Physical Characteristics Tab */}
+          {activeTab === "physical" && (
+            <div className="animate-fadeIn bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+              <h3 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2 flex items-center">
+                <FaIdCard className="mr-2 text-blue-600" />
+                Physical Characteristics
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Height (cm)
+                  </label>
                   <input
                     type="number"
                     name="height"
@@ -713,294 +941,327 @@ const UpdateInmate = ({setOpen, _id}) => {
                   />
                   {renderError('height')}
                 </div>
+                
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Hair Type</label>
-                  <input
-                    type="text"
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Hair Type
+                  </label>
+                  <select
                     name="hairType"
-                    value={formData.hairType}
-                    placeholder="Describe hair type"
+                    value={formData.hairType || ''}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     className={`w-full px-4 py-2 border ${errors.hairType ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
+                  >
+                    <option value="">Select hair type</option>
+                    {['Straight', 'Wavy', 'Curly', 'Coily', 'Bald', 'Thin', 'Thick', 'Other'].map(option => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
                   {renderError('hairType')}
                 </div>
+                
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Face</label>
-                  <input
-                    type="text"
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Face Shape
+                  </label>
+                  <select
                     name="face"
-                    value={formData.face}
-                    placeholder="Describe face shape"
+                    value={formData.face || ''}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     className={`w-full px-4 py-2 border ${errors.face ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
+                  >
+                    <option value="">Select face shape</option>
+                    {['Oval', 'Round', 'Square', 'Rectangle', 'Heart', 'Diamond', 'Triangle', 'Other'].map(option => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
                   {renderError('face')}
                 </div>
+                
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Forehead</label>
-                  <input
-                    type="text"
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Forehead
+                  </label>
+                  <select
                     name="foreHead"
-                    value={formData.foreHead}
-                    placeholder="Describe forehead"
+                    value={formData.foreHead || ''}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     className={`w-full px-4 py-2 border ${errors.foreHead ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
+                  >
+                    <option value="">Select forehead type</option>
+                    {['Narrow', 'Average', 'Wide', 'High', 'Low', 'Prominent', 'Other'].map(option => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
                   {renderError('foreHead')}
                 </div>
+                
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Nose</label>
-                  <input
-                    type="text"
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nose
+                  </label>
+                  <select
                     name="nose"
-                    value={formData.nose}
-                    placeholder="Describe nose"
+                    value={formData.nose || ''}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     className={`w-full px-4 py-2 border ${errors.nose ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
+                  >
+                    <option value="">Select nose type</option>
+                    {['Straight', 'Roman', 'Button', 'Nubian', 'Hawk', 'Snub', 'Greek', 'Other'].map(option => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
                   {renderError('nose')}
                 </div>
+                
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Eye Color</label>
-                  <input
-                    type="text"
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Eye Color
+                  </label>
+                  <select
                     name="eyeColor"
-                    value={formData.eyeColor}
-                    placeholder="Describe eye color"
+                    value={formData.eyeColor || ''}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     className={`w-full px-4 py-2 border ${errors.eyeColor ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
+                  >
+                    <option value="">Select eye color</option>
+                    {['Brown', 'Blue', 'Green', 'Hazel', 'Gray', 'Amber', 'Black', 'Other'].map(option => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
                   {renderError('eyeColor')}
                 </div>
+                
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Teeth</label>
-                  <input
-                    type="text"
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Teeth
+                  </label>
+                  <select
                     name="teeth"
-                    value={formData.teeth}
-                    placeholder="Describe teeth"
+                    value={formData.teeth || ''}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     className={`w-full px-4 py-2 border ${errors.teeth ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
+                  >
+                    <option value="">Select teeth type</option>
+                    {['Straight', 'Crowded', 'Gapped', 'Overbite', 'Underbite', 'Crooked', 'Other'].map(option => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
                   {renderError('teeth')}
                 </div>
+                
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Lip</label>
-                  <input
-                    type="text"
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Lips
+                  </label>
+                  <select
                     name="lip"
-                    value={formData.lip}
-                    placeholder="Describe lip"
+                    value={formData.lip || ''}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     className={`w-full px-4 py-2 border ${errors.lip ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
+                  >
+                    <option value="">Select lip type</option>
+                    {['Thin', 'Medium', 'Full', 'Wide', 'Narrow', 'Heart-shaped', 'Bow-shaped', 'Other'].map(option => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
                   {renderError('lip')}
                 </div>
+                
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Ear</label>
-                  <input
-                    type="text"
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Ears
+                  </label>
+                  <select
                     name="ear"
-                    value={formData.ear}
-                    placeholder="Describe ear"
+                    value={formData.ear || ''}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     className={`w-full px-4 py-2 border ${errors.ear ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
+                  >
+                    <option value="">Select ear type</option>
+                    {['Attached', 'Detached', 'Small', 'Large', 'Round', 'Pointed', 'Other'].map(option => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
+                  </select>
                   {renderError('ear')}
                 </div>
+                
                 <div className="md:col-span-3">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Special Symbol or Mark</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Special Marks/Symbols
+                  </label>
                   <textarea
                     name="specialSymbol"
                     value={formData.specialSymbol}
-                    placeholder="Describe any special symbols, birthmarks, scars, etc."
+                    placeholder="Enter any distinguishing marks, scars, tattoos or other identifying features"
                     onChange={handleChange}
-                    onBlur={handleBlur} 
+                    onBlur={handleBlur}
                     rows="3"
                     className={`w-full px-4 py-2 border ${errors.specialSymbol ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  ></textarea>
+                  />
                   {renderError('specialSymbol')}
                 </div>
               </div>
             </div>
-        );
-      case "contact":
-        return (
-            <div className="animate-fadeIn">
-              <h3 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2">Emergency Contact Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Contact Name</label>
-                  <input
-                    type="text"
-                    name="contactName"
-                    value={formData.contactName}
-                    placeholder="Enter contact name"
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    className={`w-full px-4 py-2 border ${errors.contactName ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
-                  {renderError('contactName')}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
-                  <input
-                    type="tel"
-                    name="phoneNumber"
-                    value={formData.phoneNumber}
-                    placeholder="Enter phone number"
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    className={`w-full px-4 py-2 border ${errors.phoneNumber ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
-                  {renderError('phoneNumber')}
-                </div>
-              </div>
-              
-              <h4 className="font-medium text-gray-700 mt-6 mb-4">Contact Address</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Region</label>
-                  <input
-                    type="text"
-                    name="contactRegion"
-                    value={formData.contactRegion}
-                    placeholder="Enter region"
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    className={`w-full px-4 py-2 border ${errors.contactRegion ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
-                  {renderError('contactRegion')}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Zone</label>
-                  <input
-                    type="text"
-                    name="contactZone"
-                    value={formData.contactZone}
-                    placeholder="Enter zone"
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    className={`w-full px-4 py-2 border ${errors.contactZone ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
-                  {renderError('contactZone')}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Wereda</label>
-                  <input
-                    type="text"
-                    name="contactWereda"
-                    value={formData.contactWereda}
-                    placeholder="Enter wereda"
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    className={`w-full px-4 py-2 border ${errors.contactWereda ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
-                  {renderError('contactWereda')}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Kebele</label>
-                  <input
-                    type="text"
-                    name="contactKebele"
-                    value={formData.contactKebele}
-                    placeholder="Enter kebele"
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    className={`w-full px-4 py-2 border ${errors.contactKebele ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
-                  {renderError('contactKebele')}
-                </div>
-              </div>
+          )}
 
-              <h4 className="font-medium text-gray-700 mt-6 mb-4">Registrar Information</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Registrar Worker Name</label>
-                  <input
-                    type="text"
-                    name="registrarWorkerName"
-                    value={formData.registrarWorkerName}
-                    placeholder="Enter registrar worker name"
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    className={`w-full px-4 py-2 border ${errors.registrarWorkerName ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
-                  {renderError('registrarWorkerName')}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Signature</label>
-                  <input
-                    type="file"
-                    name="signature"
-                    onChange={handleChange}
-                    className="block w-full text-sm text-gray-500
-                      file:mr-4 file:py-2 file:px-4
-                      file:rounded-full file:border-0
-                      file:text-sm file:font-semibold
-                      file:bg-blue-50 file:text-blue-700
-                      hover:file:bg-blue-100"
-                  />
-                  {formData.signature && (
-                    <div className="mt-2">
-                      <img 
-                        src={formData.signature} 
-                        alt="Signature" 
-                        className="max-h-20 border border-gray-200 rounded p-1" 
-                      />
-                    </div>
-                  )}
+          {/* Contact Information Tab */}
+          {activeTab === "contact" && (
+            <div className="animate-fadeIn bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+              <h3 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2 flex items-center">
+                <FaPhone className="mr-2 text-blue-600" />
+                Contact Information
+              </h3>
+              
+              <div className="bg-yellow-50 p-4 rounded-lg">
+                <h4 className="text-lg font-medium text-yellow-800 mb-4">Emergency Contact</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Contact Name
+                    </label>
+                    <input
+                      type="text"
+                      name="contactName"
+                      value={formData.contactName}
+                      placeholder="Enter contact name"
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      className={`w-full px-4 py-2 border ${errors.contactName ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white`}
+                    />
+                    {renderError('contactName')}
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      name="phoneNumber"
+                      value={formData.phoneNumber}
+                      placeholder="Enter phone number"
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      className={`w-full px-4 py-2 border ${errors.phoneNumber ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white`}
+                    />
+                    {renderError('phoneNumber')}
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Region
+                    </label>
+                    <input
+                      type="text"
+                      name="contactRegion"
+                      value={formData.contactRegion}
+                      placeholder="Enter contact region"
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      className={`w-full px-4 py-2 border ${errors.contactRegion ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white`}
+                    />
+                    {renderError('contactRegion')}
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Zone
+                    </label>
+                    <input
+                      type="text"
+                      name="contactZone"
+                      value={formData.contactZone}
+                      placeholder="Enter contact zone"
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      className={`w-full px-4 py-2 border ${errors.contactZone ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white`}
+                    />
+                    {renderError('contactZone')}
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Wereda
+                    </label>
+                    <input
+                      type="text"
+                      name="contactWereda"
+                      value={formData.contactWereda}
+                      placeholder="Enter contact wereda"
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      className={`w-full px-4 py-2 border ${errors.contactWereda ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white`}
+                    />
+                    {renderError('contactWereda')}
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Kebele
+                    </label>
+                    <input
+                      type="text"
+                      name="contactKebele"
+                      value={formData.contactKebele}
+                      placeholder="Enter contact kebele"
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      className={`w-full px-4 py-2 border ${errors.contactKebele ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors bg-white`}
+                    />
+                    {renderError('contactKebele')}
+                  </div>
                 </div>
               </div>
             </div>
-        );
-      case "case":
-        return (
-            <div className="animate-fadeIn">
-              <h3 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2">Case Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          )}
+
+          {/* Case Information Tab */}
+          {activeTab === "case" && (
+            <div className="animate-fadeIn bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+              <h3 className="text-xl font-semibold mb-6 text-gray-800 border-b pb-2 flex items-center">
+                <FaGavel className="mr-2 text-blue-600" />
+                Case Information
+                <span className="ml-2 text-xs text-red-500">* Required fields</span>
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Case Type</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Case Type <span className="text-red-500">*</span>
+                  </label>
                   <select
                     name="caseType"
                     value={formData.caseType}
                     onChange={handleChange}
                     onBlur={handleBlur}
                     className={`w-full px-4 py-2 border ${errors.caseType ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                    required
                   >
                     <option value="">Select Case Type</option>
-                    <option value="Criminal">Criminal</option>
-                    <option value="Civil">Civil</option>
-                    <option value="Administrative">Administrative</option>
+                    <option value="Murder">Murder</option>
+                    <option value="Assault">Assault</option>
+                    <option value="Theft">Theft</option>
+                    <option value="Robbery">Robbery</option>
+                    <option value="Fraud">Fraud</option>
+                    <option value="Drug Offense">Drug Offense</option>
+                    <option value="Other">Other</option>
                   </select>
                   {renderError('caseType')}
                 </div>
+                
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Sentence (Years)</label>
-                  <input
-                    type="number"
-                    name="sentenceYear"
-                    value={formData.sentenceYear}
-                    placeholder="Enter sentence in years"
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    min="0"
-                    step="0.5"
-                    className={`w-full px-4 py-2 border ${errors.sentenceYear ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  />
-                  {renderError('sentenceYear')}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Start Date <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="date"
                     name="startDate"
@@ -1008,11 +1269,33 @@ const UpdateInmate = ({setOpen, _id}) => {
                     onChange={handleChange}
                     onBlur={handleBlur}
                     className={`w-full px-4 py-2 border ${errors.startDate ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                    required
                   />
                   {renderError('startDate')}
                 </div>
+                
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Release Date</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Sentence (Years) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    name="sentenceYear"
+                    value={formData.sentenceYear}
+                    placeholder="Enter sentence duration in years"
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.sentenceYear ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                    required
+                    step="0.1"
+                  />
+                  {renderError('sentenceYear')}
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Release Date
+                  </label>
                   <input
                     type="date"
                     name="releasedDate"
@@ -1020,154 +1303,46 @@ const UpdateInmate = ({setOpen, _id}) => {
                     onChange={handleChange}
                     onBlur={handleBlur}
                     className={`w-full px-4 py-2 border ${errors.releasedDate ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                    readOnly
                   />
                   {renderError('releasedDate')}
                 </div>
-                <div className="md:col-span-3">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Sentence Reason</label>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Parole Date
+                  </label>
+                  <input
+                    type="date"
+                    name="paroleDate"
+                    value={formData.paroleDate}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.paroleDate ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  />
+                  {renderError('paroleDate')}
+                </div>
+                
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Sentence Reason
+                  </label>
                   <textarea
                     name="sentenceReason"
                     value={formData.sentenceReason}
-                    placeholder="Enter reason for sentence"
+                    placeholder="Enter details about the reason for sentence"
                     onChange={handleChange}
                     onBlur={handleBlur}
                     rows="3"
                     className={`w-full px-4 py-2 border ${errors.sentenceReason ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                  ></textarea>
+                  />
                   {renderError('sentenceReason')}
                 </div>
               </div>
             </div>
-        );
-      default:
-        return <div>Select a tab to view content</div>;
-    }
-  };
-
-  return (
-    <div className="max-w-5xl mx-auto bg-white p-8 rounded-lg shadow-lg">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Update Inmate</h2>
-      </div>
-
-      <form 
-        ref={formRef} 
-        onSubmit={handleSubmit} 
-        onKeyDown={handleKeyDown}
-        className="space-y-6" 
-        noValidate
-      >
-        {/* Tab Navigation */}
-        <div className="bg-white rounded-xl shadow-md mb-6 overflow-hidden border border-gray-200">
-          <div className="flex justify-between items-center border-b border-gray-200">
-            <div className="flex overflow-x-auto hide-scrollbar">
-              {tabs.map(tab => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation(); // Stop event bubbling
-                    handleTabChange(tab.id);
-                    return false; // Prevent any default behavior
-                  }}
-                  className={`px-6 py-4 flex items-center whitespace-nowrap ${
-                    activeTab === tab.id
-                      ? 'text-blue-600 border-b-2 border-blue-600 font-medium'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                  }`}
-                >
-                  {tab.icon}
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-            
-            <div className="flex pr-2">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation(); // Stop event bubbling
-                  navigateTab('prev');
-                }}
-                disabled={activeTab === tabs[0].id}
-                className={`p-2 rounded-full ${
-                  activeTab === tabs[0].id
-                    ? 'text-gray-300 cursor-not-allowed'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <FaArrowLeft />
-              </button>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation(); // Stop event bubbling
-                  navigateTab('next');
-                }}
-                disabled={activeTab === tabs[tabs.length - 1].id}
-                className={`p-2 rounded-full ${
-                  activeTab === tabs[tabs.length - 1].id
-                    ? 'text-gray-300 cursor-not-allowed'
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-              >
-                <FaArrowRight />
-              </button>
-            </div>
-          </div>
+          )}
         </div>
 
-        {/* Profile Image Upload - Always visible */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h3 className="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">Profile Image</h3>
-          <div className="flex items-center space-x-6">
-            <div className="shrink-0">
-              {profileImage ? (
-                <img className="h-16 w-16 object-cover rounded-full" 
-                     src={URL.createObjectURL(profileImage)} 
-                     alt="Profile preview" />
-              ) : (
-                formData.profileImageUrl ? (
-                  <img className="h-16 w-16 object-cover rounded-full" 
-                       src={formData.profileImageUrl} 
-                       alt="Current profile" />
-                ) : (
-                  <div className="h-16 w-16 bg-gray-200 rounded-full flex items-center justify-center">
-                    <span className="text-gray-400">No image</span>
-                  </div>
-                )
-              )}
-            </div>
-            <label className="block">
-              <span className="sr-only">Choose profile photo</span>
-              <input 
-                type="file" 
-                name="profileImage"
-                onChange={handleChange}
-                className="block w-full text-sm text-gray-500
-                  file:mr-4 file:py-2 file:px-4
-                  file:rounded-full file:border-0
-                  file:text-sm file:font-semibold
-                  file:bg-blue-50 file:text-blue-700
-                  hover:file:bg-blue-100"
-              />
-            </label>
-          </div>
-        </div>
-
-        {/* Main content section - dynamically rendered based on active tab */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h3 className="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">
-            {tabs.find(tab => tab.id === activeTab)?.label || "Form Information"}
-          </h3>
-          <TabContent />
-        </div>
-
-        {/* Signature Upload - Always visible */}
+        {/* Signature Upload */}
         <div className="bg-gray-50 p-6 rounded-lg">
           <h3 className="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">Signature</h3>
           <div className="flex items-center space-x-6">
@@ -1207,32 +1382,43 @@ const UpdateInmate = ({setOpen, _id}) => {
         </div>
 
         {/* Form Actions */}
-        <div className="flex justify-end space-x-4 pt-6">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation(); // Stop event bubbling
-              setOpen && setOpen(false);
-            }}
-            className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            className="px-6 py-2 bg-blue-600 text-black rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <>
-                <span className="inline-block animate-spin mr-2">⟳</span>
-                Updating...
-              </>
-            ) : (
-              'Update Inmate'
+        <div className="flex justify-between items-center mt-10 pt-4 border-t border-gray-200">
+          <div className="text-sm text-gray-600">
+            <span className="text-red-500">*</span> Required fields
+          </div>
+          
+          <div className="flex space-x-4">
+            {setOpen && (
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+              >
+                Cancel
+              </button>
             )}
-          </button>
+            
+            <button
+              type="submit"
+              className="px-8 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-md hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors shadow-md flex items-center"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <svg className="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Updating...
+                </>
+              ) : (
+                <>
+                  <FaSave className="mr-2" />
+                  Update Inmate
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </form>
     </div>

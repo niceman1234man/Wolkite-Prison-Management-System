@@ -104,7 +104,8 @@ const ViewInmate = ({ inmateId, onEdit }) => {
         <div className="flex justify-center my-4">
           <div className="w-32 h-32 rounded-full overflow-hidden border-2 border-blue-500">
             <img 
-              src={inmate.photo.startsWith('http') ? inmate.photo : `http://localhost:5001${inmate.photo}`} 
+             src={ `http://localhost:5001/uploads/${inmate.photo}`}
+
               alt={fullName} 
               className="w-full h-full object-cover"
               onError={(e) => {

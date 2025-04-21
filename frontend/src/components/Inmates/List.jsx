@@ -11,11 +11,13 @@ import { useSelector, useDispatch } from "react-redux";
 import { setInmate } from "../../redux/prisonSlice.js";
 import AddInmate from "./Add";
 import AddModal from "../Modals/AddModal";
+import ConfirmModal from "../Modals/ConfirmModal";
 import { toast } from "react-hot-toast";
 import useWindowSize from "../../hooks/useWindowSize";
 import '../../styles/table.css'; // Import the table styles if available
 import ViewInmate from "./ViewInmate";
 import UpdateInmate from "./UpdateInmate";
+import { logActivity, ACTIONS, RESOURCES, STATUS } from "../../utils/activityLogger";
 
 // Photo component to avoid issues with hooks in DataTable cells
 const InmatePhoto = ({ photoPath, name }) => {
@@ -52,26 +54,58 @@ const InmateActionButtons = ({ inmate, onDelete, isCardView = false }) => {
   const navigate = useNavigate();
   const [editOpen, setEditOpen] = useState(false);
   const [viewOpen, setViewOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   
-  const handleDelete = async () => {
-    if (window.confirm("Are you sure you want to delete this inmate?")) {
-      try {
-        const response = await axiosInstance.delete(`/inmates/delete-inmate/${inmate._id}`);
-        if (response.data) {
-          toast.success("Inmate deleted successfully");
-          if (onDelete) onDelete();
+  const handleDeleteClick = () => {
+    setConfirmOpen(true);
+  };
+  
+  const handleConfirmDelete = async () => {
+    try {
+      const response = await axiosInstance.delete(`/inmates/delete-inmate/${inmate._id}`);
+      if (response.data) {
+        // Log activity for successful deletion
+        try {
+          await logActivity(
+            ACTIONS.DELETE,
+            `Deleted inmate record for ${inmate.inmate_name}`,
+            RESOURCES.INMATE,
+            inmate._id,
+            STATUS.SUCCESS
+          );
+        } catch (logError) {
+          console.error('Failed to log delete activity:', logError);
         }
-      } catch (error) {
-        console.error("Error deleting inmate:", error);
-        if (error.response?.status === 401) {
-          toast.error("Please login to continue");
-          navigate("/login");
-        } else if (error.response?.status === 403) {
-          toast.error("You don't have permission to delete this inmate");
-        } else {
-          toast.error(error.response?.data?.error || "Failed to delete inmate");
-        }
+        
+        toast.success("Inmate deleted successfully");
+        if (onDelete) onDelete();
       }
+    } catch (error) {
+      console.error("Error deleting inmate:", error);
+      
+      // Log failed deletion attempt
+      try {
+        await logActivity(
+          ACTIONS.DELETE,
+          `Failed to delete inmate: ${error.response?.data?.message || error.message}`,
+          RESOURCES.INMATE,
+          inmate._id,
+          STATUS.FAILURE
+        );
+      } catch (logError) {
+        console.error('Failed to log delete failure activity:', logError);
+      }
+      
+      if (error.response?.status === 401) {
+        toast.error("Please login to continue");
+        navigate("/login");
+      } else if (error.response?.status === 403) {
+        toast.error("You don't have permission to delete this inmate");
+      } else {
+        toast.error(error.response?.data?.error || "Failed to delete inmate");
+      }
+    } finally {
+      setConfirmOpen(false);
     }
   };
   
@@ -92,7 +126,7 @@ const InmateActionButtons = ({ inmate, onDelete, isCardView = false }) => {
           <FaEdit className="mr-1" /> Edit
         </button>
         <button 
-          onClick={handleDelete}
+          onClick={handleDeleteClick}
           className="flex-1 py-2 text-center text-red-600 hover:bg-red-50 border-l border-gray-200 transition-colors duration-200 flex items-center justify-center"
         >
           <FaTrash className="mr-1" /> Delete
@@ -138,6 +172,14 @@ const InmateActionButtons = ({ inmate, onDelete, isCardView = false }) => {
             <UpdateInmate _id={inmate._id} setOpen={setEditOpen} />
           </div>
         </AddModal>
+        
+        {/* Confirm Delete Modal */}
+        <ConfirmModal 
+          open={confirmOpen} 
+          message={`Are you sure you want to delete ${inmate.inmate_name}? This action cannot be undone.`}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setConfirmOpen(false)}
+        />
       </>
     );
   }
@@ -167,7 +209,7 @@ const InmateActionButtons = ({ inmate, onDelete, isCardView = false }) => {
         </div>
       </AddModal>
       <button
-        onClick={handleDelete}
+        onClick={handleDeleteClick}
         className="p-2 text-red-600 hover:text-red-800 transition-colors"
         title="Delete Inmate"
       >
@@ -194,6 +236,14 @@ const InmateActionButtons = ({ inmate, onDelete, isCardView = false }) => {
           <ViewInmate _id={inmate._id} />
         </div>
       </AddModal>
+      
+      {/* Confirm Delete Modal */}
+      <ConfirmModal 
+        open={confirmOpen} 
+        message={`Are you sure you want to delete ${inmate.inmate_name}? This action cannot be undone.`}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </div>
   );
 };
@@ -295,9 +345,7 @@ const InmatesList = () => {
   const fetchInmates = async () => {
     setLoading(true);
     try {
-      console.log("Fetching inmates...");
       const response = await axiosInstance.get("/inmates/allInmates");
-      console.log("API Response:", response.data);
 
       // Check if response.data has an inmates array
       const inmatesData = response.data?.inmates || response.data || [];
@@ -337,12 +385,38 @@ const InmatesList = () => {
 
         setInmates(formattedData);
         applyFilters(formattedData, searchQuery, caseTypeFilter);
+        
+        // Log the list view activity
+        try {
+          await logActivity(
+            ACTIONS.VIEW,
+            `Viewed list of ${formattedData.length} inmates`,
+            RESOURCES.INMATE,
+            null,
+            STATUS.SUCCESS
+          );
+        } catch (logError) {
+          console.error('Failed to log inmates list view activity:', logError);
+        }
       } else {
-        console.error("Invalid API response structure:", response.data);
         toast.error("Invalid response structure from server");
       }
     } catch (error) {
       console.error("Error fetching inmates:", error);
+      
+      // Log failure to view inmates list
+      try {
+        await logActivity(
+          ACTIONS.VIEW,
+          `Failed to view inmates list: ${error.response?.data?.message || error.message}`,
+          RESOURCES.INMATE,
+          null,
+          STATUS.FAILURE
+        );
+      } catch (logError) {
+        console.error('Failed to log view failure activity:', logError);
+      }
+      
       if (error.response?.status === 401) {
         toast.error("Please login to continue");
         navigate("/login");
@@ -465,6 +539,7 @@ const InmatesList = () => {
   // Apply filters function
   const applyFilters = (data, query, caseType) => {
     let filtered = [...data];
+    let filterDescription = [];
     
     // Apply search query filter
     if (query && query.trim() !== "") {
@@ -475,6 +550,7 @@ const InmatesList = () => {
         (inmate.reason && inmate.reason.toLowerCase().includes(lowercasedQuery)) ||
         (inmate.sentence && inmate.sentence.toLowerCase().includes(lowercasedQuery))
       );
+      filterDescription.push(`search query: "${query}"`);
     }
     
     // Apply case type filter
@@ -482,9 +558,25 @@ const InmatesList = () => {
       filtered = filtered.filter(inmate => 
         inmate.case_type.toLowerCase() === caseType.toLowerCase()
       );
+      filterDescription.push(`case type: ${caseType}`);
     }
     
     setFilteredInmates(filtered);
+    
+    // Log activity for search and filter operations
+    if (filterDescription.length > 0) {
+      try {
+        logActivity(
+          ACTIONS.SEARCH,
+          `Searched inmates with ${filterDescription.join(", ")} (${filtered.length} results)`,
+          RESOURCES.INMATE,
+          null,
+          STATUS.SUCCESS
+        );
+      } catch (logError) {
+        console.error('Failed to log search activity:', logError);
+      }
+    }
   };
 
   // Handle search input change

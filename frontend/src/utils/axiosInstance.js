@@ -214,6 +214,27 @@ axiosInstance.interceptors.request.use(
       // Remove the default Content-Type header for FormData
       delete config.headers["Content-Type"];
       config.timeout = 60000; // Longer timeout for file uploads
+      
+      // Log FormData contents for debugging
+      const formDataContent = {};
+      config.data.forEach((value, key) => {
+        // Don't log file contents
+        if (value instanceof File) {
+          formDataContent[key] = `[File: ${value.name}, ${value.size} bytes]`;
+        } else {
+          formDataContent[key] = value;
+        }
+      });
+      console.log("FormData content:", formDataContent);
+      
+      // Check for required fields in FormData
+      const requiredFields = ['firstName', 'lastName', 'gender', 'birthDate', 'caseType', 'startDate', 'sentenceYear'];
+      if (config.url.includes('/update-inmate/')) {
+        const missingFields = requiredFields.filter(field => !config.data.get(field));
+        if (missingFields.length > 0) {
+          console.warn("FormData missing required fields:", missingFields);
+        }
+      }
     }
 
     return config;

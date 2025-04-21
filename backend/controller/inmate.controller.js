@@ -157,6 +157,10 @@ export const getAllInmates = async (req, res) => {
   export const updateInmate = async (req, res) => {
     try {
       const { id } = req.params;
+      
+      // Log request body for debugging
+      console.log("Update inmate request body:", req.body);
+      
       const {
         firstName,
         middleName,
@@ -204,8 +208,27 @@ export const getAllInmates = async (req, res) => {
         durationFromParoleToEnd
       } = req.body;
   
-      if (!firstName || !phoneNumber || !motherName || !age || !gender) {
-        return res.status(400).json({ message: "All fields are required" });
+      // Check required fields with more detailed feedback
+      const requiredFields = [
+        { field: 'firstName', value: firstName },
+        { field: 'lastName', value: lastName },
+        { field: 'gender', value: gender },
+        { field: 'birthDate', value: birthDate },
+        { field: 'caseType', value: caseType },
+        { field: 'startDate', value: startDate },
+        { field: 'sentenceYear', value: sentenceYear }
+      ];
+      
+      const missingFields = requiredFields
+        .filter(item => !item.value)
+        .map(item => item.field);
+      
+      if (missingFields.length > 0) {
+        console.error("Missing required fields:", missingFields);
+        return res.status(400).json({ 
+          message: "All fields are required", 
+          missingFields: missingFields 
+        });
       }
   
       const updateInmate = await Inmate.findByIdAndUpdate(
@@ -270,8 +293,8 @@ export const getAllInmates = async (req, res) => {
           message: "Inmate information updated successfully",
         });
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Internal Server Error" });
+      console.error("Error in updateInmate:", error);
+      res.status(500).json({ message: "Internal Server Error", error: error.message });
     }
   };
   
