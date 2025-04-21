@@ -18,7 +18,7 @@ const ClearanceButtons = ({ _id, onDelete }) => {
 
   const handleDelete = async () => {
     try {
-      const response = await axiosInstance.delete(`/clearance/delete-clearance/${_id}`);
+      const response = await axiosInstance.delete(`/clearance/deleteClearance/${_id}`);
       if (response.data && response.data.success) {
         toast.success("Clearance deleted successfully");
         onDelete();

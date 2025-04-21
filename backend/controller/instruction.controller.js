@@ -265,18 +265,48 @@ export const deleteInstruction = async (req, res) => {
   }
 };
 
- export const getInstruction = async (req, res) => {
-   try {
-     const { id } = req.params;
-     const instruct = await Instruction.findOne({ _id: id });
-     if (!instruct) {
-       return res.status(400).json({ message: "instruction does not exist" });
-     }
- 
-     res.status(200).json({ instruction: instruct });
-   } catch (error) {
-     console.error(error);
-     res.status(500).json({ message: "Server error" });
-   }
- };
+export const getInstruction = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const instruct = await Instruction.findOne({ _id: id });
+    if (!instruct) {
+      return res.status(400).json({ message: "instruction does not exist" });
+    }
+
+    res.status(200).json({ instruction: instruct });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const sendInstruction = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Find the instruction and update its status
+    const instruction = await Instruction.findById(id);
+    
+    if (!instruction) {
+      return res.status(404).json({ message: "Instruction not found" });
+    }
+    
+    // Update the status to 'sent'
+    instruction.status = 'sent';
+    await instruction.save();
+    
+    res.status(200).json({ 
+      success: true, 
+      message: "Instruction sent successfully", 
+      instruction 
+    });
+  } catch (error) {
+    console.error("Error sending instruction:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Failed to send instruction", 
+      error: error.message 
+    });
+  }
+};
  

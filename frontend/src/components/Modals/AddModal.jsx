@@ -13,7 +13,7 @@ const AddModal = ({ open, setOpen, children }) => {
         {/* Fixed Header with Gradient */}
         <div className="bg-gradient-to-r from-blue-600 to-blue-800 p-4 text-white rounded-t-xl">
           <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Add New Prison</h2>
+            <h2 className="text-xl font-semibold"></h2>
             <button
               onClick={() => setOpen(false)}
               className="text-white hover:text-gray-200 transition-colors"
@@ -38,13 +38,13 @@ const AddModal = ({ open, setOpen, children }) => {
             >
               Cancel
             </Button>
-            <Button
+            {/* <Button
               type="submit"
               form="prisonForm"
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
             >
               Save
-            </Button>
+            </Button> */}
           </div>
         </div>
       </div>

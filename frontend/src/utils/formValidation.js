@@ -329,7 +329,7 @@ export const validateUserForm = (userData) => {
 
     // Validate special dropdown selections
     if (name === 'maritalStatus' && value) {
-      const validStatuses = ['single', 'married', 'divorced', 'widowed'];
+      const validStatuses = ['Single', 'Married', 'Divorced', 'Widowed', 'single', 'married', 'divorced', 'widowed'];
       if (!validStatuses.includes(value)) {
         return 'Please select a valid marital status.';
       }
@@ -337,7 +337,10 @@ export const validateUserForm = (userData) => {
 
     // Validate degree level
     if (name === 'degreeLevel' && value) {
-      const validDegrees = ['None', 'Elementary', 'Secondary', 'Diploma', 'Bachelor', 'Masters', 'PhD'];
+      const validDegrees = [
+        'No Education', 'Primary', 'Secondary', 'Diploma', 'Bachelor', 'Masters', 'PhD',
+        'none', 'elementary', 'primary', 'secondary', 'diploma', 'bachelor', 'masters', 'phd'
+      ];
       if (!validDegrees.includes(value)) {
         return 'Please select a valid education level.';
       }

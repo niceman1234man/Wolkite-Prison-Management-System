@@ -270,8 +270,8 @@ const UpdateIncident = ({setEdit, id}) => {
                 <option disabled>Loading inmates...</option>
               ) : (
                 inmates.map((inmate) => (
-                  <option key={inmate._id} value={inmate.fullName}>
-                    {inmate.fullName}
+                  <option key={inmate._id} value= {inmate.firstName+" "+inmate.middleName+" "+ inmate.lastName}>
+                    {inmate.firstName} {inmate.middleName} {inmate.lastName}
                   </option>
                 ))
               )}

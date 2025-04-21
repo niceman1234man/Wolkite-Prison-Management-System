@@ -137,6 +137,13 @@ const InstructionSchema=new mongoose.Schema({
     attachment: {
         type: String,
         required: true
+    },
+    
+    // Status
+    status: {
+        type: String,
+        enum: ['draft', 'sent'],
+        default: 'draft'
     }
     
 },{timestamps:true});

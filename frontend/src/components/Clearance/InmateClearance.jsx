@@ -37,6 +37,7 @@ const InmateClearance = ({setOpen}) => {
     { id: 4, name: "Finance", status: "Pending" },
     { id: 5, name: "Legal", status: "Pending" }
   ]);
+  const [hasExistingClearance, setHasExistingClearance] = useState(false);
 
   // Generate a unique clearance ID
   function generateClearanceId() {
@@ -46,7 +47,7 @@ const InmateClearance = ({setOpen}) => {
   }
   
   // Handle input changes
-  const handleChange = (e) => {
+  const handleChange = async (e) => {
     const { name, value, type, checked } = e.target;
     setFormData((prevData) => ({
       ...prevData,
@@ -56,6 +57,47 @@ const InmateClearance = ({setOpen}) => {
     // Clear error message when user makes changes
     if (errorMessage) {
       setErrorMessage("");
+    }
+
+    // Check for existing clearance when inmate is selected
+    if (name === 'inmate' && value) {
+      try {
+        // Get the selected inmate record
+        const selectedInmateRecord = inmates.find(inmate => 
+          (inmate.fullName || `${inmate.firstName} ${inmate.middleName} ${inmate.lastName}`) === value
+        );
+
+        if (selectedInmateRecord) {
+          // Check if this inmate already has a clearance
+          const existingClearanceResponse = await axiosInstance.get(`/clearance/getAllClearance`);
+          const existingClearances = existingClearanceResponse.data.clearances || [];
+          
+          // Filter clearances to find any for this inmate
+          const inmateExistingClearances = existingClearances.filter(clearance => {
+            // Case 1: Direct match by name
+            if (clearance.inmate === value) return true;
+            
+            // Case 2: Match by firstName, middleName, lastName combination
+            const fullName = `${selectedInmateRecord.firstName} ${selectedInmateRecord.middleName} ${selectedInmateRecord.lastName}`.trim();
+            if (clearance.inmate === fullName) return true;
+            
+            // Case 3: Match by formatted name properties
+            if (selectedInmateRecord._id && clearance.inmateId === selectedInmateRecord._id) return true;
+            
+            return false;
+          });
+
+          if (inmateExistingClearances.length > 0) {
+            setErrorMessage("This inmate already has an existing clearance. Cannot create a duplicate.");
+            toast.warning("This inmate already has an existing clearance");
+            setHasExistingClearance(true);
+          } else {
+            setHasExistingClearance(false);
+          }
+        }
+      } catch (error) {
+        console.error("Error checking existing clearance:", error);
+      }
     }
   };
 
@@ -165,14 +207,49 @@ const InmateClearance = ({setOpen}) => {
     }
 
     try {
+      // First, check if the inmate already has an existing clearance
+      // We need to extract the inmate ID or name to check
+      const selectedInmateRecord = inmates.find(inmate => 
+        (inmate.fullName || `${inmate.firstName} ${inmate.middleName} ${inmate.lastName}`) === formData.inmate
+      );
+
+      if (selectedInmateRecord) {
+        // Check if this inmate already has a clearance
+        const existingClearanceResponse = await axiosInstance.get(`/clearance/getAllClearance`);
+        const existingClearances = existingClearanceResponse.data.clearances || [];
+        
+        // Filter clearances to find any for this inmate by matching different name formats
+        const inmateExistingClearances = existingClearances.filter(clearance => {
+          // Case 1: Direct match by name
+          if (clearance.inmate === formData.inmate) return true;
+          
+          // Case 2: Match by firstName, middleName, lastName combination
+          const fullName = `${selectedInmateRecord.firstName} ${selectedInmateRecord.middleName} ${selectedInmateRecord.lastName}`.trim();
+          if (clearance.inmate === fullName) return true;
+          
+          // Case 3: Match by formatted name properties
+          if (selectedInmateRecord._id && clearance.inmateId === selectedInmateRecord._id) return true;
+          
+          return false;
+        });
+
+        if (inmateExistingClearances.length > 0) {
+          setErrorMessage("This inmate already has an existing clearance. Cannot create a duplicate.");
+          toast.error("This inmate already has an existing clearance");
+          setHasExistingClearance(true);
+          setSubmitting(false);
+          return;
+        }
+      }
+
       // Create FormData for submission
-    const formdata = new FormData();
+      const formdata = new FormData();
       
       // Add all required fields explicitly
-    formdata.append("date", formData.date);
+      formdata.append("date", formData.date);
       formdata.append("inmate", formData.inmate);
-    formdata.append("reason", formData.reason);
-    formdata.append("remark", formData.remark);
+      formdata.append("reason", formData.reason);
+      formdata.append("remark", formData.remark);
       formdata.append("registrar", formData.registrar);
       formdata.append("clearanceId", formData.clearanceId);
       
@@ -183,9 +260,9 @@ const InmateClearance = ({setOpen}) => {
       formdata.append("notes", formData.notes || "");
       
       // Add file if available
-    if (sign) {
-      formdata.append("sign", sign);
-    }
+      if (sign) {
+        formdata.append("sign", sign);
+      }
 
       const response = await axiosInstance.post("/clearance/addClearance", formdata);
       
@@ -214,7 +291,7 @@ const InmateClearance = ({setOpen}) => {
         if (setOpen) {
           setTimeout(() => {
             setOpen(false);
-        navigate("/securityStaff-dashboard/clearance");
+            navigate("/securityStaff-dashboard/clearance");
           }, 1500);
         }
       } else {
@@ -567,9 +644,9 @@ const InmateClearance = ({setOpen}) => {
           
           <button
             type="submit"
-            disabled={submitting || loading}
+            disabled={submitting || loading || hasExistingClearance}
             className={`py-3 px-8 text-white font-medium rounded-md shadow-md transition duration-200 ${
-              submitting || loading
+              submitting || loading || hasExistingClearance
                 ? "bg-gray-400 cursor-not-allowed"
                 : "bg-teal-600 hover:bg-teal-700"
             }`}
@@ -582,6 +659,8 @@ const InmateClearance = ({setOpen}) => {
                 </svg>
                 Processing...
               </span>
+            ) : hasExistingClearance ? (
+              "Clearance Exists"
             ) : (
               "Process Clearance"
             )}

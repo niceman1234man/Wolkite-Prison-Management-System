@@ -36,6 +36,78 @@ const ViewInmate = ({ _id, setOpen, onEdit }) => {
   const [activeTab, setActiveTab] = useState('personal');
   const navigate = useNavigate();
   const printRef = useRef();
+  
+  // Local placeholder image that doesn't require network
+  const PLACEHOLDER_IMAGE = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100%25' height='100%25' fill='%23f1f5f9'/%3E%3Ccircle cx='50' cy='40' r='20' fill='%23cbd5e1'/%3E%3Crect x='30' y='70' width='40' height='20' rx='10' fill='%23cbd5e1'/%3E%3C/svg%3E";
+
+  /* 
+  NOTE: Physical characteristic dropdowns should be implemented in UpdateInmate.jsx
+  with the following options:
+  
+  hairType: ['Straight', 'Wavy', 'Curly', 'Coily', 'Bald', 'Thin', 'Thick', 'Other']
+  face: ['Oval', 'Round', 'Square', 'Rectangle', 'Heart', 'Diamond', 'Triangle', 'Other']
+  foreHead: ['Narrow', 'Average', 'Wide', 'High', 'Low', 'Prominent', 'Other']
+  nose: ['Straight', 'Roman', 'Button', 'Nubian', 'Hawk', 'Snub', 'Greek', 'Other']
+  eyeColor: ['Brown', 'Blue', 'Green', 'Hazel', 'Gray', 'Amber', 'Black', 'Other']
+  teeth: ['Straight', 'Crowded', 'Gapped', 'Overbite', 'Underbite', 'Crooked', 'Other']
+  lip: ['Thin', 'Medium', 'Full', 'Wide', 'Narrow', 'Heart-shaped', 'Bow-shaped', 'Other']
+  ear: ['Attached', 'Detached', 'Small', 'Large', 'Round', 'Pointed', 'Other']
+  */
+
+  // Helper function to get proper image URL with improved logging
+  const getImageUrl = (photoPath) => {
+    console.log("Photo path received:", photoPath);
+    console.log("Photo type:", typeof photoPath);
+    
+    if (!photoPath) {
+      console.log("No photo path provided, using placeholder");
+      return PLACEHOLDER_IMAGE;
+    }
+    
+    // Special case: if the photo might be JSON stringified or have extra quotes
+    if (photoPath.includes('"') || photoPath.includes('\\')) {
+      try {
+        // Try to parse if it's a JSON string
+        const parsed = JSON.parse(photoPath);
+        console.log("Parsed JSON photo:", parsed);
+        return getImageUrl(parsed); // Recursive call with parsed value
+      } catch (e) {
+        // Not JSON, might have quotes that need to be removed
+        const cleaned = photoPath.replace(/["'\\]/g, '');
+        console.log("Cleaned photo path:", cleaned);
+        
+        if (cleaned !== photoPath) {
+          return getImageUrl(cleaned); // Recursive call with cleaned value
+        }
+      }
+    }
+    
+    // Handle different photo URL formats
+    if (typeof photoPath === 'string') {
+      if (photoPath.startsWith('http')) {
+        console.log("Using direct URL:", photoPath);
+        return photoPath;
+      }
+      
+      // Check if it's just a filename or already has /uploads/ in it
+      if (photoPath.includes('/uploads/')) {
+        console.log("Photo already has /uploads/ path:", photoPath);
+        // Check if it needs the server prefix
+        if (!photoPath.startsWith('http')) {
+          return `http://localhost:5001${photoPath.startsWith('/') ? '' : '/'}${photoPath}`;
+        }
+        return photoPath;
+      }
+      
+      // Regular case - just a filename that needs the full path
+      console.log("Using constructed URL with backend path");
+      return `http://localhost:5001/uploads/${photoPath}`;
+    }
+    
+    // Fallback
+    console.log("Unhandled photo format, using placeholder");
+    return PLACEHOLDER_IMAGE;
+  };
 
   // Helper functions
   const calculateParoleDate = (startDate, sentenceYear) => {
@@ -306,9 +378,20 @@ const ViewInmate = ({ _id, setOpen, onEdit }) => {
 
       try {
         const response = await axiosInstance.get(`/inmates/get-inmate/${_id}`);
+        console.log("API Response:", response.data);
+        
         const inmate = response.data.inmate;
         
         if (inmate) {
+          console.log("RAW PHOTO FIELD VALUE:", inmate.photo);
+          console.log("PHOTO TYPE:", typeof inmate.photo);
+          
+          // Set default photo if missing
+          if (!inmate.photo) {
+            console.log("Photo field is empty/null/undefined, setting default");
+            inmate.photo = "default.png";
+          }
+          
           setInmateData(inmate);
           
           // Calculate parole date
@@ -421,15 +504,38 @@ const ViewInmate = ({ _id, setOpen, onEdit }) => {
           {/* Header with Actions */}
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center">
-              <img 
-                src={inmateData.photo || "https://via.placeholder.com/100?text=No+Image"} 
-                alt={`${inmateData.firstName} ${inmateData.lastName}`}
-                className="w-20 h-20 rounded-full object-cover border-2 border-blue-500 mr-4"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = "https://via.placeholder.com/100?text=No+Image";
-                }}
-              />
+              {inmateData ? (
+                <img 
+                  src={inmateData.photo 
+                    ? `http://localhost:5001/uploads/${inmateData.photo}`
+                    : PLACEHOLDER_IMAGE
+                  }
+                  alt={`${inmateData.firstName} ${inmateData.lastName}`}
+                  className="w-20 h-20 rounded-full object-cover border-2 border-blue-500 mr-4"
+                  onError={(e) => {
+                    console.log("ID-based image failed to load, trying filename approach");
+                    // Try the usual filename approach as fallback
+                    if (inmateData.photo) {
+                      e.target.src = `http://localhost:5001/uploads/${inmateData.photo.replace(/^\/+/, '')}`;
+                      
+                      // Set second fallback
+                      e.target.onerror = () => {
+                        console.log("All image loading approaches failed, using placeholder");
+                        e.target.onerror = null;
+                        e.target.src = PLACEHOLDER_IMAGE;
+                      };
+                      return;
+                    }
+                    
+                    e.target.onerror = null;
+                    e.target.src = PLACEHOLDER_IMAGE;
+                  }}
+                />
+              ) : (
+                <div className="w-20 h-20 rounded-full bg-gray-200 border-2 border-blue-500 mr-4 flex items-center justify-center">
+                  <span className="text-gray-400">No img</span>
+                </div>
+              )}
               <div>
                 <h2 className="text-2xl font-bold text-gray-800">{inmateData.firstName} {inmateData.middleName} {inmateData.lastName}</h2>
                 <p className="text-gray-600">

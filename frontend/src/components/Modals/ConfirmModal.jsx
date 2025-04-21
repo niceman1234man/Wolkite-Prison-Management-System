@@ -11,14 +11,20 @@ export default function ConfirmModal({ open, message, onConfirm, onCancel }) {
   const handleConfirm = () => {
     console.log("Confirm button clicked in ConfirmModal");
     if (typeof onConfirm === 'function') {
+      console.log("Calling onConfirm function");
       onConfirm();
+    } else {
+      console.error("onConfirm is not a function:", onConfirm);
     }
   };
 
   const handleCancel = () => {
     console.log("Cancel button clicked in ConfirmModal");
     if (typeof onCancel === 'function') {
+      console.log("Calling onCancel function");
       onCancel();
+    } else {
+      console.error("onCancel is not a function:", onCancel);
     }
   };
 
