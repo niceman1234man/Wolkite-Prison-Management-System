@@ -353,11 +353,13 @@ const InspectorSummary = () => {
             isCollapsed ? "left-16 w-[calc(100%-5rem)]" : "left-64 w-[calc(100%-17rem)]"
           }`}
         >
+       
           <h3 className="text-2xl font-bold text-gray-800 text-center">
             Welcome back, {user?.name || "Inspector"}
           </h3>
-          <div className="flex items-center">
-            <div className="relative flex items-center w-72 md:w-1/3 mr-4">
+        
+          {/* <div className="flex items-center"> */}
+            {/* <div className="relative flex items-center w-72 md:w-1/3 mr-4">
               <FaSearch className="absolute left-3 text-gray-500" />
               <input
                 type="text"
@@ -366,14 +368,14 @@ const InspectorSummary = () => {
                 onChange={filterPrisons}
                 value={searchTerm}
               />
-            </div>
-            <Link
-              to="/inspector-dashboard/add-prison"
+            </div> */}
+            {/* <Link
+              to="/inspector-dashboard/add"
               className="h-10 bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-md flex items-center justify-center min-w-[150px] md:w-auto"
             >
               <FaPlus className="mr-2" /> Add New Prison
-            </Link>
-          </div>
+            </Link> */}
+          {/* </div> */}
         </div>
 
         {/* Push content down to prevent overlap */}

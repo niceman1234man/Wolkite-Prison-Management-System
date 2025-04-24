@@ -652,14 +652,24 @@ const PrisonerList = () => {
     }
 
     try {
+      // Find selected prison name for display
+      const selectedPrisonData = prisons.find(p => p._id === selectedPrison);
+      const selectedPrisonName = selectedPrisonData ? selectedPrisonData.prison_name : "Selected Prison";
+      
+      // Find current prison name
+      const currentPrisonData = prisons.find(p => p._id === selectedPrisonerData.assignedPrison);
+      const currentPrisonName = currentPrisonData ? currentPrisonData.prison_name : "Current Prison";
+
       const transferData = {
         inmateId: selectedInmate,
+        fromPrison: selectedPrisonerData.assignedPrison,
         toPrison: selectedPrison,
         reason: transferReason,
         status: "Pending",
         inmateData: {
           firstName: selectedPrisonerData.firstName,
           lastName: selectedPrisonerData.lastName,
+          middleName: selectedPrisonerData.middleName || "",
           crime: selectedPrisonerData.crime,
           intakeDate: selectedPrisonerData.intakeDate,
           timeRemaining: selectedPrisonerData.timeRemaining,
@@ -676,7 +686,9 @@ const PrisonerList = () => {
             prison: selectedPrisonerData.assignedPrison
           },
           requestDate: new Date().toISOString(),
-          status: "Pending"
+          status: "Pending",
+          fromPrisonName: currentPrisonName,
+          toPrisonName: selectedPrisonName
         }
       };
 
@@ -696,10 +708,54 @@ const PrisonerList = () => {
       }
 
       if (response.data?.success) {
-        toast.success(selectedPrisonerData.transferId 
-          ? "Transfer request updated successfully"
-          : "Transfer request submitted successfully. Waiting for security staff approval."
-        );
+        // Check if transfer was approved immediately
+        if (response.data?.data?.status === "Approved") {
+          try {
+            console.log("Transfer was approved immediately, updating prison populations");
+            // If transfer is approved, update prison populations
+            
+            // Decrement the original prison's population if assigned
+            if (selectedPrisonerData.assignedPrison) {
+              console.log(`Decrementing population for source prison: ${selectedPrisonerData.assignedPrison}`);
+              const decrementResponse = await axiosInstance.post("/prison/decrement-population", {
+                prisonId: selectedPrisonerData.assignedPrison,
+                decrement: 1
+              });
+              
+              if (!decrementResponse.data?.success) {
+                console.error("Failed to decrement source prison population:", decrementResponse.data?.error);
+              } else {
+                console.log("Successfully decremented source prison population");
+              }
+            }
+            
+            // Increment the destination prison's population
+            console.log(`Incrementing population for destination prison: ${selectedPrison}`);
+            const incrementResponse = await axiosInstance.post("/prison/increment-population", {
+              prisonId: selectedPrison,
+              increment: 1
+            });
+            
+            if (!incrementResponse.data?.success) {
+              console.error("Failed to increment destination prison population:", incrementResponse.data?.error);
+            } else {
+              console.log("Successfully incremented destination prison population");
+              // Notify that prison populations have changed
+              window.dispatchEvent(new Event('prisonPopulationChanged'));
+              
+              toast.success("Transfer completed and prison populations updated successfully!");
+            }
+          } catch (populationError) {
+            console.error("Error updating prison populations during transfer:", populationError);
+            toast.error("Transfer approved but failed to update prison populations");
+          }
+        } else {
+          toast.success(selectedPrisonerData.transferId 
+            ? "Transfer request updated successfully"
+            : "Transfer request submitted successfully. Waiting for security staff approval."
+          );
+        }
+        
         setTransferModalOpen(false);
         setSelectedPrison("");
         setTransferReason("");

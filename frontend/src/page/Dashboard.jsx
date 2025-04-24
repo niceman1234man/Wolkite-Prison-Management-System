@@ -180,7 +180,7 @@ const Dashboard = () => {
           }`}
         >
           <h3 className="text-2xl font-bold text-gray-800">Dashboard Overview</h3>
-          <NoticeButton notices={notices} onClick={() => setIsModalOpen(true)} />
+          {/* <NoticeButton notices={notices} onClick={() => setIsModalOpen(true)} /> */}
         </div>
 
         <div className="p-6 mt-32">

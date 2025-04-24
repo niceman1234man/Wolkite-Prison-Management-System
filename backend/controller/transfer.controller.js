@@ -180,3 +180,72 @@ export const cancelTransfer = async (req, res) => {
         });
     }
 };
+
+// Approve a transfer request
+export const approveTransfer = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    console.log(`Approving transfer with ID: ${id}`);
+    
+    const transfer = await Transfer.findById(id);
+    
+    if (!transfer) {
+      return res.status(404).json({
+        success: false,
+        error: "Transfer request not found"
+      });
+    }
+    
+    // Update the transfer status
+    transfer.status = "Approved";
+    await transfer.save();
+    
+    // Update prison populations
+    try {
+      const { fromPrison, toPrison } = transfer;
+      
+      console.log(`Transfer approved. Updating populations for prisons: 
+        From: ${fromPrison} 
+        To: ${toPrison}`);
+      
+      // Import the updatePrisonPopulation function (assuming it's exported from prison.controller.js)
+      const { updatePrisonPopulation } = await import("./prison.controller.js");
+      
+      // Decrement source prison population
+      if (fromPrison) {
+        const decrementResult = await updatePrisonPopulation(fromPrison, -1);
+        if (!decrementResult.success) {
+          console.error(`Failed to decrement source prison population: ${decrementResult.error}`);
+        } else {
+          console.log(`Successfully decremented source prison population`);
+        }
+      }
+      
+      // Increment destination prison population
+      if (toPrison) {
+        const incrementResult = await updatePrisonPopulation(toPrison, 1);
+        if (!incrementResult.success) {
+          console.error(`Failed to increment destination prison population: ${incrementResult.error}`);
+        } else {
+          console.log(`Successfully incremented destination prison population`);
+        }
+      }
+    } catch (populationError) {
+      console.error("Error updating prison populations:", populationError);
+      // Still continue with the transfer approval, just log the error
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: "Transfer request approved successfully",
+      data: transfer
+    });
+  } catch (error) {
+    console.error("Error approving transfer:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to approve transfer request"
+    });
+  }
+};

@@ -37,6 +37,7 @@ const TransferDialog = ({
   const [hasApprovedTransfer, setHasApprovedTransfer] = useState(false);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (inmate?.assignedPrison) {
@@ -162,87 +163,121 @@ const TransferDialog = ({
   };
 
   const handleTransfer = async () => {
-    // Enhanced validation
-    if (!selectedPrison) {
-      toast.error("Please select a destination prison");
-      return;
-    }
-    if (!transferReason || transferReason.trim() === "") {
-      toast.error("Please provide a reason for transfer");
-      return;
-    }
-    if (!inmate?._id) {
-      toast.error("Invalid inmate data");
+    if (!selectedPrison || !transferReason) {
+      toast.error("Please fill in all required fields.");
       return;
     }
 
+    setIsSubmitting(true);
+    setMessage("");
+
     try {
-      // Find the selected prison data
+      // Create inmate data object from the selected inmate
+      const inmateData = {
+        firstName: inmate.firstName,
+        lastName: inmate.lastName,
+        middleName: inmate.middleName || "",
+        crime: inmate.crime,
+        gender: inmate.gender,
+        intakeDate: inmate.intakeDate,
+        dateOfBirth: inmate.dateOfBirth,
+        assignedPrison: inmate.assignedPrison,
+        timeRemaining: inmate.timeRemaining
+      };
+
+      // Find selected prison name for display
       const selectedPrisonData = prisons.find(p => p._id === selectedPrison);
-      if (!selectedPrisonData) {
-        toast.error("Invalid prison selection");
-        return;
-      }
+      const selectedPrisonName = selectedPrisonData ? selectedPrisonData.prison_name : "Selected Prison";
 
       const transferData = {
         inmateId: inmate._id,
         fromPrison: inmate.assignedPrison,
         toPrison: selectedPrison,
-        reason: transferReason.trim(),
+        reason: transferReason,
         status: "Pending",
-        inmateData: {
-          firstName: inmate.firstName || "",
-          lastName: inmate.lastName || "",
-          middleName: inmate.middleName || "",
-          crime: inmate.crime || "",
-          intakeDate: inmate.intakeDate || new Date().toISOString(),
-          timeRemaining: inmate.timeRemaining || 0,
-          age: inmate.age || 0,
-          gender: inmate.gender || "",
-          address: inmate.address || "",
-          phoneNumber: inmate.phoneNumber || "",
-          emergencyContact: inmate.emergencyContact || "",
-          medicalConditions: inmate.medicalConditions || "",
-          sentenceStart: inmate.sentenceStart || new Date().toISOString(),
-          sentenceEnd: inmate.sentenceEnd || new Date().toISOString(),
-          riskLevel: inmate.riskLevel || "Low",
-          status: inmate.status || "Active"
-        },
+        inmateData,
         requestDetails: {
           requestedBy: {
-            role: "Woreda",
-            prison: inmate.assignedPrison
+            role: "Woreda", // Required role field
+            prison: inmate.assignedPrison // Required prison field
           },
           requestDate: new Date().toISOString(),
           status: "Pending",
           fromPrisonName: currentPrisonName,
-          toPrisonName: selectedPrisonData.prison_name
+          toPrisonName: selectedPrisonName
         }
       };
 
       console.log("Submitting transfer request:", transferData);
+      const response = await axiosInstance.post("/transfer/create-transfer", transferData);
 
-      const response = await axiosInstance.post(
-        "/transfer/create-transfer",
-        transferData
-      );
+      console.log("Transfer response:", response.data);
 
       if (response.data?.success) {
-        toast.success("Transfer request submitted successfully");
+        // If the transfer is automatically approved (bypassing the typical approval process)
+        if (response.data?.data?.status === "Approved") {
+          try {
+            console.log("Transfer was approved automatically, updating prison populations");
+            // Decrement the original prison's population
+            if (inmate.assignedPrison) {
+              console.log(`Decrementing population for source prison: ${inmate.assignedPrison}`);
+              const decrementResponse = await axiosInstance.post("/prison/decrement-population", {
+                prisonId: inmate.assignedPrison,
+                decrement: 1
+              });
+              
+              if (!decrementResponse.data?.success) {
+                console.error("Failed to decrement source prison population:", decrementResponse.data?.error);
+              } else {
+                console.log("Successfully decremented source prison population");
+              }
+            }
+            
+            // Increment the destination prison's population
+            console.log(`Incrementing population for destination prison: ${selectedPrison}`);
+            const incrementResponse = await axiosInstance.post("/prison/increment-population", {
+              prisonId: selectedPrison,
+              increment: 1
+            });
+            
+            if (!incrementResponse.data?.success) {
+              console.error("Failed to increment destination prison population:", incrementResponse.data?.error);
+            } else {
+              console.log("Successfully incremented destination prison population");
+              // Notify that prison populations have changed
+              window.dispatchEvent(new Event('prisonPopulationChanged'));
+            }
+          } catch (populationError) {
+            console.error("Error updating prison populations during transfer:", populationError);
+          }
+        } else {
+          // If transfer is pending, log that population updates will happen upon approval
+          console.log("Transfer request submitted as pending. Prison populations will update upon approval.");
+        }
+        
+        toast.success(
+          response.data?.data?.status === "Approved" 
+            ? "Transfer completed successfully!" 
+            : "Transfer request submitted successfully. Awaiting approval."
+        );
+        setIsSubmitting(false);
         onClose();
+        
         if (onTransferComplete) {
           onTransferComplete();
         }
+      } else {
+        setMessage(response.data?.error || "Failed to create transfer request.");
+        setMessageType("error");
+        setIsSubmitting(false);
       }
     } catch (error) {
-      console.error("Error creating transfer:", error);
-      const errorMessage = error.response?.data?.message || "Failed to submit transfer request";
-      toast.error(errorMessage);
+      console.error("Transfer request error:", error);
+      console.error("Error details:", error.response?.data);
       
-      // Log detailed error information
-      if (error.response?.data) {
-        console.error("Server error details:", error.response.data);
-      }
+      setMessage(error.response?.data?.error || "Failed to create transfer request. Please try again.");
+      setMessageType("error");
+      setIsSubmitting(false);
     }
   };
 
@@ -440,11 +475,11 @@ const TransferDialog = ({
               />
               <button
                 onClick={handleTransfer}
-                disabled={loading}
+                disabled={isSubmitting}
                 className="flex items-center px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors disabled:opacity-50"
               >
                 <FaExchangeAlt className="mr-2 text-sm" />
-                {loading ? "Submitting..." : "Submit Transfer"}
+                {isSubmitting ? "Submitting..." : "Submit Transfer"}
               </button>
             </>
           )}

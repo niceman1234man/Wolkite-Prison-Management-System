@@ -459,19 +459,9 @@ export default function AddWoredaInmate() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    // Validate form
-    const errors = validateForm();
-    setFormErrors(errors);
     
-    // If there are errors, stop submission
-    if (Object.keys(errors).length > 0) {
-      // Scroll to the first error
-      const firstErrorField = document.querySelector('[aria-invalid="true"]');
-      if (firstErrorField) {
-        firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        firstErrorField.focus();
-      }
+    if (!validateForm()) {
+      toast.error("Please fix the form errors");
       return;
     }
     
@@ -502,6 +492,28 @@ export default function AddWoredaInmate() {
       );
 
       if (response.data?.success) {
+        // If inmate was assigned to a prison, update that prison's population
+        if (prisonerData.assignedPrison) {
+          try {
+            // Increment the prison population by 1
+            const populationResponse = await axiosInstance.post("/prison/increment-population", {
+              prisonId: prisonerData.assignedPrison,
+              increment: 1
+            });
+            
+            if (populationResponse.data?.success) {
+              // Notify components that prison population has changed
+              window.dispatchEvent(new Event('prisonPopulationChanged'));
+            } else {
+              console.error("Failed to update prison population:", populationResponse.data?.error);
+              // Still proceed with the inmate creation
+            }
+          } catch (populationError) {
+            console.error("Error updating prison population:", populationError);
+            // Still proceed with the inmate creation
+          }
+        }
+
         toast.success("Inmate registered successfully!");
         setShowForm(false);
         fetchInmates();

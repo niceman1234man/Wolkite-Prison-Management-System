@@ -265,79 +265,153 @@ axiosInstance.interceptors.response.use(
     return response;
   },
   (error) => {
-    const originalRequest = error.config;
+    const { response } = error;
     
-    // Handle network errors (server not responding)
-    if (error.code === "ERR_NETWORK") {
-      console.error("Network Error:", error);
-      throw new Error("Network error. Please check your internet connection.");
+    if (!response) {
+      console.error("Network error or server not responding");
+      return Promise.reject(new Error("Network error. Please check your connection and try again."));
     }
-
-    // Handle timeouts
-    if (error.code === "ECONNABORTED") {
-      console.error("Request timeout:", originalRequest.url);
-      throw new Error("Request timeout. Please try again.");
-    }
-
-    // Handle HTTP errors
-    if (error.response) {
-      const { status, data } = error.response;
-      console.error(`API Error (${status}):`, originalRequest.url, data);
-
-      // Handle 401 Unauthorized - but check if it's a login attempt or token expiration
-      if (status === 401) {
-        // Check if this is a login attempt
-        const isLoginAttempt = originalRequest.url.includes('/auth/login') || originalRequest.url.includes('/user/login');
+    
+    const status = response.status;
+    const data = response.data;
+    
+    console.log(`API Error (${status}):`, response.config.url, data);
+    
+    // Handle specific error status codes
+    switch (status) {
+      case 400:
+        // Bad request, usually validation error
+        console.error("Bad request:", data);
+        return Promise.reject(error);
         
-        if (isLoginAttempt) {
-          // For login attempts, just return the error to be handled by the login component
-          console.error(`Authentication failed for ${originalRequest.url} with email: ${originalRequest.data?.email || 'unknown'}`);
-          console.error("Error response:", data);
-          return Promise.reject(error);
-        } else {
-          // For other requests, it means the token has expired or is invalid
-          console.error("Token expired or invalid");
-          localStorage.removeItem("token");
-          localStorage.removeItem("user");
-          
-          // Return a custom error without redirecting
-          return Promise.reject(new Error("Session expired. Please log in again."));
-        }
-      }
-
-      // Handle 403 Forbidden
-      if (status === 403) {
-        console.error("Forbidden access to:", originalRequest.url);
-        throw new Error("You don't have permission to access this resource.");
-      }
-
-      // Handle 404 Not Found
-      if (status === 404) {
-        console.error("Resource not found:", originalRequest.url);
-        throw new Error("The requested resource was not found.");
-      }
-
-      // Handle 409 Conflict (e.g., duplicate email)
-      if (status === 409) {
-        throw new Error(data.message || "Resource conflict occurred.");
-      }
-
-      // Handle 500 Server Error
-      if (status >= 500) {
+      case 401:
+        // Unauthorized, expired token or not authenticated
+        console.error("Unauthorized:", data);
+        // Redirect to login if needed
+        // window.location.href = "/login";
+        return Promise.reject(error);
+        
+      case 403:
+        // Forbidden, authenticated but not allowed
+        console.error("Forbidden:", data);
+        return Promise.reject(error);
+        
+      case 404:
+        // Not found
+        console.error("Not found:", data);
+        return Promise.reject(error);
+        
+      case 500:
+        // Server error, log additional info for debugging
         console.error("Server error:", status, data);
-        throw new Error("Server error. Please try again later.");
-      }
-
-      // For other 4xx errors, use the server's error message if available
-      if (data && data.message) {
-        throw new Error(data.message);
-      }
+        
+        // For 500 errors, try to provide more informative error
+        let errorMessage = "Server error. Please try again later.";
+        if (data && data.error) {
+          errorMessage = data.error;
+        } else if (data && data.message) {
+          errorMessage = data.message;
+        } else if (typeof data === "string") {
+          errorMessage = data;
+        }
+        
+        // Create a custom error with more details
+        const customError = new Error(errorMessage);
+        customError.status = status;
+        customError.originalError = error;
+        customError.serverData = data;
+        
+        return Promise.reject(customError);
+        
+      default:
+        // Generic error handling
+        console.error("Unhandled error:", status, data);
+        return Promise.reject(error);
     }
-
-    // For all other errors
-    console.error("Unhandled API error:", error);
-    throw new Error("An unexpected error occurred. Please try again.");
   }
 );
+
+// Add these utility functions
+axiosInstance.updatePrisonPopulation = async (prisonId, change) => {
+  if (!prisonId) {
+    console.error("No prison ID provided for population update");
+    return { success: false, error: "No prison ID provided" };
+  }
+
+  try {
+    console.log(`Updating prison ${prisonId} population by ${change}`);
+    
+    const endpoint = change >= 0 
+      ? "/prison/increment-population"
+      : "/prison/decrement-population";
+    
+    const payload = change >= 0
+      ? { prisonId, increment: Math.abs(change) }
+      : { prisonId, decrement: Math.abs(change) };
+    
+    console.log(`Using endpoint ${endpoint} with payload:`, payload);
+    
+    const response = await axiosInstance.post(endpoint, payload);
+    
+    // Log response for debugging
+    console.log(`Prison population update response:`, response.data);
+    
+    // Dispatch an event to notify components about the population change
+    if (response.data?.success) {
+      console.log(`Successfully updated prison ${prisonId} population by ${change}`);
+      window.dispatchEvent(new Event('prisonPopulationChanged'));
+    } else {
+      console.error(`Failed to update prison ${prisonId} population:`, response.data?.error || 'Unknown error');
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error(`Error updating prison ${prisonId} population by ${change}:`, error);
+    console.error("Error details:", error.response?.data || error.message);
+    
+    return {
+      success: false,
+      error: error.response?.data?.error || error.message || "Failed to update prison population"
+    };
+  }
+};
+
+// For transferring inmate between prisons and updating the population counts
+axiosInstance.transferInmateBetweenPrisons = async (fromPrisonId, toPrisonId) => {
+  if (!fromPrisonId || !toPrisonId) {
+    console.error("Both source and destination prison IDs are required");
+    return { success: false, error: "Both source and destination prison IDs are required" };
+  }
+
+  try {
+    // Decrement the source prison population
+    const decrementResponse = await axiosInstance.updatePrisonPopulation(fromPrisonId, -1);
+    if (!decrementResponse.success) {
+      return decrementResponse;
+    }
+
+    // Increment the destination prison population
+    const incrementResponse = await axiosInstance.updatePrisonPopulation(toPrisonId, 1);
+    if (!incrementResponse.success) {
+      // Try to revert the decrement operation
+      await axiosInstance.updatePrisonPopulation(fromPrisonId, 1);
+      return incrementResponse;
+    }
+
+    // Dispatch event for prison population changes
+    window.dispatchEvent(new Event('prisonPopulationChanged'));
+    
+    return {
+      success: true,
+      message: "Inmate transferred between prisons successfully"
+    };
+  } catch (error) {
+    console.error("Error transferring inmate between prisons:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to transfer inmate between prisons"
+    };
+  }
+};
 
 export default axiosInstance;

@@ -5,6 +5,8 @@ import {
   getPrisonById,
   updatePrison,
   deletePrison,
+  incrementPrisonPopulation,
+  decrementPrisonPopulation
 } from "../controller/prison.controller.js";
 import { authenticateToken } from "../middleware/auth.js";
 
@@ -27,5 +29,11 @@ router.put("/:id", updatePrison);
 
 // Delete prison
 router.delete("/:id", deletePrison);
+
+// Increment prison population
+router.post("/increment-population", incrementPrisonPopulation);
+
+// Decrement prison population
+router.post("/decrement-population", decrementPrisonPopulation);
 
 export const prisonRouter = router;

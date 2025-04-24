@@ -35,7 +35,7 @@ const EditPrison = ({ setOpen, id: propId }) => {
     
     setPrisonData((prevState) => ({
       ...prevState,
-      [name]: name === "capacity" ? Number(value) : value,
+      [name]: name === "capacity" || name === "current_population" ? Number(value) : value,
     }));
   };
 
@@ -46,16 +46,34 @@ const EditPrison = ({ setOpen, id: propId }) => {
         console.log("Fetching prison with ID:", id);
         // Update the endpoint to match the backend router
         const response = await axiosInstance.get(`/prison/${id}`);
+        console.log("Prison data received:", response.data);
+        
         if (response.data.prison) {
+          // First normalize the status field to lowercase
+          const normalizedStatus = response.data.prison.status ? 
+            response.data.prison.status.toLowerCase() : "active";
+          
+          // Ensure current_population is a number for display
+          const currentPop = response.data.prison.current_population !== null && 
+            response.data.prison.current_population !== undefined ?
+            Number(response.data.prison.current_population) : 0;
+          
           setPrisonData({
             ...response.data.prison,
             // Ensure all fields are handled, even if some are missing from the response
             prison_name: response.data.prison.prison_name || "",
             location: response.data.prison.location || "",
             description: response.data.prison.description || "",
-            capacity: response.data.prison.capacity || 0,
-            current_population: response.data.prison.current_population || "",
-            status: response.data.prison.status || ""
+            capacity: Number(response.data.prison.capacity || 0),
+            // Use Number to ensure it's a number type
+            current_population: currentPop,
+            status: normalizedStatus
+          });
+          
+          console.log("Normalized prison data:", {
+            ...response.data.prison,
+            current_population: currentPop,
+            status: normalizedStatus
           });
         } else {
           toast.error("Prison data not found.");
@@ -88,20 +106,56 @@ const EditPrison = ({ setOpen, id: propId }) => {
   const validateForm = () => {
     const newErrors = {};
     
+    // Prison name validation
     if (!prisonData.prison_name.trim()) {
       newErrors.prison_name = "Prison name is required";
+    } else if (prisonData.prison_name.trim().length < 3) {
+      newErrors.prison_name = "Prison name must be at least 3 characters";
+    } else if (prisonData.prison_name.trim().length > 50) {
+      newErrors.prison_name = "Prison name cannot exceed 50 characters";
+    } else if (!/^[A-Za-z0-9\s\-_.()]+$/.test(prisonData.prison_name.trim())) {
+      newErrors.prison_name = "Prison name contains invalid characters";
     }
     
+    // Location validation
     if (!prisonData.location.trim()) {
       newErrors.location = "Location is required";
+    } else if (prisonData.location.trim().length < 3) {
+      newErrors.location = "Location must be at least 3 characters";
+    } else if (prisonData.location.trim().length > 100) {
+      newErrors.location = "Location cannot exceed 100 characters";
     }
     
+    // Description validation
     if (!prisonData.description.trim()) {
       newErrors.description = "Description is required";
+    } else if (prisonData.description.trim().length < 10) {
+      newErrors.description = "Description must be at least 10 characters";
+    } else if (prisonData.description.trim().length > 500) {
+      newErrors.description = "Description cannot exceed 500 characters";
     }
     
-    if (isNaN(prisonData.capacity) || prisonData.capacity < 0) {
+    // Capacity validation
+    if (isNaN(prisonData.capacity) || prisonData.capacity <= 0) {
       newErrors.capacity = "Capacity must be a positive number";
+    } else if (prisonData.capacity > 10000) {
+      newErrors.capacity = "Capacity cannot exceed 10,000";
+    }
+    
+    // Current population validation
+    if (prisonData.current_population !== "") {
+      if (isNaN(prisonData.current_population) || Number(prisonData.current_population) < 0) {
+        newErrors.current_population = "Current population must be zero or a positive number";
+      } else if (Number(prisonData.current_population) > Number(prisonData.capacity)) {
+        newErrors.current_population = "Current population cannot exceed capacity";
+      }
+    }
+    
+    // Status validation
+    if (!prisonData.status) {
+      newErrors.status = "Status is required";
+    } else if (!["active", "inactive", "maintenance"].includes(prisonData.status)) {
+      newErrors.status = "Invalid status value";
     }
     
     setErrors(newErrors);
@@ -121,21 +175,73 @@ const EditPrison = ({ setOpen, id: propId }) => {
 
     try {
       console.log("Updating prison with ID:", id);
+      
+      // Create a simplified data structure with only the fields the API expects
+      // This helps prevent sending unexpected fields that might cause server errors
       const formattedData = {
-        ...prisonData,
-        capacity: Number(prisonData.capacity)
+        prison_name: prisonData.prison_name.trim(),
+        location: prisonData.location.trim(),
+        description: prisonData.description.trim(),
+        capacity: Number(prisonData.capacity),
+        current_population: Number(prisonData.current_population || 0),
+        status: prisonData.status ? prisonData.status.toLowerCase() : "active"
       };
 
-      const response = await axiosInstance.put(`/prison/${id}`, formattedData);
-
-      if (response.data?.success) {
-        toast.success("Prison updated successfully!");
-        setOpen(false);
-        // Dispatch event to refresh the prison list
-        window.dispatchEvent(new Event('prisonsUpdated'));
+      console.log("Sending data:", formattedData);
+      
+      try {
+        // First try sending the complete data
+        const response = await axiosInstance.put(`/prison/${id}`, formattedData);
+        
+        if (response.data?.success) {
+          toast.success("Prison updated successfully!");
+          if (setOpen) {
+            setOpen(false);
+          }
+          // Dispatch event to refresh the prison list
+          window.dispatchEvent(new Event('prisonsUpdated'));
+          
+          // If standalone mode, navigate back
+          if (!setOpen) {
+            navigate(-1);
+          }
+        }
+      } catch (firstError) {
+        console.error("First attempt failed:", firstError);
+        
+        // If first attempt fails, try a more conservative approach with minimal data
+        try {
+          // Create an even more minimal data structure with just required fields
+          const minimalData = {
+            prison_name: prisonData.prison_name.trim(),
+            location: prisonData.location.trim(),
+            description: prisonData.description.trim(),
+            capacity: Number(prisonData.capacity)
+          };
+          
+          console.log("Trying minimal data:", minimalData);
+          const fallbackResponse = await axiosInstance.put(`/prison/${id}`, minimalData);
+          
+          if (fallbackResponse.data?.success) {
+            toast.success("Prison updated with basic information successfully!");
+            if (setOpen) {
+              setOpen(false);
+            }
+            window.dispatchEvent(new Event('prisonsUpdated'));
+            
+            if (!setOpen) {
+              navigate(-1);
+            }
+          }
+        } catch (secondError) {
+          // If both attempts fail, show a detailed error
+          console.error("Error updating prison:", secondError.response?.data || secondError);
+          toast.error(secondError.response?.data?.error || "Failed to update prison. Please try again later.");
+          throw secondError; // Re-throw to trigger the outer catch block
+        }
       }
     } catch (error) {
-      console.error("Error updating prison:", error);
+      console.error("Error updating prison:", error.response?.data || error);
       toast.error(error.response?.data?.error || "Failed to update prison");
     } finally {
       setLoading(false);
@@ -239,8 +345,14 @@ const EditPrison = ({ setOpen, id: propId }) => {
               value={prisonData.current_population}
               onChange={handleChange}
               placeholder="Enter current population"
-              className="mt-1 w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500"
+              className={`mt-1 w-full p-2 border ${
+                errors.current_population ? "border-red-500" : "border-gray-300"
+              } rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500`}
+              min="0"
             />
+            {errors.current_population && (
+              <p className="text-sm text-red-500">{errors.current_population}</p>
+            )}
           </div>
         </div>
 
@@ -253,13 +365,18 @@ const EditPrison = ({ setOpen, id: propId }) => {
             name="status"
             value={prisonData.status}
             onChange={handleChange}
-            className="mt-1 w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500"
+            className={`mt-1 w-full p-2 border ${
+              errors.status ? "border-red-500" : "border-gray-300"
+            } rounded-md focus:outline-none focus:ring-teal-500 focus:border-teal-500`}
           >
             <option value="" disabled>Select status</option>
             <option value="active">Active</option>
             <option value="inactive">Inactive</option>
             <option value="maintenance">Maintenance</option>
           </select>
+          {errors.status && (
+            <p className="text-sm text-red-500">{errors.status}</p>
+          )}
         </div>
 
         {/* Description */}

@@ -223,93 +223,58 @@ const TransferRequests = () => {
       }
 
       setIsUpdating(true);
-      const updateData = {
-        status: newStatus,
-        ...(newStatus === "rejected" && { rejectionReason }),
-        updatedAt: new Date().toISOString()
-      };
-
-      await axiosInstance.put(`/transfer/update-transfer/${transferId}`, updateData);
-      toast.success(`Transfer request ${newStatus} successfully`);
-
-      // If transfer is approved, navigate to add-inmate with the inmate data
+      
+      // Use the special approve-transfer endpoint for approvals to update prison populations
       if (newStatus === "approved") {
+        // Get the transfer details first for UI feedback
         const transfer = transfers.find(t => t._id === transferId);
-        if (transfer?.inmateData) {
-          // Prepare inmate data for the form
-          const inmateData = {
-            firstName: transfer.inmateData.firstName,
-            middleName: transfer.inmateData.middleName,
-            lastName: transfer.inmateData.lastName,
-            birthDate: transfer.inmateData.dateOfBirth,
-            age: transfer.inmateData.age,
-            motherName: transfer.inmateData.motherName,
-            gender: transfer.inmateData.gender,
-            birthRegion: transfer.inmateData.birthRegion,
-            birthZone: transfer.inmateData.birthZone,
-            birthWereda: transfer.inmateData.birthWereda,
-            birthKebele: transfer.inmateData.birthKebele,
-            currentRegion: transfer.inmateData.currentRegion,
-            currentZone: transfer.inmateData.currentZone,
-            currentWereda: transfer.inmateData.currentWereda,
-            currentKebele: transfer.inmateData.currentKebele,
-            degreeLevel: transfer.inmateData.degreeLevel,
-            work: transfer.inmateData.work,
-            nationality: transfer.inmateData.nationality,
-            religion: transfer.inmateData.religion,
-            maritalStatus: transfer.inmateData.maritalStatus,
-            height: transfer.inmateData.height,
-            hairType: transfer.inmateData.hairType,
-            face: transfer.inmateData.face,
-            foreHead: transfer.inmateData.foreHead,
-            nose: transfer.inmateData.nose,
-            eyeColor: transfer.inmateData.eyeColor,
-            teeth: transfer.inmateData.teeth,
-            lip: transfer.inmateData.lip,
-            ear: transfer.inmateData.ear,
-            specialSymbol: transfer.inmateData.specialSymbol,
-            contactName: transfer.inmateData.contactName,
-            contactRegion: transfer.inmateData.contactRegion,
-            contactZone: transfer.inmateData.contactZone,
-            contactWereda: transfer.inmateData.contactWereda,
-            contactKebele: transfer.inmateData.contactKebele,
-            phoneNumber: transfer.inmateData.phoneNumber,
-            registrarWorkerName: transfer.inmateData.registrarWorkerName,
-            caseType: transfer.inmateData.crimeType,
-            startDate: transfer.inmateData.sentenceStartDate,
-            sentenceYear: transfer.inmateData.sentenceDuration,
-            releaseReason: transfer.inmateData.releaseReason,
-            releasedDate: transfer.inmateData.expectedReleaseDate,
-            assignedPrison: transfer.toPrison,
-            documents: transfer.inmateData.documents || []
-          };
+        const fromPrisonName = getPrisonName(transfer?.fromPrison);
+        const toPrisonName = getPrisonName(transfer?.toPrison);
+        
+        try {
+          // Call the dedicated approve endpoint that handles population updates
+          const response = await axiosInstance.put(`/transfer/approve-transfer/${transferId}`);
           
-          // Close both modals before navigating
-          setShowDetailsModal(false);
-          setShowStatusChangeModal(false);
-          
-          // Navigate to add-inmate with the inmate data
-          navigate('/securityStaff-dashboard/add-inmate', { 
-            state: { 
-              inmateData,
-              isTransferApproval: true,
-              transferId 
-            }
-          });
+          if (response.data?.success) {
+            toast.success(`Transfer approved successfully! Prison populations updated.`);
+            // Add more detailed feedback about the population changes
+            toast.info(`Inmate moved from ${fromPrisonName} to ${toPrisonName}`);
+            
+            // Refresh the transfers list
+            fetchTransfers();
+          } else {
+            toast.error(response.data?.error || "Failed to approve transfer");
+          }
+        } catch (error) {
+          console.error("Error approving transfer:", error);
+          toast.error(error.response?.data?.error || "Failed to approve transfer");
         }
-      }
+      } else {
+        // For non-approval status updates, use the regular update endpoint
+        const updateData = {
+          status: newStatus,
+          ...(newStatus === "rejected" && { rejectionReason }),
+          updatedAt: new Date().toISOString()
+        };
 
-      fetchTransfers();
-      // Close both modals
-      setShowDetailsModal(false);
-      setShowStatusChangeModal(false);
-      setRejectionReason("");
+        await axiosInstance.put(`/transfer/update-transfer/${transferId}`, updateData);
+        toast.success(`Transfer request ${newStatus} successfully`);
+        
+        // Refresh the transfers list
+        fetchTransfers();
+      }
     } catch (error) {
       console.error("Error updating transfer status:", error);
-      toast.error("Failed to update transfer status");
+      toast.error(error.response?.data?.message || "Failed to update transfer status");
     } finally {
       setIsUpdating(false);
     }
+  };
+
+  // Helper function to get prison name from ID
+  const getPrisonName = (prisonId) => {
+    const prison = prisons.find(p => p._id === prisonId);
+    return prison ? prison.prison_name : "Unknown Prison";
   };
 
   // Sort function for transfer data
@@ -804,22 +769,55 @@ const TransferRequests = () => {
 
     try {
       setIsUpdating(true);
-      // Fix the endpoint to match the correct API path format
-      const response = await axiosInstance.put(`/transfer/update-transfer/${selectedTransfer._id}`, {
-        status: newStatus,
-        rejectionReason: newStatus === "rejected" ? rejectionReason : "",
-      });
-
-      if (response.data && response.data.success) {
-        toast.success(`Transfer status updated to ${newStatus}`);
-        fetchTransfers();
-        // Close both modals
-        setShowDetailsModal(false);
-        setShowStatusChangeModal(false);
-        setRejectionReason("");
-        setNewStatus("");
+      
+      // Use special approve endpoint for approvals to update prison populations
+      if (newStatus === "approved") {
+        const fromPrisonName = getPrisonName(selectedTransfer?.fromPrison);
+        const toPrisonName = getPrisonName(selectedTransfer?.toPrison);
+        
+        try {
+          // Call the dedicated approve endpoint that handles population updates
+          const response = await axiosInstance.put(`/transfer/approve-transfer/${selectedTransfer._id}`);
+          
+          if (response.data?.success) {
+            toast.success(`Transfer approved successfully! Prison populations updated.`);
+            // Add more detailed feedback about the population changes
+            toast.info(`Inmate moved from ${fromPrisonName} to ${toPrisonName}`);
+            
+            // Refresh the transfers list
+            fetchTransfers();
+            
+            // Close both modals
+            setShowDetailsModal(false);
+            setShowStatusChangeModal(false);
+            setRejectionReason("");
+            setNewStatus("");
+          } else {
+            toast.error(response.data?.error || "Failed to approve transfer");
+          }
+        } catch (error) {
+          console.error("Error approving transfer:", error);
+          toast.error(error.response?.data?.error || "Failed to approve transfer");
+        }
       } else {
-        toast.error(response.data?.message || "Failed to update transfer status");
+        // For non-approval status updates, use the regular update endpoint
+        // Fix the endpoint to match the correct API path format
+        const response = await axiosInstance.put(`/transfer/update-transfer/${selectedTransfer._id}`, {
+          status: newStatus,
+          rejectionReason: newStatus === "rejected" ? rejectionReason : "",
+        });
+
+        if (response.data && response.data.success) {
+          toast.success(`Transfer status updated to ${newStatus}`);
+          fetchTransfers();
+          // Close both modals
+          setShowDetailsModal(false);
+          setShowStatusChangeModal(false);
+          setRejectionReason("");
+          setNewStatus("");
+        } else {
+          toast.error(response.data?.message || "Failed to update transfer status");
+        }
       }
     } catch (error) {
       console.error("Error updating transfer status:", error);
