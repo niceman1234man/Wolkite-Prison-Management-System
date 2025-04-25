@@ -26,7 +26,7 @@ import { MessageRoutes } from "./router/hompage.router.js";
 import reportRoutes from "./router/reportRouter.js";
 import prisonerRoutes from "./router/prisonerRouter.js";
 import transferRoutes from "./router/transferRouter.js";
-import { woredaInmateRouter } from "./router/woredaInmate.router.js";
+import woredaInmateRouter from "./router/woredaInmate.router.js";
 import { notificationRouter } from "./router/notification.router.js";
 import woredaRouter from "./router/woreda.router.js";
 import dashboardRouter from "./router/dashboard.router.js";
@@ -56,7 +56,7 @@ const server = http.createServer(app);
 // Initialize Socket.io
 const io = new Server(server, {
   cors: {
-    origin: ["http://localhost:5173", "http://localhost:5174"],
+    origin: ["http://localhost:5173", "http://localhost:5174", "http://10.194.120.26:5173","0.0.0.0"],
     methods: ["GET", "POST"],
     credentials: true
   }
@@ -67,7 +67,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:5174"],
+    origin: ["http://localhost:5173", "http://localhost:5174", "http://10.194.120.26:5173"],
     credentials: true,
   })
 );

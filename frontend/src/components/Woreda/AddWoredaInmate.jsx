@@ -21,7 +21,8 @@ import {
   FaChevronDown,
   FaChevronUp,
   FaPrint,
-  FaTrash
+  FaTrash,
+  FaSignOutAlt
 } from "react-icons/fa";
 import TransferButton from "./TransferButton";
 
@@ -54,11 +55,16 @@ export default function AddWoredaInmate() {
     documents: [],
   });
   
+  // Add validation state
+  const [formErrors, setFormErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalItems, setTotalItems] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [transferFilter, setTransferFilter] = useState("all"); // "all", "local", "transferred", "not-approved"
   
   // Delete confirmation state
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -77,6 +83,16 @@ export default function AddWoredaInmate() {
     medical: false,
   });
 
+  // Add a loading state specific to deleting
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
+  // Release modal state
+  const [releaseModalOpen, setReleaseModalOpen] = useState(false);
+  const [inmateToRelease, setInmateToRelease] = useState(null);
+  const [releaseReason, setReleaseReason] = useState("");
+  const [releaseLoading, setReleaseLoading] = useState(false);
+  const [customReleaseReason, setCustomReleaseReason] = useState(""); // Add a separate state for custom reason
+
   const navigate = useNavigate();
 
   // Live timer effect
@@ -93,103 +109,265 @@ export default function AddWoredaInmate() {
     fetchInmates();
   }, []);
 
+  // Create state to store prison mapping
+  const [prisonMap, setPrisonMap] = useState({});
+
   const fetchPrisons = async () => {
     try {
       const response = await axiosInstance.get("/prison/getall-prisons");
-      console.log("Prison response:", response.data);
       if (response.data?.success) {
-        setPrisons(response.data.prisons || []);
+        const prisons = response.data.prisons || [];
+        setPrisons(prisons);
+        
+        // Create a mapping of prison IDs to names for quick lookup
+        const prisonIdToName = {};
+        prisons.forEach(prison => {
+          prisonIdToName[prison._id] = prison.prison_name;
+        });
+        setPrisonMap(prisonIdToName);
       }
     } catch (error) {
-      console.error("Error fetching prisons:", error);
-      console.error("Error details:", error.response?.data);
       toast.error("Failed to fetch prison data");
     }
   };
 
+  // Calculate time remaining within first 48 hours of intake
   const calculateTimeRemaining = (intakeDate) => {
+    if (!intakeDate) return 0;
+    
     const intakeTime = new Date(intakeDate).getTime();
     const currentTime = new Date().getTime();
+    
+    // Calculate elapsed time since intake
     const elapsedTime = currentTime - intakeTime;
+    
+    // Calculate how much time is left in the 48-hour window
     const remainingTime = 48 * 60 * 60 * 1000 - elapsedTime; // 48 hours minus elapsed time
-    return Math.max(0, remainingTime); // Ensure no negative time
+    
+    // Return 0 if the 48-hour window has passed, otherwise return remaining time
+    return Math.max(0, remainingTime);
   };
 
   const formatTimeRemaining = (remainingTime) => {
+    if (remainingTime <= 0) {
+      return "Time expired";
+    }
+    
     const hours = Math.floor(remainingTime / (1000 * 60 * 60));
-    const minutes = Math.floor(
-      (remainingTime % (1000 * 60 * 60)) / (1000 * 60)
-    );
-    return `${hours} hours ${minutes} minutes`;
+    const minutes = Math.floor((remainingTime % (1000 * 60 * 60)) / (1000 * 60));
+    
+    return `${hours}h ${minutes}m`;
   };
 
-  // Enhanced fetchInmates function with pagination
+  // Update the fetchInmates function to remove console.logs and improve error handling
   const fetchInmates = async () => {
     try {
       setLoading(true);
-      const response = await axiosInstance.get("/woreda-inmate/getall-inmates");
       
-      if (response.data?.success) {
-        // Format the data similar to List.jsx
-        let sno = 1;
-        const formattedData = response.data.inmates.map((inmate) => {
-          // Create full name from first, middle and last name
-          const fullName = [inmate.firstName, inmate.middleName, inmate.lastName]
-            .filter(Boolean)
-            .join(" ");
-            
-          // Format the sentence information
-          const sentenceInfo = inmate.sentenceYear ? 
-            `${inmate.sentenceYear} ${inmate.sentenceYear === 1 ? 'year' : 'years'}` : 
-            "Not specified";
-            
-          // Format location data
-          const location = [inmate.currentWereda, inmate.currentZone]
-            .filter(Boolean)
-            .join(", ");
-            
-          // Calculate time remaining
-          const timeRemaining = calculateTimeRemaining(inmate.intakeDate);
-            
+      // Fetch all transfers
+      const transferResponse = await axiosInstance.get("/transfer/getall-transfers");
+      const transfersRaw = transferResponse.data?.data || [];
+      
+      // Normalize and process the transfers with clear logging
+      console.log(`Fetched ${transfersRaw.length} total transfers`);
+      
+      // Normalize transfer statuses for consistent handling
+      const transfers = transfersRaw.map(transfer => {
+        // For consistent status handling, ensure all status values follow the same pattern
+        let normalizedStatus = (transfer.status?.toLowerCase?.() || 'pending').trim();
+        let displayStatus = transfer.status || 'Pending';
+        
+        // Handle all possible status variations
+        if (normalizedStatus.includes('cancel')) {
+          normalizedStatus = 'cancelled';
+          displayStatus = 'Cancelled';
+        } else if (normalizedStatus.includes('approve')) {
+          normalizedStatus = 'approved';
+          displayStatus = 'Approved';
+        } else if (normalizedStatus.includes('reject')) {
+          normalizedStatus = 'rejected';
+          displayStatus = 'Rejected';
+        } else if (normalizedStatus.includes('review') || normalizedStatus.includes('under')) {
+          normalizedStatus = 'under-review';
+          displayStatus = 'Under Review';
+        } else if (normalizedStatus.includes('pending')) {
+          normalizedStatus = 'pending';
+          displayStatus = 'Pending';
+        }
+        
+        return {
+          ...transfer,
+          normalizedStatus,
+          displayStatus
+        };
+      });
+      
+      // Get unique inmate IDs that have transfers
+      const inmatesInTransfer = [];
+      const seenInmateIds = new Set();
+      
+      // First, create a map of the latest transfer for each inmate
+      const latestTransferMap = {};
+      
+      transfers.forEach(transfer => {
+        const inmateId = transfer.inmateId;
+        
+        // Skip invalid entries
+        if (!inmateId || !transfer.inmateData) return;
+        
+        // If we haven't seen this inmate yet, or this transfer is newer
+        if (!latestTransferMap[inmateId] || 
+            new Date(transfer.createdAt) > new Date(latestTransferMap[inmateId].createdAt)) {
+          latestTransferMap[inmateId] = transfer;
+        }
+      });
+      
+      // Now create inmate records from the latest transfers
+      Object.values(latestTransferMap).forEach(transfer => {
+        const inmateId = transfer.inmateId;
+        
+        // Skip if we've already processed this inmate (shouldn't happen now with the map)
+        if (seenInmateIds.has(inmateId)) return;
+        
+        seenInmateIds.add(inmateId);
+        
+        // Create an inmate record from the transfer data
+        const inmateFromTransfer = {
+          _id: inmateId,
+          firstName: transfer.inmateData.firstName,
+          middleName: transfer.inmateData.middleName,
+          lastName: transfer.inmateData.lastName,
+          gender: transfer.inmateData.gender,
+          crime: transfer.inmateData.crime,
+          dateOfBirth: transfer.inmateData.dateOfBirth,
+          sentenceStart: transfer.inmateData.sentenceStart,
+          sentenceEnd: transfer.inmateData.sentenceEnd,
+          medicalConditions: transfer.inmateData.medicalConditions,
+          riskLevel: transfer.inmateData.riskLevel || 'Low',
+          intakeDate: transfer.inmateData.intakeDate,
+          transferStatus: {
+            status: transfer.displayStatus,
+            normalizedStatus: transfer.normalizedStatus,
+            toPrison: transfer.toPrison
+          },
+          transferDestination: transfer.toPrison,
+          isFromTransfer: true
+        };
+        
+        inmatesInTransfer.push(inmateFromTransfer);
+      });
+      
+      console.log(`Found ${inmatesInTransfer.length} unique inmates from transfers`);
+      
+      // Fetch regular inmates
+      const inmatesResponse = await axiosInstance.get("/woreda-inmate/getall-inmates");
+      const regularInmates = inmatesResponse.data?.inmates || [];
+      console.log(`Fetched ${regularInmates.length} regular inmates`);
+      
+      // Get IDs of regular inmates for deduplication
+      const regularInmateIds = new Set(regularInmates.map(inmate => inmate._id));
+      
+      // Filter out transfer inmates already in the regular list to avoid duplicates
+      const uniqueTransferInmates = inmatesInTransfer.filter(inmate => !regularInmateIds.has(inmate._id));
+      console.log(`Found ${uniqueTransferInmates.length} inmates that only exist in transfer records`);
+      
+      // Update regular inmates with their latest transfer status
+      const updatedRegularInmates = regularInmates.map(inmate => {
+        // Check if this inmate has any transfers
+        const latestTransfer = latestTransferMap[inmate._id];
+        
+        if (latestTransfer) {
           return {
-            _id: inmate._id,
-            sno: sno++,
-            inmate_name: fullName || "Not available",
-            age: inmate.age || "N/A",
-            gender: inmate.gender || "N/A",
-            case_type: inmate.caseType || "Not specified",
-            reason: inmate.sentenceReason || "",
-            sentence: sentenceInfo,
-            current_location: location || "Not specified",
-            photo: inmate.photo,
-            timeRemaining,
-            firstName: inmate.firstName,
-            middleName: inmate.middleName,
-            lastName: inmate.lastName,
-            crime: inmate.crime,
-            assignedPrison: inmate.assignedPrison,
-            intakeDate: inmate.intakeDate,
-            // Include any other fields needed from the original inmate data
-            ...inmate
+            ...inmate,
+            transferStatus: {
+              status: latestTransfer.displayStatus,
+              normalizedStatus: latestTransfer.normalizedStatus,
+              toPrison: latestTransfer.toPrison
+            }
           };
-        });
-
-        // Set inmates and pagination data
-        setInmates(formattedData);
-        setTotalItems(formattedData.length);
-        setFilteredInmates(formattedData);
-
-        // Log the data for debugging
-        console.log("All inmates:", formattedData);
-        console.log(
-          "Inmates with time details:",
-          formattedData.map((inmate) => ({
-            name: inmate.inmate_name,
-            timeRemaining: inmate.timeRemaining,
-            hoursRemaining: inmate.timeRemaining / (60 * 60 * 1000),
-          }))
-        );
-      }
+        }
+        
+        return inmate;
+      });
+      
+      // Combine both lists
+      const allInmates = [...updatedRegularInmates, ...uniqueTransferInmates];
+      console.log(`Combined total: ${allInmates.length} inmates`);
+      
+      // Process all inmates with their transfer status
+      let sno = 1;
+      const formattedData = allInmates.map(inmate => {
+        // Create full name
+        const fullName = [inmate.firstName, inmate.middleName, inmate.lastName]
+          .filter(Boolean)
+          .join(" ");
+          
+        // Format sentence info
+        const sentenceInfo = inmate.sentenceYear ? 
+          `${inmate.sentenceYear} ${inmate.sentenceYear === 1 ? 'year' : 'years'}` : 
+          "Not specified";
+          
+        // Format location data
+        const location = [inmate.currentWereda, inmate.currentZone]
+          .filter(Boolean)
+          .join(", ");
+          
+        // Calculate time remaining
+        const timeRemaining = calculateTimeRemaining(inmate.intakeDate);
+        
+        return {
+          _id: inmate._id,
+          firstName: inmate.firstName,
+          middleName: inmate.middleName,
+          lastName: inmate.lastName,
+          inmate_name: fullName,
+          case_type: inmate.crime || "Not specified",
+          crime: inmate.crime || "Not specified",
+          sentenceInfo: sentenceInfo,
+          location: location,
+          reason: inmate.specialRequirements,
+          intakeDate: inmate.intakeDate,
+          remainingTime: formatTimeRemaining(timeRemaining),
+          rawRemainingTime: timeRemaining,
+          timeStatus: getTimeStatus(timeRemaining),
+          transferStatus: inmate.transferStatus || null,
+          isFromTransfer: inmate.isFromTransfer || false,
+          gender: inmate.gender || "Not specified",
+          dateOfBirth: inmate.dateOfBirth,
+          paroleEligibility: inmate.paroleEligibility,
+          medicalConditions: inmate.medicalConditions || "None",
+          riskLevel: inmate.riskLevel || "Low",
+          specialRequirements: inmate.specialRequirements || "None",
+          arrestingOfficer: inmate.arrestingOfficer,
+          holdingCell: inmate.holdingCell,
+          assignedPrison: inmate.assignedPrison,
+          documents: inmate.documents || [],
+          sentenceStart: inmate.sentenceStart,
+          sentenceEnd: inmate.sentenceEnd,
+          status: inmate.status || "Active",
+          releaseDate: inmate.releaseDate,
+          releaseReason: inmate.releaseReason
+        };
+      });
+      
+      // Set the data
+      setInmates(formattedData);
+      setTotalItems(formattedData.length);
+      setFilteredInmates(formattedData);
+      
+      // Log status counts for verification
+      const statusCounts = {};
+      formattedData.forEach(inmate => {
+        if (inmate.transferStatus) {
+          const status = inmate.transferStatus.status;
+          statusCounts[status] = (statusCounts[status] || 0) + 1;
+        } else {
+          statusCounts['No Transfer'] = (statusCounts['No Transfer'] || 0) + 1;
+        }
+      });
+      
+      console.log('Inmate status counts:', statusCounts);
+      
     } catch (error) {
       console.error("Error fetching inmates:", error);
       toast.error("Failed to fetch inmate data");
@@ -204,6 +382,14 @@ export default function AddWoredaInmate() {
       ...prev,
       [name]: name === "paroleEligibility" ? value === "true" : value,
     }));
+    
+    // Clear error for this field when user makes changes
+    if (formErrors[name]) {
+      setFormErrors(prev => ({
+        ...prev,
+        [name]: ""
+      }));
+    }
   };
 
   const handleFileUpload = (e) => {
@@ -214,8 +400,72 @@ export default function AddWoredaInmate() {
     }));
   };
 
+  // Validate form fields
+  const validateForm = () => {
+    const errors = {};
+    const today = new Date();
+    const minAge = 12; // Minimum age for an inmate
+    
+    // Required fields
+    if (!prisonerData.firstName.trim()) errors.firstName = "First name is required";
+    if (!prisonerData.middleName.trim()) errors.middleName = "Middle name is required";
+    if (!prisonerData.lastName.trim()) errors.lastName = "Last name is required";
+    if (!prisonerData.crime.trim()) errors.crime = "Crime is required";
+    if (!prisonerData.arrestingOfficer.trim()) errors.arrestingOfficer = "Arresting officer is required";
+    if (!prisonerData.holdingCell.trim()) errors.holdingCell = "Holding cell is required";
+    
+    // Date of birth validation
+    if (!prisonerData.dateOfBirth) {
+      errors.dateOfBirth = "Date of birth is required";
+    } else {
+      const birthDate = new Date(prisonerData.dateOfBirth);
+      const ageDate = new Date(today - birthDate);
+      const age = Math.abs(ageDate.getUTCFullYear() - 1970);
+      
+      if (isNaN(birthDate.getTime())) {
+        errors.dateOfBirth = "Invalid date format";
+      } else if (birthDate > today) {
+        errors.dateOfBirth = "Date of birth cannot be in the future";
+      } else if (age < minAge) {
+        errors.dateOfBirth = `Inmate must be at least ${minAge} years old`;
+      }
+    }
+    
+    // Sentence dates validation
+    if (!prisonerData.sentenceStart) {
+      errors.sentenceStart = "Sentence start date is required";
+    } else {
+      const startDate = new Date(prisonerData.sentenceStart);
+      if (isNaN(startDate.getTime())) {
+        errors.sentenceStart = "Invalid date format";
+      }
+    }
+    
+    if (!prisonerData.sentenceEnd) {
+      errors.sentenceEnd = "Sentence end date is required";
+    } else {
+      const endDate = new Date(prisonerData.sentenceEnd);
+      const startDate = new Date(prisonerData.sentenceStart);
+      
+      if (isNaN(endDate.getTime())) {
+        errors.sentenceEnd = "Invalid date format";
+      } else if (prisonerData.sentenceStart && startDate > endDate) {
+        errors.sentenceEnd = "End date must be after start date";
+      }
+    }
+    
+    return errors;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      toast.error("Please fix the form errors");
+      return;
+    }
+    
+    setIsSubmitting(true);
 
     try {
       const formData = new FormData();
@@ -242,6 +492,28 @@ export default function AddWoredaInmate() {
       );
 
       if (response.data?.success) {
+        // If inmate was assigned to a prison, update that prison's population
+        if (prisonerData.assignedPrison) {
+          try {
+            // Increment the prison population by 1
+            const populationResponse = await axiosInstance.post("/prison/increment-population", {
+              prisonId: prisonerData.assignedPrison,
+              increment: 1
+            });
+            
+            if (populationResponse.data?.success) {
+              // Notify components that prison population has changed
+              window.dispatchEvent(new Event('prisonPopulationChanged'));
+            } else {
+              console.error("Failed to update prison population:", populationResponse.data?.error);
+              // Still proceed with the inmate creation
+            }
+          } catch (populationError) {
+            console.error("Error updating prison population:", populationError);
+            // Still proceed with the inmate creation
+          }
+        }
+
         toast.success("Inmate registered successfully!");
         setShowForm(false);
         fetchInmates();
@@ -264,10 +536,12 @@ export default function AddWoredaInmate() {
           assignedPrison: "",
           documents: [],
         });
+        setFormErrors({});
       }
     } catch (error) {
-      console.error("Error registering inmate:", error);
       toast.error(error.response?.data?.error || "Failed to register inmate");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -309,7 +583,7 @@ export default function AddWoredaInmate() {
       };
 
       const response = await axiosInstance.post(
-        "/api/transfer/create-transfer",
+        "/transfer/create-transfer",
         transferData
       );
 
@@ -322,7 +596,6 @@ export default function AddWoredaInmate() {
         fetchInmates();
       }
     } catch (error) {
-      console.error("Error creating transfer:", error);
       toast.error(
         error.response?.data?.error || "Failed to submit transfer request"
       );
@@ -550,29 +823,187 @@ export default function AddWoredaInmate() {
 
   // Handle delete button click
   const handleDeleteClick = (inmate) => {
+    // Check if inmate can be deleted
+    if (!canDeleteInmate(inmate)) {
+      toast.error("Cannot delete inmates with approved transfers. Please contact the administrator.");
+      return;
+    }
+    
     setInmateToDelete(inmate);
     setDeleteConfirmOpen(true);
   };
   
-  // Handle delete inmate confirmation
+  // Utility function to ensure proper ID format - sometimes MongoDB IDs can have unexpected formats
+  const ensureProperIdFormat = (id) => {
+    if (!id) return '';
+    
+    // Remove any unwanted characters that might be in the ID
+    return id.toString().replace(/[^a-zA-Z0-9]/g, '');
+  };
+
+  // Handle delete inmate confirmation with special handling for transferred inmates
   const handleDeleteConfirm = async () => {
     if (!inmateToDelete) return;
     
     try {
       setLoading(true);
-      const response = await axiosInstance.delete(`/woreda-inmate/delete-inmate/${inmateToDelete._id}`);
+      setDeleteLoading(true);
       
+      // Check if inmate has a transfer status of "Approved"
+      if (inmateToDelete.transferStatus && 
+          getNormalizedStatus(inmateToDelete.transferStatus).includes("approve")) {
+        toast.error("Cannot delete inmates with approved transfers. Please contact the administrator.");
+        setDeleteConfirmOpen(false);
+        setInmateToDelete(null);
+        setLoading(false);
+        setDeleteLoading(false);
+        return;
+      }
+      
+      // Make sure we have a valid ID
+      const inmateId = inmateToDelete._id;
+      if (!inmateId) {
+        toast.error("Invalid inmate ID. Cannot process delete request.");
+        setDeleteConfirmOpen(false);
+        setInmateToDelete(null);
+        setLoading(false);
+        setDeleteLoading(false);
+        return;
+      }
+      
+      console.log(`Attempting to delete inmate with ID: ${inmateId}`);
+      console.log("Inmate details:", inmateToDelete);
+      console.log("Transfer status:", inmateToDelete.transferStatus);
+      console.log("Is from transfer:", inmateToDelete.isFromTransfer);
+      
+      // Check if this inmate only exists in the transfer collection
+      if (inmateToDelete.isFromTransfer) {
+        console.log("This inmate exists only in the transfer collection");
+        
+        // NEW CODE: Check if the transfer is rejected, cancelled, or pending
+        const status = getNormalizedStatus(inmateToDelete.transferStatus);
+        if (status.includes('reject') || status.includes('cancel') || status.includes('pending')) {
+          // For rejected, cancelled, or pending transfers, we can delete from the transfer collection
+          try {
+            // First, find the transfer record by inmate ID
+            const transfersResponse = await axiosInstance.get('/transfer/getall-transfers');
+            const transfers = transfersResponse.data?.data || [];
+            
+            console.log(`Found ${transfers.length} total transfers in the system`);
+            console.log(`Looking for transfer with inmate ID: ${inmateId}`);
+            console.log(`Inmate details for matching: `, {
+              firstName: inmateToDelete.firstName,
+              lastName: inmateToDelete.lastName
+            });
+            
+            // Find the transfer with the matching inmate ID
+            const transfer = transfers.find(t => {
+              // Check if this inmate is the matching one by comparing various ID fields
+              // The inmateId in the transfer could be either a string or an object reference
+              const transferInmateId = typeof t.inmateId === 'string' 
+                ? t.inmateId 
+                : (t.inmateId?._id || '');
+                
+              // For transfer records created with actual inmate data, we might need to look at other identifiers
+              const inmateDataMatches = t.inmateData && 
+                t.inmateData.firstName === inmateToDelete.firstName && 
+                t.inmateData.lastName === inmateToDelete.lastName;
+                
+              return transferInmateId === inmateId || inmateDataMatches;
+            });
+            
+            if (!transfer) {
+              console.log("Could not find matching transfer in the system");
+              toast.error("Could not find the transfer record for this inmate");
+              fetchInmates();
+              return;
+            }
+            
+            console.log("Found matching transfer:", transfer);
+            console.log("Deleting transfer with ID:", transfer._id);
+            
+            // Call the transfer deletion endpoint with the transfer ID
+            const response = await axiosInstance.delete(`/transfer/delete-transfer/${transfer._id}`);
+            
+            if (response.data?.success) {
+              toast.success("Transfer record deleted successfully");
+              
+              // Remove the inmate from the UI
+              const filteredInmates = inmates.filter(inmate => inmate._id !== inmateToDelete._id);
+              setInmates(filteredInmates);
+              setFilteredInmates(filteredInmates);
+              setTotalItems(filteredInmates.length);
+            } else {
+              toast.info(response.data?.message || "Delete request was processed but returned an unexpected response");
+              fetchInmates(); // Refresh the list
+            }
+          } catch (error) {
+            console.error("Transfer delete API error:", error.message);
+            toast.error(`Failed to delete transfer record: ${error.message || "Unknown error"}`);
+            fetchInmates(); // Refresh the list
+          }
+        } else {
+          // For active transfers, show the original message
+          toast.info("This inmate exists in the transfer system and cannot be deleted directly. The transfer must be cancelled first.");
+        }
+        
+        setDeleteConfirmOpen(false);
+        setInmateToDelete(null);
+        setLoading(false);
+        setDeleteLoading(false);
+        return;
+      }
+      
+      // Use the exact endpoint path from the backend routes
+      try {
+        const response = await axiosInstance.delete(`/woreda-inmate/delete-inmate/${inmateId}`);
+        
       if (response.data?.success) {
         toast.success("Inmate deleted successfully");
         fetchInmates(); // Refresh the inmate list
+      } else if (response.data?.error === "Inmate not found") {
+          toast.info("Inmate was already removed from the system");
+          fetchInmates(); // Refresh the list
       } else {
-        toast.error(response.data?.error || "Failed to delete inmate");
+          toast.info(response.data?.message || "Delete request was processed but returned an unexpected response");
+          fetchInmates(); // Refresh the list
       }
     } catch (error) {
-      console.error("Error deleting inmate:", error);
-      toast.error(error.response?.data?.error || "Failed to delete inmate");
+        console.error("Delete API error:", error.message);
+        
+        // Check if this is a "not found" error - which seems to be happening for inmates with transfers
+      if (error.response?.status === 404) {
+          if (error.response?.data?.error === "Inmate not found" && inmateToDelete.transferStatus) {
+            console.log("Inmate not found in woreda-inmate collection but has transfer status. Handling as special case.");
+            
+            // Just hide the inmate from UI for now
+            const filteredInmates = inmates.filter(inmate => inmate._id !== inmateToDelete._id);
+            setInmates(filteredInmates);
+            setFilteredInmates(filteredInmates);
+            setTotalItems(filteredInmates.length);
+            
+            toast.warning(
+              "This inmate has a transfer record but cannot be found in the main inmates database. " +
+              "It has been hidden from your view. Please contact the administrator to fix this data inconsistency.",
+              { autoClose: 5000 }
+            );
+        } else {
+            toast.error("Unable to delete this inmate. The record may no longer exist.");
+        }
+      } else {
+          toast.error(`Failed to delete inmate: ${error.message || "Unknown error"}`);
+        }
+        
+        fetchInmates(); // Refresh the list anyway
+      }
+      
+    } catch (error) {
+      console.error("Overall delete operation failed:", error.message);
+      toast.error(`Failed to delete inmate: ${error.message || "Unknown error"}`);
+      fetchInmates(); // Refresh the list anyway
     } finally {
       setLoading(false);
+      setDeleteLoading(false);
       setDeleteConfirmOpen(false);
       setInmateToDelete(null);
     }
@@ -584,6 +1015,46 @@ export default function AddWoredaInmate() {
     setInmateToDelete(null);
   };
 
+  // Add a helper function to normalize transfer status consistently
+  const getNormalizedStatus = (transferStatus) => {
+    if (!transferStatus) return '';
+    
+    // If it's already an object with normalized status
+    if (transferStatus.normalizedStatus) {
+      return transferStatus.normalizedStatus;
+    }
+    
+    // If it's an object with status
+    if (transferStatus.status) {
+      const status = transferStatus.status.toLowerCase();
+      
+      // Handle standard status variations
+      if (status.includes('approve')) return 'approved';
+      if (status.includes('reject')) return 'rejected';
+      if (status.includes('cancel')) return 'cancelled';
+      if (status.includes('review') || status.includes('under')) return 'under-review';
+      if (status.includes('pending')) return 'pending';
+      
+      return status;
+    }
+    
+    // If it's a string
+    if (typeof transferStatus === 'string') {
+      const status = transferStatus.toLowerCase();
+      
+      // Handle standard status variations
+      if (status.includes('approve')) return 'approved';
+      if (status.includes('reject')) return 'rejected';
+      if (status.includes('cancel')) return 'cancelled';
+      if (status.includes('review') || status.includes('under')) return 'under-review';
+      if (status.includes('pending')) return 'pending';
+      
+      return status;
+    }
+    
+    return '';
+  };
+  
   // Apply filters and search with pagination
   const applyFilters = () => {
     let filtered = inmates;
@@ -599,14 +1070,242 @@ export default function AddWoredaInmate() {
       );
     }
     
+    // Apply transfer status filter
+    if (transferFilter !== "all") {
+      filtered = filtered.filter(inmate => {
+        // For "no-transfer" filter, we want inmates without transfer status
+        if (transferFilter === "no-transfer") {
+          return !inmate.transferStatus;
+        }
+        
+        // For all other filters, we need a transfer status
+        if (!inmate.transferStatus) {
+          return false;
+        }
+        
+        // Get normalized status for consistent comparison
+        const normalizedStatus = getNormalizedStatus(inmate.transferStatus);
+        
+        // Match based on filter type
+        switch(transferFilter) {
+          case "approved":
+            return normalizedStatus.includes('approve');
+          case "rejected":
+            return normalizedStatus.includes('reject');
+          case "cancelled":
+            // Check for all variations: cancel, cancelled, canceled
+            return normalizedStatus.includes('cancel');
+          case "pending":
+            return normalizedStatus.includes('pending');
+          case "under-review":
+            return normalizedStatus.includes('review') || normalizedStatus.includes('under');
+          default:
+            return true;
+        }
+      });
+    }
+    
     setTotalItems(filtered.length);
     setFilteredInmates(filtered);
   };
   
-  // Effect to apply filters when search term changes
+  // Effect to apply filters when search term or transfer filter changes
   useEffect(() => {
-    applyFilters();
-  }, [searchTerm, inmates]);
+    if (inmates.length > 0) {
+      applyFilters();
+    }
+  }, [searchTerm, transferFilter, inmates]);
+
+  // Handle transfer filter change
+  const handleTransferFilterChange = (value) => {
+    setTransferFilter(value);
+    setCurrentPage(1); // Reset to first page
+  };
+
+  // Add a helper function to calculate sentence duration
+  const calculateSentenceDuration = (startDate, endDate) => {
+    if (!startDate || !endDate) return "N/A";
+    
+    try {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        return "Invalid dates";
+      }
+      
+      // Calculate difference in milliseconds
+      const diffTime = Math.abs(end - start);
+      
+      // Calculate years
+      const years = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 365));
+      
+      // Calculate months
+      const months = Math.floor((diffTime % (1000 * 60 * 60 * 24 * 365)) / (1000 * 60 * 60 * 24 * 30));
+      
+      // Calculate days
+      const days = Math.floor((diffTime % (1000 * 60 * 60 * 24 * 30)) / (1000 * 60 * 60 * 24));
+      
+      // Build result string
+      let result = [];
+      if (years > 0) {
+        result.push(`${years} ${years === 1 ? 'year' : 'years'}`);
+      }
+      if (months > 0) {
+        result.push(`${months} ${months === 1 ? 'month' : 'months'}`);
+      }
+      if (days > 0 || (years === 0 && months === 0)) {
+        result.push(`${days} ${days === 1 ? 'day' : 'days'}`);
+      }
+      
+      return result.join(', ');
+    } catch (e) {
+      console.error("Error calculating sentence duration:", e);
+      return "Error";
+    }
+  };
+
+  // Helper function for getting status color classes
+  const getStatusColorClass = (transferStatus, isBadge = false) => {
+    if (!transferStatus) {
+      return isBadge ? 'bg-gray-100 text-gray-800' : 'bg-gray-500';
+    }
+    
+    // Get the normalized status
+    const normalizedStatus = getNormalizedStatus(transferStatus);
+    
+    if (normalizedStatus.includes('approve')) {
+      return isBadge ? 'bg-green-100 text-green-800' : 'bg-green-500';
+    } else if (normalizedStatus.includes('reject')) {
+      return isBadge ? 'bg-red-100 text-red-800' : 'bg-red-500';
+    } else if (normalizedStatus.includes('cancel')) {
+      return isBadge ? 'bg-gray-100 text-gray-800' : 'bg-gray-500';
+    } else if (normalizedStatus.includes('review')) {
+      return isBadge ? 'bg-blue-100 text-blue-800' : 'bg-blue-500';
+    } else if (normalizedStatus.includes('pending')) {
+      return isBadge ? 'bg-yellow-100 text-yellow-800' : 'bg-yellow-500';
+    }
+
+    return isBadge ? 'bg-blue-100 text-blue-800' : 'bg-blue-500';
+  };
+
+  // Helper function to check if inmate can be deleted
+  const canDeleteInmate = (inmate) => {
+    if (!inmate) return false;
+    
+    // Only prevent deletion if inmate has an approved or under-review transfer
+    if (inmate.transferStatus) {
+      const normalizedStatus = getNormalizedStatus(inmate.transferStatus);
+      // Block deletion for approved and under-review transfers
+      if (normalizedStatus.includes("approve") || normalizedStatus.includes("review")) {
+      return false;
+      }
+      // Allow deletion for rejected, cancelled, and pending transfers
+      return true;
+    }
+    
+    // Always allow deletion for inmates without transfer status
+    return true;
+  };
+
+  // Helper function to check if inmate can be released
+  const canReleaseInmate = (inmate) => {
+    if (!inmate) return false;
+    
+    // Don't allow release for already released inmates
+    if (inmate.status === "Released") return false;
+    
+    // Check if inmate is from the transfer list but not in the inmates database
+    if (inmate.isFromTransfer && !inmate._id.includes('woreda')) {
+      return false; // Cannot release inmates that only exist in transfer records
+    }
+    
+    // Don't allow release for inmates with approved or under-review transfers
+    if (inmate.transferStatus) {
+      const normalizedStatus = getNormalizedStatus(inmate.transferStatus);
+      // Block ONLY for approved and under-review transfers
+      if (normalizedStatus.includes("approve") || normalizedStatus.includes("review")) {
+        return false;
+      }
+      // Allow release for cancelled, rejected, and pending transfers
+    }
+    
+    // Default: allow release
+    return true;
+  };
+
+  // Handle release button click
+  const handleReleaseClick = (inmate) => {
+    // Check if inmate can be released
+    if (!canReleaseInmate(inmate)) {
+      if (inmate.status === "Released") {
+        toast.info("This inmate has already been released.");
+      } else {
+        toast.error("Cannot release inmates with approved or under review transfers.");
+      }
+      return;
+    }
+    
+    setInmateToRelease(inmate);
+    setReleaseReason("");
+    setReleaseModalOpen(true);
+  };
+  
+  // Handle release inmate confirmation
+  const handleReleaseConfirm = async () => {
+    if (!inmateToRelease) return;
+    
+    try {
+      setReleaseLoading(true);
+      
+      const inmateId = inmateToRelease._id;
+      // Use either the selected reason or custom reason
+      const finalReleaseReason = releaseReason === "Other" ? customReleaseReason : releaseReason;
+      console.log(`Attempting to release inmate with ID: ${inmateId}, reason: ${finalReleaseReason}`);
+      
+      // If the inmate only exists in transfer records, not in the database
+      if (inmateToRelease.isFromTransfer && !inmateId.includes('woreda')) {
+        toast.error("Cannot release this inmate as they only exist in transfer records");
+        return;
+      }
+      
+      const response = await axiosInstance.put(
+        `/woreda-inmate/release-inmate/${inmateId}`,
+        { releaseReason: finalReleaseReason }
+      );
+      
+      if (response.data?.success) {
+        toast.success("Inmate released successfully");
+        fetchInmates(); // Refresh the inmate list
+      } else {
+        toast.error(response.data?.error || "Failed to release inmate");
+      }
+    } catch (error) {
+      console.error("Release API error:", error);
+      
+      if (error.response?.status === 404) {
+        toast.error("This inmate could not be found in the database");
+      } else if (error.response?.status === 400) {
+        toast.error(error.response.data?.error || "Cannot release this inmate");
+      } else {
+        toast.error("An unexpected error occurred during release");
+      }
+    } finally {
+      setReleaseLoading(false);
+      setReleaseModalOpen(false);
+      setInmateToRelease(null);
+      setReleaseReason("");
+      setCustomReleaseReason("");
+    }
+  };
+  
+  // Cancel release
+  const handleReleaseCancel = () => {
+    setReleaseModalOpen(false);
+    setInmateToRelease(null);
+    setReleaseReason("");
+    setCustomReleaseReason("");
+  };
 
   return (
     <div className="flex mt-10">
@@ -638,6 +1337,42 @@ export default function AddWoredaInmate() {
                 className="pl-10 pr-4 py-2 border rounded-md w-full focus:outline-none focus:ring-2 focus:ring-teal-500"
               />
             </div>
+            
+            <div className="flex items-center gap-2">
+              <select
+                id="transfer-filter"
+                value={transferFilter}
+                onChange={(e) => handleTransferFilterChange(e.target.value)}
+                className="form-select border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
+              >
+                <option value="all">All Inmates</option>
+                <option value="approved">Approved Transfers</option>
+                <option value="rejected">Rejected Transfers</option>
+                <option value="pending">Pending Transfers</option>
+                <option value="under-review">Under Review</option>
+                <option value="cancelled">Cancelled Transfers</option>
+                <option value="no-transfer">No Transfer Record</option>
+              </select>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <label htmlFor="items-per-page" className="text-sm font-medium text-gray-600">
+                Show:
+              </label>
+              <select
+                id="items-per-page"
+                className="form-select border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-sm"
+                value={itemsPerPage}
+                onChange={handleItemsPerPageChange}
+              >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+                <option value={1000}>All</option>
+              </select>
+            </div>
           </div>
           <div className="flex items-center gap-6">
             <button
@@ -663,84 +1398,135 @@ export default function AddWoredaInmate() {
 
         {/* Push content down to prevent overlap */}
         <div className="mt-24">
-          {/* Inmates Table */}
-          <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          {/* Remove the summary bar with loading indicator since it's empty most of the time */}
+          
+          {/* Inmates Table - Improved for better responsiveness */}
+          <div className="bg-white rounded-lg shadow-md overflow-hidden w-full">
             {loading && (
               <div className="p-4 text-center">
                 <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 <p className="mt-2 text-gray-600">Loading inmates...</p>
-                  </div>
+              </div>
             )}
             
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+            <div className="w-full" style={{ maxHeight: 'calc(100vh - 240px)', overflowY: 'auto' }}>
+              <table className="w-full table-fixed divide-y divide-gray-200 shadow-sm border border-gray-200">
+                <thead className="bg-gradient-to-r from-blue-600 to-blue-800 text-white sticky top-0 z-10 shadow-md">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider w-[40px]">
+                      #
+                    </th>
+                    <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider w-[35%]">
                       Name
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider w-[22%] sm:w-[18%]">
                       Crime
                     </th>
-                    <th className="hidden md:table-cell px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Assigned Prison
+                    <th className="hidden md:table-cell px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider w-[25%]">
+                      Transfer Status
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Time Remaining
+                    <th className="hidden lg:table-cell px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider w-[13%]">
+                      Risk Level
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-2 sm:px-4 py-3 text-center text-xs font-medium uppercase tracking-wider w-[12%]">
                       Actions
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {currentItems.map((inmate) => (
-                    <tr key={inmate._id} className="hover:bg-gray-50">
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {inmate.inmate_name}
+                  {currentItems.map((inmate, index) => (
+                    <tr 
+                      key={inmate._id} 
+                      className="hover:bg-blue-50 transition-colors duration-150 group cursor-pointer"
+                      onClick={() => handleViewDetails(inmate._id)}
+                    >
+                      <td className="px-2 sm:px-4 py-3 sm:py-4 group-hover:bg-blue-100 transition-colors duration-150">
+                        <div className="text-sm font-medium text-gray-900 bg-gray-100 group-hover:bg-blue-200 transition-colors duration-150 h-7 w-7 sm:h-8 sm:w-8 rounded-full flex items-center justify-center">
+                          {indexOfFirstItem + index + 1}
                         </div>
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
+                      <td className="px-2 sm:px-4 py-3 sm:py-4 group-hover:bg-blue-100 transition-colors duration-150">
+                        <div className="flex items-center">
+                          <div className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0 mr-2 sm:mr-3 overflow-hidden rounded-full ring-2 ring-transparent group-hover:ring-blue-400 transition-all duration-150">
+                            <div className="h-full w-full rounded-full bg-blue-100 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform duration-200">
+                              <FaUser className={inmate.gender === 'female' ? "text-pink-500" : "text-blue-500"} />
+                            </div>
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-col gap-1">
+                              <div className="flex flex-wrap items-center">
+                                <div className="font-medium text-gray-900 group-hover:text-blue-700 transition-colors duration-150 text-sm sm:text-base truncate w-full">
+                                  {inmate.firstName} {inmate.lastName}
+                                  <div className="inline-flex items-center mt-1">
+                                    {inmate.status === "Released" && (
+                                      <span className="mr-1 px-1 sm:px-2 py-0.5 text-xs rounded-full bg-purple-100 text-purple-800">
+                                        Released
+                                      </span>
+                                    )}
+                                    {inmate.transferStatus && (
+                                      <span className={`ml-1 sm:ml-2 inline-flex h-2 w-2 rounded-full ${getStatusColorClass(inmate.transferStatus)}`} />
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="text-xs text-gray-500 truncate">
+                                {inmate.gender}, ID: {inmate._id.slice(-6).toUpperCase()}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-2 sm:px-4 py-3 sm:py-4 group-hover:bg-blue-100 transition-colors duration-150">
+                        <div className="text-sm text-gray-900 font-medium group-hover:text-blue-700 transition-colors duration-150 break-words line-clamp-2">
                           {inmate.crime}
                         </div>
                       </td>
-                      <td className="hidden md:table-cell px-4 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
-                          {prisons.find(p => p._id === inmate.assignedPrison)?.prison_name || "Not assigned"}
+                      <td className="hidden md:table-cell px-2 sm:px-4 py-3 sm:py-4 group-hover:bg-blue-100 transition-colors duration-150">
+                        <div className="text-sm">
+                          {inmate.transferStatus ? (
+                            <div className="flex flex-col">
+                              <span className={`px-1 sm:px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full shadow-sm ${getStatusColorClass(inmate.transferStatus, true)}`}>
+                                {inmate.transferStatus.status || "Unknown"}
+                              </span>
+                              {inmate.transferStatus.toPrison && (
+                                <span className="text-xs text-gray-500 mt-1 break-words line-clamp-1">
+                                  To: {typeof inmate.transferStatus.toPrison === 'string' ? 
+                                    prisonMap[inmate.transferStatus.toPrison] || inmate.transferStatus.toPrison : 
+                                    inmate.transferStatus.toPrison.name || 'Unknown Prison'}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="px-1 sm:px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800 shadow-sm">
+                              No Transfer
+                            </span>
+                          )}
                         </div>
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <span
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            inmate.timeRemaining <= 4 * 60 * 60 * 1000
-                              ? "bg-red-100 text-red-800"
-                              : inmate.timeRemaining <= 12 * 60 * 60 * 1000
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-green-100 text-green-800"
-                          }`}
-                        >
-                          {formatTimeRemaining(inmate.timeRemaining)}
+                      <td className="hidden lg:table-cell px-2 sm:px-4 py-3 sm:py-4 group-hover:bg-blue-100 transition-colors duration-150">
+                        <span className={`px-1 sm:px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full group-hover:opacity-90 shadow-sm transition-all duration-150 ${
+                          inmate.riskLevel === 'High' 
+                            ? 'bg-red-100 text-red-800 group-hover:bg-red-200' 
+                            : inmate.riskLevel === 'Medium'
+                            ? 'bg-yellow-100 text-yellow-800 group-hover:bg-yellow-200'
+                            : 'bg-green-100 text-green-800 group-hover:bg-green-200'
+                        }`}>
+                          {inmate.riskLevel || 'Low'}
                         </span>
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(getTimeStatus(inmate.timeRemaining).status)}`}>
-                          {getTimeStatus(inmate.timeRemaining).status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
-                        <div className="flex items-center gap-3">
+                      <td className="px-2 sm:px-4 py-3 sm:py-4 text-sm font-medium text-center group-hover:bg-blue-100 transition-colors duration-150" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex flex-wrap items-center justify-center gap-1">
                           <button
-                            onClick={() => handleViewDetails(inmate._id)}
-                            className="text-blue-600 hover:text-blue-900 flex items-center gap-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewDetails(inmate._id);
+                            }}
+                            className="text-blue-600 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 p-1 sm:p-1.5 rounded-full transition-all duration-150 hover:shadow-md transform hover:-translate-y-1"
+                            title="View Details"
                           >
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
-                              className="h-4 w-4"
+                              className="h-3 w-3 sm:h-3.5 sm:w-3.5"
                               viewBox="0 0 20 20"
                               fill="currentColor"
                             >
@@ -751,19 +1537,62 @@ export default function AddWoredaInmate() {
                                 clipRule="evenodd"
                               />
                             </svg>
-                            <span className="hidden md:inline">View</span>
                           </button>
-                          <TransferButton
-                            inmate={inmate}
-                            onTransferComplete={handleTransfer}
-                            currentPrison={inmate.assignedPrison}
-                          />
+                          <div onClick={(e) => e.stopPropagation()}>
+                            <TransferButton
+                              inmate={inmate}
+                              onTransferComplete={handleTransfer}
+                              currentPrison={inmate.assignedPrison}
+                              prisonMap={prisonMap}
+                            />
+                          </div>
                           <button
-                            onClick={() => handleDeleteClick(inmate)}
-                            className="text-red-600 hover:text-red-900 flex items-center gap-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleReleaseClick(inmate);
+                            }}
+                            className={`${canReleaseInmate(inmate) 
+                              ? "text-green-600 hover:text-green-900 bg-green-50 hover:bg-green-100" 
+                              : "text-gray-400 bg-gray-50 cursor-not-allowed"} 
+                              p-1 sm:p-1.5 rounded-full transition-all duration-150 hover:shadow-md transform hover:-translate-y-1 relative`}
+                            title={
+                              inmate.status === "Released" 
+                                ? "Inmate already released" 
+                                : inmate.isFromTransfer && !inmate._id.includes('woreda')
+                                ? "Cannot release inmates that only exist in transfer records"
+                                : inmate.transferStatus && (getNormalizedStatus(inmate.transferStatus).includes("approve") || getNormalizedStatus(inmate.transferStatus).includes("review"))
+                                ? "Cannot release inmate with approved or under review transfer"
+                                : "Release Inmate"
+                            }
+                            disabled={!canReleaseInmate(inmate) || releaseLoading}
                           >
-                            <FaTrash className="h-4 w-4" />
-                            <span className="hidden md:inline">Delete</span>
+                            {releaseLoading && inmateToRelease?._id === inmate._id ? (
+                              <div className="absolute inset-0 flex items-center justify-center bg-green-50 rounded-full">
+                                <div className="w-3 h-3 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                              </div>
+                            ) : (
+                              <FaSignOutAlt className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                            )}
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteClick(inmate);
+                            }}
+                            className={`${canDeleteInmate(inmate) 
+                              ? "text-red-600 hover:text-red-900 bg-red-50 hover:bg-red-100" 
+                              : "text-gray-400 bg-gray-50 cursor-not-allowed"} 
+                              p-1 sm:p-1.5 rounded-full transition-all duration-150 hover:shadow-md transform hover:-translate-y-1 relative`}
+                            title={canDeleteInmate(inmate) ? "Delete Inmate" : "Cannot delete approved transfers"}
+                            disabled={!canDeleteInmate(inmate) || deleteLoading}
+                          >
+                            {deleteLoading && inmateToDelete?._id === inmate._id ? (
+                              <div className="absolute inset-0 flex items-center justify-center bg-red-50 rounded-full">
+                                <div className="w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                              </div>
+                            ) : (
+                              <FaTrash className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                            )}
                           </button>
                         </div>
                       </td>
@@ -772,8 +1601,12 @@ export default function AddWoredaInmate() {
                   
                   {currentItems.length === 0 && !loading && (
                     <tr>
-                      <td colSpan="6" className="px-4 py-6 text-center text-gray-500">
-                        No inmates found. {searchTerm ? "Try a different search term." : ""}
+                      <td colSpan="6" className="px-4 py-10 text-center text-gray-500">
+                        <div className="flex flex-col items-center justify-center gap-3">
+                          <FaExclamationTriangle className="h-10 w-10 text-gray-300" />
+                          <p className="text-lg font-medium">No inmates found</p>
+                          <p className="text-sm">{searchTerm ? "Try a different search term." : "Add inmates using the button above."}</p>
+                        </div>
                       </td>
                     </tr>
                   )}
@@ -781,8 +1614,8 @@ export default function AddWoredaInmate() {
               </table>
             </div>
             
-            {/* Pagination Controls */}
-            <div className="px-4 py-3 bg-white border-t border-gray-200 sm:px-6">
+            {/* Pagination Controls - Updated with proper pagination */}
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-lg">
               <div className="flex flex-col sm:flex-row justify-between items-center">
                 <div className="mb-4 sm:mb-0 flex items-center">
                   <p className="text-sm text-gray-700">
@@ -798,106 +1631,94 @@ export default function AddWoredaInmate() {
                     <span className="font-medium mx-1">{totalItems}</span>
                     results
                   </p>
-                  
-                  <div className="ml-4">
-                    <select
-                      className="form-select border-gray-300 rounded-md shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                      value={itemsPerPage}
-                      onChange={handleItemsPerPageChange}
-                    >
-                      <option value={5}>5 per page</option>
-                      <option value={10}>10 per page</option>
-                      <option value={25}>25 per page</option>
-                      <option value={50}>50 per page</option>
-                    </select>
-                  </div>
                 </div>
                 
-                <div className="flex justify-center">
-                  <nav className="relative z-0 inline-flex rounded-md shadow-sm" aria-label="Pagination">
-                    <button
-                      onClick={() => handlePageChange(currentPage - 1)}
-                      disabled={currentPage === 1}
-                      className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
-                        currentPage === 1
-                          ? "text-gray-300 cursor-not-allowed"
-                          : "text-gray-500 hover:bg-gray-50"
-                      }`}
-                    >
-                      <span className="sr-only">Previous</span>
-                      <svg
-                        className="h-5 w-5"
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                        aria-hidden="true"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </button>
+                {/* Pagination buttons */}
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handlePageChange(1)}
+                    disabled={currentPage === 1}
+                    className={`px-3 py-1 rounded ${
+                      currentPage === 1
+                        ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                        : "bg-blue-600 text-white hover:bg-blue-700"
+                    }`}
+                  >
+                    &laquo;
+                  </button>
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className={`px-3 py-1 rounded ${
+                      currentPage === 1
+                        ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                        : "bg-blue-600 text-white hover:bg-blue-700"
+                    }`}
+                  >
+                    &lsaquo;
+                  </button>
+                  
+                  {/* Page numbers */}
+                  {[...Array(Math.min(5, Math.ceil(totalItems / itemsPerPage)))].map((_, idx) => {
+                    // Calculate page number based on current position
+                    let pageNum;
+                    const totalPages = Math.ceil(totalItems / itemsPerPage);
                     
-                    {/* Page Numbers */}
-                    {Array.from({ length: Math.ceil(totalItems / itemsPerPage) }, (_, i) => i + 1)
-                      .filter(
-                        (page) =>
-                          page === 1 ||
-                          page === Math.ceil(totalItems / itemsPerPage) ||
-                          (page >= currentPage - 1 && page <= currentPage + 1)
-                      )
-                      .map((page, index, array) => {
-                        const prevPage = array[index - 1];
-                        const needsEllipsis = prevPage && page - prevPage > 1;
-                        
-                        return (
-                          <div key={page}>
-                            {needsEllipsis && (
-                              <span className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700">
-                                ...
-                              </span>
-                            )}
-                            <button
-                              onClick={() => handlePageChange(page)}
-                              className={`relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium ${
-                                currentPage === page
-                                  ? "bg-blue-50 text-blue-600 border-blue-500 z-10"
-                                  : "text-gray-500 hover:bg-gray-50"
-                              }`}
-                            >
-                              {page}
-                            </button>
-                          </div>
-                        );
-                      })}
+                    if (totalPages <= 5) {
+                      // If 5 or fewer pages, show all page numbers
+                      pageNum = idx + 1;
+                    } else if (currentPage <= 3) {
+                      // Near the start
+                      pageNum = idx + 1;
+                    } else if (currentPage >= totalPages - 2) {
+                      // Near the end
+                      pageNum = totalPages - 4 + idx;
+                    } else {
+                      // In the middle
+                      pageNum = currentPage - 2 + idx;
+                    }
                     
-                    <button
-                      onClick={() => handlePageChange(currentPage + 1)}
-                      disabled={currentPage === Math.ceil(totalItems / itemsPerPage)}
-                      className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
-                        currentPage === Math.ceil(totalItems / itemsPerPage)
-                          ? "text-gray-300 cursor-not-allowed"
-                          : "text-gray-500 hover:bg-gray-50"
-                      }`}
-                    >
-                      <span className="sr-only">Next</span>
-                      <svg
-                        className="h-5 w-5"
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                        aria-hidden="true"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                          clipRule="evenodd"
-                        />
-                      </svg>
-                    </button>
-                  </nav>
+                    // Only render if pageNum is valid
+                    if (pageNum > 0 && pageNum <= totalPages) {
+                      return (
+                        <button
+                          key={pageNum}
+                          onClick={() => handlePageChange(pageNum)}
+                          className={`px-3 py-1 rounded ${
+                            currentPage === pageNum
+                              ? "bg-blue-800 text-white"
+                              : "bg-blue-100 text-blue-800 hover:bg-blue-200"
+                          }`}
+                        >
+                          {pageNum}
+                        </button>
+                      );
+                    }
+                    return null;
+                  })}
+                  
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === Math.ceil(totalItems / itemsPerPage)}
+                    className={`px-3 py-1 rounded ${
+                      currentPage === Math.ceil(totalItems / itemsPerPage)
+                        ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                        : "bg-blue-600 text-white hover:bg-blue-700"
+                    }`}
+                  >
+                    &rsaquo;
+                  </button>
+                  <button
+                    onClick={() => handlePageChange(Math.ceil(totalItems / itemsPerPage))}
+                    disabled={currentPage === Math.ceil(totalItems / itemsPerPage)}
+                    className={`px-3 py-1 rounded ${
+                      currentPage === Math.ceil(totalItems / itemsPerPage)
+                        ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                        : "bg-blue-600 text-white hover:bg-blue-700"
+                    }`}
+                  >
+                    &raquo;
+                  </button>
                 </div>
               </div>
             </div>
@@ -910,7 +1731,7 @@ export default function AddWoredaInmate() {
             <DialogHeader>
               <DialogTitle>Add New Inmate</DialogTitle>
               <DialogDescription>
-                Fill in the inmate's information below.
+                Fill in the inmate's information below. Fields marked with * are required.
               </DialogDescription>
             </DialogHeader>
 
@@ -928,9 +1749,13 @@ export default function AddWoredaInmate() {
                     name="firstName"
                     value={prisonerData.firstName}
                     onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    className={`mt-1 block w-full rounded-md ${formErrors.firstName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'}`}
+                    aria-invalid={formErrors.firstName ? "true" : "false"}
                     required
                   />
+                  {formErrors.firstName && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.firstName}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
@@ -941,9 +1766,13 @@ export default function AddWoredaInmate() {
                     name="middleName"
                     value={prisonerData.middleName}
                     onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    className={`mt-1 block w-full rounded-md ${formErrors.middleName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'}`}
+                    aria-invalid={formErrors.middleName ? "true" : "false"}
                     required
                   />
+                  {formErrors.middleName && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.middleName}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
@@ -954,9 +1783,13 @@ export default function AddWoredaInmate() {
                     name="lastName"
                     value={prisonerData.lastName}
                     onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    className={`mt-1 block w-full rounded-md ${formErrors.lastName ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'}`}
+                    aria-invalid={formErrors.lastName ? "true" : "false"}
                     required
                   />
+                  {formErrors.lastName && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.lastName}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
@@ -967,9 +1800,13 @@ export default function AddWoredaInmate() {
                     name="dateOfBirth"
                     value={prisonerData.dateOfBirth}
                     onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    className={`mt-1 block w-full rounded-md ${formErrors.dateOfBirth ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'}`}
+                    aria-invalid={formErrors.dateOfBirth ? "true" : "false"}
                     required
                   />
+                  {formErrors.dateOfBirth && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.dateOfBirth}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
@@ -995,9 +1832,13 @@ export default function AddWoredaInmate() {
                     name="crime"
                     value={prisonerData.crime}
                     onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    className={`mt-1 block w-full rounded-md ${formErrors.crime ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'}`}
+                    aria-invalid={formErrors.crime ? "true" : "false"}
                     required
                   />
+                  {formErrors.crime && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.crime}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
@@ -1008,9 +1849,13 @@ export default function AddWoredaInmate() {
                     name="sentenceStart"
                     value={prisonerData.sentenceStart}
                     onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    className={`mt-1 block w-full rounded-md ${formErrors.sentenceStart ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'}`}
+                    aria-invalid={formErrors.sentenceStart ? "true" : "false"}
                     required
                   />
+                  {formErrors.sentenceStart && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.sentenceStart}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
@@ -1021,9 +1866,13 @@ export default function AddWoredaInmate() {
                     name="sentenceEnd"
                     value={prisonerData.sentenceEnd}
                     onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    className={`mt-1 block w-full rounded-md ${formErrors.sentenceEnd ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'}`}
+                    aria-invalid={formErrors.sentenceEnd ? "true" : "false"}
                     required
                   />
+                  {formErrors.sentenceEnd && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.sentenceEnd}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
@@ -1088,9 +1937,13 @@ export default function AddWoredaInmate() {
                     name="arrestingOfficer"
                     value={prisonerData.arrestingOfficer}
                     onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    className={`mt-1 block w-full rounded-md ${formErrors.arrestingOfficer ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'}`}
+                    aria-invalid={formErrors.arrestingOfficer ? "true" : "false"}
                     required
                   />
+                  {formErrors.arrestingOfficer && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.arrestingOfficer}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
@@ -1101,9 +1954,13 @@ export default function AddWoredaInmate() {
                     name="holdingCell"
                     value={prisonerData.holdingCell}
                     onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                    className={`mt-1 block w-full rounded-md ${formErrors.holdingCell ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'}`}
+                    aria-invalid={formErrors.holdingCell ? "true" : "false"}
                     required
                   />
+                  {formErrors.holdingCell && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.holdingCell}</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">
@@ -1145,16 +2002,27 @@ export default function AddWoredaInmate() {
               <DialogFooter>
                 <button
                   type="button"
-                  onClick={() => setShowForm(false)}
+                  onClick={() => {
+                    setShowForm(false);
+                    setFormErrors({});
+                  }}
                   className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isSubmitting}
                 >
-                  Add Inmate
+                  {isSubmitting ? (
+                    <span className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Registering...
+                    </span>
+                  ) : (
+                    "Add Inmate"
+                  )}
                 </button>
               </DialogFooter>
             </form>
@@ -1167,32 +2035,130 @@ export default function AddWoredaInmate() {
             <DialogHeader>
               <DialogTitle>Confirm Delete</DialogTitle>
               <DialogDescription>
-                Are you sure you want to delete inmate {inmateToDelete?.firstName} {inmateToDelete?.lastName}? This action cannot be undone.
+                Are you sure you want to delete this inmate record? This action cannot be undone.
               </DialogDescription>
             </DialogHeader>
-            <div className="flex items-center justify-end gap-4 mt-6">
+            <div className="space-y-4">
+              {inmateToDelete && (
+                <div className="bg-red-50 p-4 rounded-md">
+                  <p className="font-medium text-red-900">You are about to delete:</p>
+                  <p className="text-red-800">
+                    {inmateToDelete.firstName} {inmateToDelete.lastName}
+                  </p>
+                  <p className="text-sm text-red-700 mt-1">ID: {inmateToDelete._id}</p>
+                </div>
+              )}
+            </div>
+            <DialogFooter>
               <button
+                type="button"
                 onClick={handleDeleteCancel}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                disabled={loading}
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleDeleteConfirm}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                disabled={loading}
+                className="ml-3 px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={deleteLoading}
               >
-                {loading ? (
+                {deleteLoading ? (
                   <span className="flex items-center gap-2">
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                     Deleting...
                   </span>
                 ) : (
-                  "Delete Inmate"
+                  "Delete"
                 )}
               </button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Release Confirmation Dialog */}
+        <Dialog open={releaseModalOpen} onOpenChange={setReleaseModalOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Release Inmate</DialogTitle>
+              <DialogDescription>
+                You are about to release this inmate. Please provide a reason for the release.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              {inmateToRelease && (
+                <div className="bg-green-50 p-4 rounded-md">
+                  <p className="font-medium text-green-900">You are about to release:</p>
+                  <p className="text-green-800">
+                    {inmateToRelease.firstName} {inmateToRelease.lastName}
+                  </p>
+                  <p className="text-sm text-green-700 mt-1">ID: {inmateToRelease._id}</p>
+                </div>
+              )}
+              
+              <div>
+                <label htmlFor="releaseReason" className="block text-sm font-medium text-gray-700">
+                  Release Reason
+                </label>
+                <select
+                  id="releaseReason"
+                  name="releaseReason"
+                  value={releaseReason === "Other" ? "Other" : releaseReason}
+                  onChange={(e) => setReleaseReason(e.target.value)}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                  required
+                >
+                  <option value="">Select a reason</option>
+                  <option value="Sentence completed">Sentence completed</option>
+                  <option value="Parole granted">Parole granted</option>
+                  <option value="Case dismissed">Case dismissed</option>
+                  <option value="Court order">Court order</option>
+                  <option value="Bail granted">Bail granted</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              
+              {releaseReason === "Other" && (
+                <div>
+                  <label htmlFor="customReleaseReason" className="block text-sm font-medium text-gray-700">
+                    Specify Reason
+                  </label>
+                  <input
+                    type="text"
+                    id="customReleaseReason"
+                    name="customReleaseReason"
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    placeholder="Enter specific reason"
+                    value={customReleaseReason}
+                    onChange={(e) => setCustomReleaseReason(e.target.value)}
+                  />
+                </div>
+              )}
             </div>
+            <DialogFooter>
+              <button
+                type="button"
+                onClick={handleReleaseCancel}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleReleaseConfirm}
+                className="ml-3 px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={releaseLoading || !(releaseReason && (releaseReason !== "Other" || customReleaseReason))}
+              >
+                {releaseLoading ? (
+                  <span className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Releasing...
+                  </span>
+                ) : (
+                  "Release Inmate"
+                )}
+              </button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>

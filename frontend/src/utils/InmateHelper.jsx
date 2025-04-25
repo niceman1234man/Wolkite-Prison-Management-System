@@ -67,19 +67,17 @@ export const columns = [
     ),
   },
   {
-    name: "Sentence",
-    selector: (row) => row.sentence,
+    name: "Status",
+    selector: (row) => row.transfer_status,
     sortable: true,
-    width: "100px",
-  },
-  {
-    name: "Location",
-    selector: (row) => row.current_location,
-    sortable: true,
-    width: "150px",
+    width: "120px",
     cell: (row) => (
-      <div className="truncate max-w-[150px]" title={row.current_location}>
-        {row.current_location === ", " ? "Not specified" : row.current_location}
+      <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+        row.transfer_status === "transferred" ? "bg-purple-100 text-purple-800" : 
+        row.transfer_status === "local" ? "bg-green-100 text-green-800" : 
+        "bg-gray-100 text-gray-800"
+      }`}>
+        {row.transfer_status || "Local"}
       </div>
     ),
   },

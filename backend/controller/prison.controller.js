@@ -18,6 +18,140 @@ const createTestPrison = async () => {
   }
 };
 
+// Helper function to update prison population
+export const updatePrisonPopulation = async (prisonId, change) => {
+  try {
+    if (!prisonId) {
+      console.error("No prison ID provided for population update");
+      return { success: false, error: "No prison ID provided" };
+    }
+
+    console.log(`Attempting to update prison ${prisonId} population by ${change}`);
+
+    const prison = await Prison.findById(prisonId);
+    if (!prison) {
+      console.error(`Prison with ID ${prisonId} not found for population update`);
+      return { success: false, error: "Prison not found" };
+    }
+
+    // Get current population and ensure it's a number
+    let currentPopulation = prison.current_population || 0;
+    if (typeof currentPopulation !== 'number') {
+      console.log(`Converting current_population from ${typeof currentPopulation} to number`);
+      currentPopulation = Number(currentPopulation) || 0;
+    }
+
+    console.log(`Current population for prison ${prison.prison_name}: ${currentPopulation}`);
+    
+    // Calculate new population
+    const newPopulation = Math.max(0, currentPopulation + change);
+    console.log(`Calculated new population: ${newPopulation}`);
+    
+    // Ensure new population doesn't exceed capacity
+    if (newPopulation > prison.capacity) {
+      console.warn(`Prison ${prison.prison_name} population (${newPopulation}) would exceed capacity (${prison.capacity})`);
+      return { 
+        success: false, 
+        error: "Prison population would exceed capacity", 
+        currentPopulation, 
+        capacity: prison.capacity 
+      };
+    }
+
+    // Update prison population
+    prison.current_population = newPopulation;
+    console.log(`Saving updated population for prison ${prison.prison_name}`);
+    
+    try {
+      await prison.save();
+      console.log(`Successfully updated prison ${prison.prison_name} population: ${currentPopulation} → ${newPopulation}`);
+    } catch (saveError) {
+      console.error(`Error saving prison ${prison.prison_name} after population update:`, saveError);
+      return { success: false, error: `Error saving prison: ${saveError.message}` };
+    }
+    
+    return { 
+      success: true, 
+      prison, 
+      previousPopulation: currentPopulation, 
+      newPopulation 
+    };
+  } catch (error) {
+    console.error("Error updating prison population:", error);
+    return { success: false, error: error.message };
+  }
+};
+
+// Increment prison population by 1 or custom value
+export const incrementPrisonPopulation = async (req, res) => {
+  try {
+    const { prisonId, increment = 1 } = req.body;
+    
+    if (!prisonId) {
+      return res.status(400).json({
+        success: false,
+        error: "Prison ID is required"
+      });
+    }
+
+    const result = await updatePrisonPopulation(prisonId, increment);
+    
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        error: result.error
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Prison population updated successfully",
+      prison: result.prison
+    });
+  } catch (error) {
+    console.error("Error incrementing prison population:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to update prison population"
+    });
+  }
+};
+
+// Decrement prison population by 1 or custom value
+export const decrementPrisonPopulation = async (req, res) => {
+  try {
+    const { prisonId, decrement = 1 } = req.body;
+    
+    if (!prisonId) {
+      return res.status(400).json({
+        success: false,
+        error: "Prison ID is required"
+      });
+    }
+
+    const result = await updatePrisonPopulation(prisonId, -decrement);
+    
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        error: result.error
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Prison population updated successfully",
+      prison: result.prison
+    });
+  } catch (error) {
+    console.error("Error decrementing prison population:", error);
+    res.status(500).json({
+      success: false,
+      error: "Failed to update prison population"
+    });
+  }
+};
+
 // Create new prison
 export const createPrison = async (req, res) => {
   try {
@@ -195,14 +329,26 @@ export const deletePrison = async (req, res) => {
       });
     }
 
-    // Check if prison has inmates
-    if (prison.current_population > 0) {
+    // Check if prison has inmates - strict validation
+    let currentPopulation = prison.current_population;
+    
+    // Ensure it's a number for comparison
+    if (typeof currentPopulation !== 'number') {
+      currentPopulation = Number(currentPopulation || 0);
+    }
+    
+    console.log(`Attempting to delete prison ${prison.prison_name} with population: ${currentPopulation}`);
+    
+    if (currentPopulation > 0) {
+      console.error(`Cannot delete prison ${prison.prison_name} with existing inmates (${currentPopulation})`);
       return res.status(400).json({
         success: false,
-        error: "Cannot delete prison with existing inmates",
+        error: "Cannot delete prison with existing inmates. Transfer all inmates to another prison first.",
+        currentPopulation
       });
     }
 
+    console.log(`Deleting prison ${prison.prison_name}`);
     await prison.deleteOne();
 
     res.status(200).json({

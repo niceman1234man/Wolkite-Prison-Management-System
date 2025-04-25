@@ -2,17 +2,17 @@ import React, { useState } from "react";
 import { FaExchangeAlt } from "react-icons/fa";
 import TransferDialog from "./TransferDialog";
 
-const TransferButton = ({ inmate, onTransferComplete, currentPrison }) => {
+const TransferButton = ({ inmate, onTransferComplete, currentPrison, prisonMap }) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   return (
     <>
       <button
         onClick={() => setIsDialogOpen(true)}
-        className="flex items-center px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+        className="text-green-600 hover:text-green-900 bg-green-50 hover:bg-green-100 p-1 sm:p-1.5 rounded-full transition-all duration-150 hover:shadow-md transform hover:-translate-y-1"
+        title="Transfer Inmate"
       >
-        <FaExchangeAlt className="mr-2 text-sm" />
-        Transfer
+        <FaExchangeAlt className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
       </button>
 
       <TransferDialog
@@ -21,6 +21,7 @@ const TransferButton = ({ inmate, onTransferComplete, currentPrison }) => {
         inmate={inmate}
         onTransferComplete={onTransferComplete}
         currentPrison={currentPrison}
+        prisonMap={prisonMap}
       />
     </>
   );

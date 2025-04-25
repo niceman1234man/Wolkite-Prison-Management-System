@@ -5,7 +5,11 @@ const transferSchema = new mongoose.Schema({
     fromPrison: { type: String, required: true },
     toPrison: { type: String, required: true },
     reason: { type: String, required: true },
-    status: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' },
+    status: { 
+        type: String, 
+        enum: ['Pending', 'Under Review', 'Approved', 'Rejected', 'Cancelled'], 
+        default: 'Pending' 
+    },
     inmateData: {
         firstName: { type: String, required: true },
         lastName: { type: String, required: true },
@@ -31,14 +35,16 @@ const transferSchema = new mongoose.Schema({
             role: { type: String, required: true },
             prison: { type: String, required: true }
         },
-        status: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' },
+        status: { type: String, enum: ['Pending', 'Under Review', 'Approved', 'Rejected', 'Cancelled'], default: 'Pending' },
         securityReview: {
             status: { type: String, enum: ['Pending', 'Approved', 'Rejected'], default: 'Pending' },
             reviewDate: { type: Date },
             reviewedBy: { type: String },
             rejectionReason: { type: String }
         }
-    }
+    },
+    cancelledAt: { type: Date },
+    cancellationReason: { type: String }
 }, { timestamps: true });
 
 export const Transfer = mongoose.model('Transfer', transferSchema);

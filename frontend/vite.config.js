@@ -8,4 +8,7 @@ export default defineConfig({
       '@': '/src',
     },
   },
+  server: {
+    host: true, // This allows access from other devices on the same network
+  },
 });

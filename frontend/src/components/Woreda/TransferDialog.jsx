@@ -24,6 +24,7 @@ const TransferDialog = ({
   inmate,
   onTransferComplete,
   currentPrison,
+  prisonMap,
 }) => {
   const [prisons, setPrisons] = useState([]);
   const [selectedPrison, setSelectedPrison] = useState("");
@@ -36,13 +37,19 @@ const TransferDialog = ({
   const [hasApprovedTransfer, setHasApprovedTransfer] = useState(false);
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (inmate?.assignedPrison) {
-      fetchPrisons();
+      // If we already have a prison map, use it instead of fetching
+      if (prisonMap && Object.keys(prisonMap).length > 0 && inmate.assignedPrison in prisonMap) {
+        setCurrentPrisonName(prisonMap[inmate.assignedPrison]);
+      } else {
+        fetchPrisons();
+      }
       checkExistingTransfers();
     }
-  }, [inmate?.assignedPrison]);
+  }, [inmate?.assignedPrison, prisonMap]);
 
   const fetchPrisons = async () => {
     try {
@@ -157,61 +164,120 @@ const TransferDialog = ({
 
   const handleTransfer = async () => {
     if (!selectedPrison || !transferReason) {
-      toast.error("Please fill in all fields");
+      toast.error("Please fill in all required fields.");
       return;
     }
 
+    setIsSubmitting(true);
+    setMessage("");
+
     try {
-      // Find the selected prison data
+      // Create inmate data object from the selected inmate
+      const inmateData = {
+        firstName: inmate.firstName,
+        lastName: inmate.lastName,
+        middleName: inmate.middleName || "",
+        crime: inmate.crime,
+        gender: inmate.gender,
+        intakeDate: inmate.intakeDate,
+        dateOfBirth: inmate.dateOfBirth,
+        assignedPrison: inmate.assignedPrison,
+        timeRemaining: inmate.timeRemaining
+      };
+
+      // Find selected prison name for display
       const selectedPrisonData = prisons.find(p => p._id === selectedPrison);
-      if (!selectedPrisonData) {
-        toast.error("Invalid prison selection");
-        return;
-      }
+      const selectedPrisonName = selectedPrisonData ? selectedPrisonData.prison_name : "Selected Prison";
 
       const transferData = {
         inmateId: inmate._id,
-        fromPrison: currentPrisonName,
-        toPrison: selectedPrisonData.prison_name, // Use prison name instead of ID
+        fromPrison: inmate.assignedPrison,
+        toPrison: selectedPrison,
         reason: transferReason,
-        inmateData: {
-          firstName: inmate.firstName,
-          lastName: inmate.lastName,
-          crime: inmate.crime,
-          intakeDate: inmate.intakeDate,
-          timeRemaining: inmate.timeRemaining,
-          age: inmate.age,
-          gender: inmate.gender,
-          address: inmate.address,
-          phoneNumber: inmate.phoneNumber,
-          emergencyContact: inmate.emergencyContact,
-          medicalConditions: inmate.medicalConditions,
-        },
+        status: "Pending",
+        inmateData,
         requestDetails: {
           requestedBy: {
-            role: "Woreda",
-            prison: currentPrisonName
+            role: "Woreda", // Required role field
+            prison: inmate.assignedPrison // Required prison field
           },
-          requestDate: new Date().toISOString()
+          requestDate: new Date().toISOString(),
+          status: "Pending",
+          fromPrisonName: currentPrisonName,
+          toPrisonName: selectedPrisonName
         }
       };
 
       console.log("Submitting transfer request:", transferData);
-      const response = await axiosInstance.post(
-        "/transfer/new-transfer",
-        transferData
-      );
+      const response = await axiosInstance.post("/transfer/create-transfer", transferData);
+
+      console.log("Transfer response:", response.data);
 
       if (response.data?.success) {
-        toast.success("Transfer request submitted successfully. Waiting for security staff approval.");
+        // If the transfer is automatically approved (bypassing the typical approval process)
+        if (response.data?.data?.status === "Approved") {
+          try {
+            console.log("Transfer was approved automatically, updating prison populations");
+            // Decrement the original prison's population
+            if (inmate.assignedPrison) {
+              console.log(`Decrementing population for source prison: ${inmate.assignedPrison}`);
+              const decrementResponse = await axiosInstance.post("/prison/decrement-population", {
+                prisonId: inmate.assignedPrison,
+                decrement: 1
+              });
+              
+              if (!decrementResponse.data?.success) {
+                console.error("Failed to decrement source prison population:", decrementResponse.data?.error);
+              } else {
+                console.log("Successfully decremented source prison population");
+              }
+            }
+            
+            // Increment the destination prison's population
+            console.log(`Incrementing population for destination prison: ${selectedPrison}`);
+            const incrementResponse = await axiosInstance.post("/prison/increment-population", {
+              prisonId: selectedPrison,
+              increment: 1
+            });
+            
+            if (!incrementResponse.data?.success) {
+              console.error("Failed to increment destination prison population:", incrementResponse.data?.error);
+            } else {
+              console.log("Successfully incremented destination prison population");
+              // Notify that prison populations have changed
+              window.dispatchEvent(new Event('prisonPopulationChanged'));
+            }
+          } catch (populationError) {
+            console.error("Error updating prison populations during transfer:", populationError);
+          }
+        } else {
+          // If transfer is pending, log that population updates will happen upon approval
+          console.log("Transfer request submitted as pending. Prison populations will update upon approval.");
+        }
+        
+        toast.success(
+          response.data?.data?.status === "Approved" 
+            ? "Transfer completed successfully!" 
+            : "Transfer request submitted successfully. Awaiting approval."
+        );
+        setIsSubmitting(false);
         onClose();
-        onTransferComplete();
+        
+        if (onTransferComplete) {
+          onTransferComplete();
+        }
+      } else {
+        setMessage(response.data?.error || "Failed to create transfer request.");
+        setMessageType("error");
+        setIsSubmitting(false);
       }
     } catch (error) {
-      console.error("Error creating transfer:", error);
-      toast.error(
-        error.response?.data?.error || "Failed to submit transfer request"
-      );
+      console.error("Transfer request error:", error);
+      console.error("Error details:", error.response?.data);
+      
+      setMessage(error.response?.data?.error || "Failed to create transfer request. Please try again.");
+      setMessageType("error");
+      setIsSubmitting(false);
     }
   };
 
@@ -239,6 +305,16 @@ const TransferDialog = ({
     );
   };
 
+  // Add this function to handle Cloudinary URLs
+  const getSecureUrl = (url) => {
+    if (!url) return null;
+    // Convert http to https for Cloudinary URLs
+    if (url.startsWith('http://res.cloudinary.com')) {
+      return url.replace('http://', 'https://');
+    }
+    return url;
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -262,21 +338,37 @@ const TransferDialog = ({
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center space-x-4">
                   <div className="relative w-48 h-48">
-                    {inmate?.documents?.length > 0 ? (
-                      <img
-                        src={inmate.documents[0]}
-                        alt={`${inmate.firstName} ${inmate.lastName}`}
-                        className="w-full h-full rounded-lg object-cover border-4 border-green-600 shadow-lg"
-                        onError={(e) => {
-                          e.target.src =
-                            "https://via.placeholder.com/200?text=No+Photo";
-                        }}
-                      />
-                    ) : (
-                      <div className="w-full h-full rounded-lg bg-gray-200 border-4 border-green-600 shadow-lg flex items-center justify-center">
-                        <FaUser className="w-24 h-24 text-gray-400" />
-                      </div>
-                    )}
+                    <div className="h-full w-full rounded-full overflow-hidden">
+                      {inmate?.photo ? (
+                        <>
+                          <img
+                            src={getSecureUrl(inmate.photo)}
+                            alt={`${inmate.firstName} ${inmate.lastName}`}
+                            className="h-full w-full object-cover"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextElementSibling.style.display = 'flex';
+                            }}
+                          />
+                          <div 
+                            className="h-full w-full absolute top-0 left-0 bg-blue-100 items-center justify-center hidden"
+                            style={{ display: 'none' }}
+                          >
+                            <FaUser 
+                              className={inmate?.gender === 'female' ? "text-pink-500" : "text-blue-500"} 
+                              size={48} 
+                            />
+                          </div>
+                        </>
+                      ) : (
+                        <div className="h-full w-full bg-blue-100 flex items-center justify-center">
+                          <FaUser 
+                            className={inmate?.gender === 'female' ? "text-pink-500" : "text-blue-500"} 
+                            size={48} 
+                          />
+                        </div>
+                      )}
+                    </div>
                     <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-center py-2 text-sm">
                       {inmate.firstName} {inmate.lastName}
                     </div>
@@ -383,11 +475,11 @@ const TransferDialog = ({
               />
               <button
                 onClick={handleTransfer}
-                disabled={loading}
+                disabled={isSubmitting}
                 className="flex items-center px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors disabled:opacity-50"
               >
                 <FaExchangeAlt className="mr-2 text-sm" />
-                {loading ? "Submitting..." : "Submit Transfer"}
+                {isSubmitting ? "Submitting..." : "Submit Transfer"}
               </button>
             </>
           )}

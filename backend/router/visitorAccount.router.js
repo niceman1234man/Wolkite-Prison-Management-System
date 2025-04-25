@@ -3,14 +3,28 @@ import {
   registerVisitor,
   loginVisitor,
   getVisitorProfile,
+  updateVisitorProfile,
+  changePassword,
+  logoutVisitor,
+  forgotPassword,
+  resetPassword
 } from "../controller/visitorAccount.controller.js";
-// import { protect } from "../middleware/authMiddleware.js";
+import { authenticateToken } from "../middleware/auth.js";
 
 const visitorAccountrouter = express.Router();
 
+// Authentication routes
 visitorAccountrouter.post("/register", registerVisitor);
 visitorAccountrouter.post("/login", loginVisitor);
-// visitorAccountrouter.get("/profile", protect, getVisitorProfile);
+visitorAccountrouter.post("/logout", logoutVisitor);
+visitorAccountrouter.post("/forgot-password", forgotPassword);
+visitorAccountrouter.post("/reset-password/:token", resetPassword);
+
+// Profile routes - protected by auth middleware
+visitorAccountrouter.get("/profile", authenticateToken, getVisitorProfile);
+visitorAccountrouter.put("/profile", authenticateToken, updateVisitorProfile);
+visitorAccountrouter.put("/update-profile", authenticateToken, updateVisitorProfile); // Alias
+visitorAccountrouter.put("/change-password", authenticateToken, changePassword);
 
 // Debug route - REMOVE IN PRODUCTION
 visitorAccountrouter.get("/sample-users", async (req, res) => {

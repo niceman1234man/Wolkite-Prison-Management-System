@@ -22,8 +22,8 @@ app.use(express.json());
 // Routes
 app.use("/api/reports", reportsRouter);
 app.use("/api/transfer", transferRouter);
-app.use("/api/visitor", visitorRouter);
-app.use("/api", visitorAccountRouter);
+app.use("/api/prisoner", inmateRouter);
+app.use("/api/auth", visitorAccountRouter);
 app.use("/api/visitorSchedule", visitorScheduleRouter);
 app.use("/api/translate", translationRouter);
 
