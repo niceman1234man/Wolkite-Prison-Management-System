@@ -18,12 +18,15 @@ const UpdateIncident = ({setEdit, id}) => {
     incidentType: "",
     status: "",
     description: "",
-    attachment: ""
+    attachment: "",
+    severity: ""
   });
   const [inmates, setInmates] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [fetchingData, setFetchingData] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -48,26 +51,40 @@ const UpdateIncident = ({setEdit, id}) => {
     };
 
     const fetchIncident = async () => {
+      setFetchingData(true);
       try {
+        console.log("Fetching incident with ID:", id);
         const response = await axiosInstance.get(`/incidents/get-incident/${id}`);
-        const incident = Array.isArray(response.data.incidents)
-          ? response.data.incidents.find((item) => item._id === id) || {}
-          : response.data.incidents;
-
-        // Format date for the input field
-        if (incident.incidentDate) {
-          incident.incidentDate = new Date(incident.incidentDate).toISOString().split("T")[0];
+        console.log("Incident response:", response.data);
+        
+        if (response.data && response.data.incident) {
+          // Format date for the input field
+          const incident = response.data.incident;
+          if (incident.incidentDate) {
+            incident.incidentDate = new Date(incident.incidentDate).toISOString().split("T")[0];
+          }
+          console.log("Setting form data:", incident);
+          setFormData(incident);
+        } else {
+          setError("Incident not found");
+          toast.error("Incident data not found");
         }
-
-        setFormData(incident);
       } catch (error) {
         console.error("Error fetching incident details:", error);
+        setError("Failed to load incident details");
         toast.error("Failed to load incident details");
+      } finally {
+        setFetchingData(false);
       }
     };
     
     fetchInmates();
-    fetchIncident();
+    if (id) {
+      fetchIncident();
+    } else {
+      setError("No incident ID provided");
+      setFetchingData(false);
+    }
   }, [id]);
 
   const validateForm = () => {
@@ -132,15 +149,27 @@ const UpdateIncident = ({setEdit, id}) => {
     setSubmitting(true);
     
     try {
+      const updateData = { ...formData };
+      // Remove fields that shouldn't be sent in the update
+      delete updateData._id;
+      delete updateData.__v;
+      delete updateData.createdAt;
+      delete updateData.updatedAt;
+      
+      console.log("Sending update data:", updateData);
+      
       const response = await axiosInstance.put(
         `/incidents/update-incident/${id}`,
-        formData
+        updateData
       );
       
       if (response.data) {
         toast.success("Incident updated successfully!");
-        setEdit(false);
-        navigate("/policeOfficer-dashboard/incident");
+        if (setEdit) {
+          setEdit(false);
+        } else {
+          navigate("/policeOfficer-dashboard/incident");
+        }
       }
     } catch (error) {
       console.error("Error updating incident:", error);
@@ -162,6 +191,24 @@ const UpdateIncident = ({setEdit, id}) => {
         return 'text-gray-600 border-gray-600';
     }
   };
+
+  if (fetchingData) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-teal-600"></div>
+        <span className="ml-3 text-teal-600">Loading incident data...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col justify-center items-center h-64">
+        <FaExclamationCircle className="text-red-600 text-3xl mb-2" />
+        <p className="text-red-600 font-medium">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full mx-auto bg-white p-6 rounded-lg shadow-lg">
@@ -213,269 +260,230 @@ const UpdateIncident = ({setEdit, id}) => {
                 onChange={handleChange}
                 max={new Date().toISOString().split("T")[0]}
                 className={`p-2 block w-full border ${
-                  errors.incidentDate ? "border-red-500" : "border-gray-300"
-                } rounded-md focus:ring-teal-500 focus:border-teal-500`}
+                  errors.incidentDate 
+                    ? "border-red-500 focus:ring-red-500 focus:border-red-500" 
+                    : "border-gray-300 focus:ring-teal-500 focus:border-teal-500"
+                } rounded-md`}
                 required
               />
               {errors.incidentDate && (
-                <p className="mt-1 text-xs text-red-500 flex items-center">
-                  <FaExclamationCircle className="mr-1" />
-                  {errors.incidentDate}
+                <p className="mt-1 text-sm text-red-500">{errors.incidentDate}</p>
+              )}
+            </div>
+
+            {/* Incident Type */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                <FaTag className="inline-block mr-1 text-teal-600" />
+                Incident Type <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="incidentType"
+                value={formData.incidentType || ""}
+                onChange={handleChange}
+                className={`p-2 block w-full border ${
+                  errors.incidentType
+                    ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                    : "border-gray-300 focus:ring-teal-500 focus:border-teal-500"
+                } rounded-md`}
+                required
+              >
+                <option value="">Select incident type</option>
+                <option value="Contraband">Contraband</option>
+                <option value="Assault">Assault</option>
+                <option value="Escape Attempt">Escape Attempt</option>
+                <option value="Medical Emergency">Medical Emergency</option>
+                <option value="Property Damage">Property Damage</option>
+                <option value="Fire">Fire</option>
+                <option value="Self-Harm">Self-Harm</option>
+                <option value="Staff Assault">Staff Assault</option>
+                <option value="Inmate Conflict">Inmate Conflict</option>
+                <option value="Theft">Theft</option>
+                <option value="Vandalism">Vandalism</option>
+                <option value="Other">Other</option>
+              </select>
+              {errors.incidentType && (
+                <p className="mt-1 text-sm text-red-500">{errors.incidentType}</p>
+              )}
+            </div>
+
+            {/* Severity (Read-Only if repeated incident) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                <FaExclamationCircle className="inline-block mr-1 text-teal-600" />
+                Severity
+              </label>
+              <select
+                name="severity"
+                value={formData.severity || "Low"}
+                onChange={handleChange}
+                disabled={formData.isRepeat}
+                className={`p-2 block w-full border ${
+                  formData.isRepeat ? "bg-gray-100" : ""
+                } border-gray-300 focus:ring-teal-500 focus:border-teal-500 rounded-md`}
+              >
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+                <option value="Critical">Critical</option>
+              </select>
+              {formData.isRepeat && (
+                <p className="mt-1 text-xs text-amber-600">
+                  Severity is automatically set based on repeat count ({formData.repeatCount || 0})
                 </p>
               )}
-          </div>
+            </div>
 
-          {/* Reporter Name */}
-          <div>
+            {/* Reporter */}
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 <FaUserShield className="inline-block mr-1 text-teal-600" />
-                Reporter Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="reporter"
-              value={formData.reporter || ""}
-                placeholder="Enter full name of reporter"
-              onChange={handleChange}
+                Reporter <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="reporter"
+                value={formData.reporter || ""}
+                onChange={handleChange}
                 className={`p-2 block w-full border ${
-                  errors.reporter ? "border-red-500" : "border-gray-300"
-                } rounded-md focus:ring-teal-500 focus:border-teal-500`}
-              required
-            />
+                  errors.reporter
+                    ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                    : "border-gray-300 focus:ring-teal-500 focus:border-teal-500"
+                } rounded-md`}
+                required
+              />
               {errors.reporter && (
-                <p className="mt-1 text-xs text-red-500 flex items-center">
-                  <FaExclamationCircle className="mr-1" />
-                  {errors.reporter}
-                </p>
+                <p className="mt-1 text-sm text-red-500">{errors.reporter}</p>
               )}
-          </div>
+            </div>
 
-            {/* Inmate Selection */}
-          <div>
+            {/* Inmate */}
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 <FaUser className="inline-block mr-1 text-teal-600" />
-                Inmate Involved <span className="text-red-500">*</span>
-            </label>
-            <select
-              name="inmate"
-              value={formData.inmate || ""}
-              onChange={handleChange}
+                Inmate <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="inmate"
+                value={formData.inmate || ""}
+                onChange={handleChange}
                 className={`p-2 block w-full border ${
-                  errors.inmate ? "border-red-500" : "border-gray-300"
-                } rounded-md focus:ring-teal-500 focus:border-teal-500`}
-              required
-            >
-              <option value="">Select Inmate</option>
-              {loading ? (
-                <option disabled>Loading inmates...</option>
-              ) : (
-                inmates.map((inmate) => (
-                  <option key={inmate._id} value= {inmate.firstName+" "+inmate.middleName+" "+ inmate.lastName}>
-                    {inmate.firstName} {inmate.middleName} {inmate.lastName}
-                  </option>
-                ))
-              )}
-            </select>
+                  errors.inmate
+                    ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                    : "border-gray-300 focus:ring-teal-500 focus:border-teal-500"
+                } rounded-md`}
+                required
+              />
               {errors.inmate && (
-                <p className="mt-1 text-xs text-red-500 flex items-center">
-                  <FaExclamationCircle className="mr-1" />
-                  {errors.inmate}
-                </p>
+                <p className="mt-1 text-sm text-red-500">{errors.inmate}</p>
+              )}
+            </div>
+
+            {/* Status */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                <FaTag className="inline-block mr-1 text-teal-600" />
+                Status <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="status"
+                value={formData.status || ""}
+                onChange={handleChange}
+                className={`p-2 block w-full border ${
+                  errors.status
+                    ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                    : "border-gray-300 focus:ring-teal-500 focus:border-teal-500"
+                } rounded-md`}
+                required
+              >
+                <option value="">Select status</option>
+                <option value="Pending">Pending</option>
+                <option value="Under Investigation">Under Investigation</option>
+                <option value="Resolved">Resolved</option>
+                <option value="Escalated">Escalated</option>
+              </select>
+              {errors.status && (
+                <p className="mt-1 text-sm text-red-500">{errors.status}</p>
               )}
             </div>
           </div>
-          </div>
+        </div>
 
-        {/* Incident Details Card */}
+        {/* Description Card */}
         <div className="bg-gray-50 p-5 rounded-lg shadow-sm mb-6">
           <h3 className="text-lg font-medium text-gray-700 mb-4 flex items-center">
-            <FaTag className="mr-2 text-teal-600" />
-            Incident Details
+            <FaClipboardList className="mr-2 text-teal-600" />
+            Incident Description
           </h3>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-4">
-          {/* Incident Type */}
           <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Incident Type <span className="text-red-500">*</span>
-            </label>
-            <select
-              name="incidentType"
-              value={formData.incidentType || ""}
-              onChange={handleChange}
-                className={`p-2 block w-full border ${
-                  errors.incidentType ? "border-red-500" : "border-gray-300"
-                } rounded-md focus:ring-teal-500 focus:border-teal-500`}
-              required
-            >
-              <option value="">Select Incident Type</option>
-              <option value="Theft">Theft</option>
-                <option value="Assault">Assault</option>
-              <option value="Harassment">Harassment</option>
-                <option value="Substance Abuse">Substance Abuse</option>
-                <option value="Contraband">Contraband</option>
-              <option value="Accident">Accident</option>
-                <option value="Property Damage">Property Damage</option>
-                <option value="Medical Emergency">Medical Emergency</option>
-              <option value="Other">Other</option>
-            </select>
-              {errors.incidentType && (
-                <p className="mt-1 text-xs text-red-500 flex items-center">
-                  <FaExclamationCircle className="mr-1" />
-                  {errors.incidentType}
-                </p>
-              )}
-          </div>
-
-          {/* Status */}
-          <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Status <span className="text-red-500">*</span>
-            </label>
-            <select
-              name="status"
-              value={formData.status || ""}
-              onChange={handleChange}
-                className={`p-2 block w-full border ${
-                  errors.status ? "border-red-500" : "border-gray-300"
-                } rounded-md focus:ring-teal-500 focus:border-teal-500 ${getStatusClass(formData.status)}`}
-              required
-            >
-              <option value="">Select Status</option>
-              <option value="Pending">Pending</option>
-                <option value="Under Investigation">Under Investigation</option>
-              <option value="Resolved">Resolved</option>
-              <option value="Escalated">Escalated</option>
-            </select>
-              {errors.status && (
-                <p className="mt-1 text-xs text-red-500 flex items-center">
-                  <FaExclamationCircle className="mr-1" />
-                  {errors.status}
-                </p>
-              )}
-            </div>
-          </div>
-
-          {/* Description */}
-          <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Description <span className="text-red-500">*</span>
             </label>
             <textarea
               name="description"
               value={formData.description || ""}
-              placeholder="Provide a detailed description of what happened during the incident..."
               onChange={handleChange}
+              rows="6"
               className={`p-2 block w-full border ${
-                errors.description ? "border-red-500" : "border-gray-300"
-              } rounded-md focus:ring-teal-500 focus:border-teal-500`}
-              rows="4"
+                errors.description
+                  ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                  : "border-gray-300 focus:ring-teal-500 focus:border-teal-500"
+              } rounded-md`}
+              placeholder="Provide a detailed description of the incident..."
               required
-            />
+            ></textarea>
             {errors.description && (
-              <p className="mt-1 text-xs text-red-500 flex items-center">
-                <FaExclamationCircle className="mr-1" />
-                {errors.description}
-              </p>
+              <p className="mt-1 text-sm text-red-500">{errors.description}</p>
             )}
-            <p className="mt-1 text-xs text-gray-500">
-              Include who was involved, what happened, when and where the incident occurred, and any actions taken
-            </p>
-          </div>
-
-          {/* Attachment Reference */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              <FaUpload className="inline-block mr-1 text-teal-600" />
-              Attachment Reference <span className="text-xs text-gray-500">(Optional)</span>
-            </label>
-            <input
-              type="text"
-              name="attachment"
-              value={formData.attachment || ""}
-              onChange={handleChange}
-              className="p-2 block w-full border border-gray-300 rounded-md"
-              placeholder="Reference to existing attachment"
-            />
-            <p className="mt-1 text-xs text-gray-500">
-              Note: This field only updates the reference to an existing file
-            </p>
-          </div>
-          </div>
-
-        {/* Status Bar */}
-        <div className="mb-6 bg-gray-50 p-4 rounded-lg">
-          <h4 className="text-sm font-medium text-gray-700 mb-2">Form Completion</h4>
-          <div className="relative pt-1">
-            <div className="flex mb-2 items-center justify-between">
-              <div>
-                <span className="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-teal-600 bg-teal-200">
-                  {formData.reporter && formData.inmate && formData.incidentDate && 
-                   formData.incidentType && formData.status && formData.description 
-                   ? "Ready to Submit" : "In Progress"}
-                </span>
-              </div>
-              <div className="text-right">
-                <span className="text-xs font-semibold inline-block text-teal-600">
-                  {(formData.reporter ? 1 : 0) + 
-                   (formData.inmate ? 1 : 0) + 
-                   (formData.incidentDate ? 1 : 0) + 
-                   (formData.incidentType ? 1 : 0) + 
-                   (formData.status ? 1 : 0) + 
-                   (formData.description ? 1 : 0)}/6
-                </span>
-              </div>
-            </div>
-            <div className="overflow-hidden h-2 mb-4 text-xs flex rounded bg-teal-200">
-              <div style={{ width: `${((formData.reporter ? 1 : 0) + 
-                            (formData.inmate ? 1 : 0) + 
-                            (formData.incidentDate ? 1 : 0) + 
-                            (formData.incidentType ? 1 : 0) + 
-                            (formData.status ? 1 : 0) + 
-                            (formData.description ? 1 : 0)) * 16.7}%` }} 
-                   className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-teal-500 transition-all duration-300">
-              </div>
-            </div>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t">
+        {/* Repeat Incident Information */}
+        {formData.isRepeat && (
+          <div className="bg-amber-50 p-5 rounded-lg shadow-sm mb-6 border border-amber-200">
+            <h3 className="text-lg font-medium text-amber-800 mb-4 flex items-center">
+              <FaExclamationCircle className="mr-2 text-amber-600" />
+              Repeat Incident
+            </h3>
+            
+            <div className="flex items-center">
+              <p className="text-amber-800">This is a repeat incident. Inmate has been involved in <strong>{formData.repeatCount || 0}</strong> incidents.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Form Actions */}
+        <div className="flex justify-between mt-8">
           <button
             type="button"
-            onClick={() => setEdit(false)}
-            className="py-2 px-4 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition duration-200 flex items-center justify-center"
+            onClick={() => setEdit ? setEdit(false) : navigate('/policeOfficer-dashboard/incident')}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500"
           >
-            <FaTimes className="mr-1" />
+            <FaTimes className="mr-2 -ml-1" />
             Cancel
           </button>
           
-            <button
-              type="submit"
-            disabled={submitting || !formData.reporter || !formData.inmate || !formData.incidentDate || 
-                     !formData.incidentType || !formData.status || !formData.description}
-            className={`py-2 px-6 rounded-md text-white font-medium flex items-center justify-center transition duration-200 ${
-              submitting || !formData.reporter || !formData.inmate || !formData.incidentDate || 
-              !formData.incidentType || !formData.status || !formData.description
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-teal-600 hover:bg-teal-700"
+          <button
+            type="submit"
+            disabled={submitting}
+            className={`inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 ${
+              submitting ? "opacity-75 cursor-not-allowed" : ""
             }`}
           >
             {submitting ? (
               <>
-                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Processing...
+                <div className="animate-spin mr-2 h-4 w-4 border-t-2 border-b-2 border-white rounded-full"></div>
+                Updating...
               </>
             ) : (
               <>
-                <FaSave className="mr-1" />
-              Update Incident
+                <FaSave className="mr-2 -ml-1" />
+                Update Incident
               </>
             )}
-            </button>
+          </button>
         </div>
       </form>
     </div>

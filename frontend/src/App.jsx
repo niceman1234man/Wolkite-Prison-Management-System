@@ -113,6 +113,8 @@ import { SocketProvider } from './context/SocketContext';
 import AuthContext from './context/authContext';
 import PoliceVisitorManagementPage from "./components/policeofficerdashboard/PoliceVisitorManagementPage";
 import ActivityLog from "./components/Accounts/Log";
+import RepeatOffenders from "./components/Incident/RepeatOffenders.jsx";
+import InmateIncidentHistory from "./components/Incident/InmateIncidentHistory.jsx";
 
 function App() {
   return (
@@ -147,8 +149,10 @@ function App() {
                 <Route path="parole-request" element={<RequestParole />} />
                 <Route path="ParoleList/:inmateId" element={<ParoleList />} />
                 <Route path="incident" element={<Insident />} />
+                <Route path="repeat-offenders" element={<RepeatOffenders />} />
                 <Route path="reports" element={<PoliceOfficerReports />} />
                 <Route path="add-incident" element={<Add />} />
+                <Route path="incidents/inmate/:inmateId" element={<InmateIncidentHistory />} />
                 <Route path="incident-details/:id" element={<ViewIncident />} />
                 <Route path="edit-incident/:id" element={<UpdateIncident />} />
                 <Route path="status/:_id" element={<InmateBehaviorGraph />} />

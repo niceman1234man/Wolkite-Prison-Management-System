@@ -1,5 +1,5 @@
 import React, { useEffect, useContext, useState, useMemo, useCallback } from "react";
-import { FaBook, FaClipboardCheck, FaSave, FaEye, FaExclamationTriangle, FaFilter, FaSync, FaEdit, FaTimes, FaTable, FaThLarge, FaTrash } from "react-icons/fa";
+import { FaBook, FaClipboardCheck, FaSave, FaEye, FaExclamationTriangle, FaFilter, FaSync, FaEdit, FaTimes, FaTable, FaThLarge, FaTrash, FaCalendarPlus } from "react-icons/fa";
 import Loader from "../common/Loader";
 import { useSelector } from "react-redux";
 import { toast } from "react-hot-toast";
@@ -11,6 +11,9 @@ import { VisitorCapacityContext } from "../Visitor/VisitorList";
 import axiosInstance from "../../utils/axiosInstance";
 import '../../styles/table.css'; // Import the table styles
 import '../../styles/responsive.css'; // Import the responsive utility classes
+import LanguageSelector from "../common/LanguageSelector";
+import { T } from "../common/TranslatedText";
+import TranslatedText from "../common/TranslatedText";
 
 const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null, onRefreshCapacity = null }) => {
   // Get data from custom hook - include version for memoization
@@ -456,7 +459,7 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
   const renderLoading = () => (
     <div className="flex justify-center items-center py-12">
       <Loader size="lg" message="Loading schedules..." />
-          </div>
+    </div>
   );
 
   const renderEmptyState = () => (
@@ -472,14 +475,14 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
       </p>
       {!isCapacityReached && !hasPendingSchedule && (
         <div className="mt-6">
-            <button
+          <button
             onClick={openScheduleForm}
             className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             <FaBook className="-ml-1 mr-2 h-5 w-5" />
             Schedule New Visit
-            </button>
-          </div>
+          </button>
+        </div>
       )}
       {hasPendingSchedule && (
         <div className="mt-4 text-sm text-yellow-600 bg-yellow-50 p-3 rounded-md border border-yellow-200">
@@ -487,7 +490,7 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
           You already have a pending visit schedule. You cannot create a new schedule until your current one is approved, rejected, or canceled.
         </div>
       )}
-      </div>
+    </div>
   );
 
   const renderScheduleCard = (schedule) => {
@@ -497,16 +500,18 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
     const inmateName = inmate ? inmate.inmate_name : "Unknown Inmate";
     const canEdit = schedule.status?.toLowerCase() === 'pending';
 
-  return (
+    return (
       <div key={schedule._id} className="visitor-item-card">
         <div className="flex justify-between items-start mb-2">
-          <h3 className="font-medium text-sm">{visitorName}</h3>
+          <h3 className="font-medium text-sm">
+            <TranslatedText text={`Visit to ${visitorName}`} />
+          </h3>
           <span className={`visitor-badge ${schedule.status?.toLowerCase() === 'pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' : 
                                                schedule.status?.toLowerCase() === 'approved' ? 'bg-green-100 text-green-800 border-green-300' : 
                                                schedule.status?.toLowerCase() === 'cancelled' ? 'bg-gray-100 text-gray-700 border-gray-300' :
                                                schedule.status?.toLowerCase() === 'rejected' ? 'bg-red-100 text-red-800 border-red-300' :
                                                'bg-blue-100 text-blue-800 border-blue-300'}`}>
-            {schedule.status}
+            <T>{schedule.status}</T>
           </span>
         </div>
         
@@ -563,7 +568,9 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
               
               return (
                 <tr key={schedule._id}>
-                  <td className="font-medium">{visitorName}</td>
+                  <td className="font-medium">
+                    <TranslatedText text={`Visit to ${visitorName}`} />
+                  </td>
                   <td>{inmateName}</td>
                   <td className="hidden sm:table-cell">
                     {new Date(schedule.visitDate).toLocaleDateString()} <br />
@@ -577,7 +584,7 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
                                                     schedule.status?.toLowerCase() === 'cancelled' ? 'bg-gray-100 text-gray-700 border-gray-300' :
                                                     schedule.status?.toLowerCase() === 'rejected' ? 'bg-red-100 text-red-800 border-red-300' :
                                                     'bg-blue-100 text-blue-800 border-blue-300'}`}>
-                      {schedule.status}
+                      <T>{schedule.status}</T>
                     </span>
                   </td>
                   <td>
@@ -646,7 +653,9 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
         <div className="visitor-header">
           <div className="visitor-title">
             <FaClipboardCheck className="visitor-title-icon" />
-            <h2 className="visitor-title-text">Visit Schedules</h2>
+            <h2 className="visitor-title-text">
+              <T>Visit Schedules</T>
+            </h2>
           </div>
           
           <div className="visitor-actions flex justify-end">
@@ -661,7 +670,7 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
               disabled={loading || isCapacityReached || hasPendingSchedule}
               className={`visitor-button visitor-button-primary ${(loading || isCapacityReached || hasPendingSchedule) ? "opacity-50 cursor-not-allowed" : ""}`}
             >
-              <FaSave className="mr-1" /> Create Schedule
+              <FaSave className="mr-1" /> <T>Create Schedule</T>
             </button>
             
             <button
@@ -669,7 +678,7 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
               disabled={loading}
               className={`visitor-button visitor-button-secondary ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
             >
-              <FaSync className={loading ? "animate-spin" : ""} /> Refresh
+              <FaSync className={loading ? "animate-spin" : ""} /> <T>Refresh</T>
             </button>
             
             <div className="flex gap-1 ml-1">
@@ -701,7 +710,7 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
             </div>
             <div className="ml-3">
               <p className="text-sm text-yellow-700">
-                The prison has reached its visitor capacity for today. Please schedule a visit for another day.
+                <T>The prison has reached its visitor capacity for today. Please schedule a visit for another day.</T>
               </p>
             </div>
           </div>
@@ -711,7 +720,7 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
       {/* Filter and Search Controls */}
       <div className="visitor-controls">
         <div className="visitor-control-group">
-                    <div>
+          <div>
             <label htmlFor="statusFilter" className="sr-only">Filter by Status</label>
             <div className="flex">
               <div className="flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500">

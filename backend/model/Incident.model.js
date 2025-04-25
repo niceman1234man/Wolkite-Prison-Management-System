@@ -1,4 +1,3 @@
-
 import mongoose from "mongoose";
 const incidentSchema=new mongoose.Schema({
     incidentId:{
@@ -13,6 +12,10 @@ const incidentSchema=new mongoose.Schema({
         type:String ,
         required:true
     },
+    inmateId:{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Inmate'
+    },
     incidentDate:{
         type:Date ,
         required:true
@@ -25,6 +28,11 @@ const incidentSchema=new mongoose.Schema({
         type:String ,
         required:true
     },
+    severity:{
+        type:String,
+        enum: ['Low', 'Medium', 'High', 'Critical'],
+        default: 'Medium'
+    },
     attachment:{
         type:String ,
        
@@ -33,6 +41,14 @@ const incidentSchema=new mongoose.Schema({
         type:String ,
         required:true,
     },
+    isRepeat:{
+        type: Boolean,
+        default: false
+    },
+    repeatCount:{
+        type: Number,
+        default: 1
+    }
     
 },{timestamps:true});
 export const Incident=mongoose.model('Incident',incidentSchema);

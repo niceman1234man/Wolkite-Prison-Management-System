@@ -33,10 +33,35 @@ export const logActivity = async (
       ...additionalData
     };
     
-    console.log(`Logging activity: ${action} - ${description}`);
+    // Make sure user ID is set if available
+    if (!logData.user && userData && userData._id) {
+      logData.user = userData._id;
+      
+      // Also add other user details if not already provided
+      if (!logData.userEmail && userData.email) {
+        logData.userEmail = userData.email;
+      }
+      
+      if (!logData.userName && userData.name) {
+        logData.userName = userData.name;
+      } else if (!logData.userName && userData.firstName) {
+        logData.userName = `${userData.firstName} ${userData.lastName || ''}`.trim();
+      }
+      
+      if (!logData.userRole && userData.role) {
+        logData.userRole = userData.role;
+      }
+    }
+    
+    console.log(`Logging activity: ${action} - ${description}`, logData);
     
     // Send the log to the server
     const response = await axiosInstance.post('/activity/log', logData);
+    
+    if (!response.data.success) {
+      console.error('Activity logging server error:', response.data.message);
+    }
+    
     return response.data;
   } catch (error) {
     console.error('Failed to log activity:', error);
@@ -57,16 +82,11 @@ export const ACTIONS = {
   LOGOUT: 'logout',
   DOWNLOAD: 'download',
   UPLOAD: 'upload',
-  APPROVE: 'approve',
-  REJECT: 'reject',
-  TRANSFER: 'transfer',
-  SEARCH: 'search',
-  ASSIGN: 'assign',
-  SCHEDULE: 'schedule',
   BACKUP: 'backup',
   RESTORE: 'restore',
-  EXPORT: 'export',
-  IMPORT: 'import'
+  PASSWORD_CHANGE: 'password_change',
+  ACCOUNT_ACTIVATION: 'account_activation',
+  ACCOUNT_DEACTIVATION: 'account_deactivation'
 };
 
 /**
@@ -76,18 +96,15 @@ export const RESOURCES = {
   INMATE: 'inmate',
   VISITOR: 'visitor',
   USER: 'user',
-  SCHEDULE: 'schedule',
-  DOCUMENT: 'document',
-  INCIDENT: 'incident',
-  REPORT: 'report',
-  PAROLE: 'parole',
-  CASE: 'case',
-  SYSTEM: 'system',
   PRISON: 'prison',
+  INCIDENT: 'incident',
+  CLEARANCE: 'clearance',
+  NOTICE: 'notice',
   TRANSFER: 'transfer',
-  MESSAGE: 'message',
-  PROFILE: 'profile',
-  BACKUP: 'backup'
+  PAROLE: 'parole',
+  INSTRUCTION: 'instruction',
+  REPORT: 'report',
+  SYSTEM: 'system'
 };
 
 /**

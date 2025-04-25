@@ -16,12 +16,12 @@ const ViewIncident = ({setView, id}) => {
   const [incident, setIncident] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-   const [openDelete, setOpenDelete] = useState(false);
+  const [openDelete, setOpenDelete] = useState(false);
 
   const deleteIncident = async () => {
     try {
       console.log("Attempting to delete incident with ID:", id);
-      const response = await axiosInstance.delete(`/incidents/update-incident/${id}`);
+      const response = await axiosInstance.delete(`/incidents/delete-incident/${id}`);
       console.log("Delete response:", response.data);
       
       if (response.data && response.status === 200) {
@@ -50,8 +50,9 @@ const ViewIncident = ({setView, id}) => {
     const fetchIncident = async () => {
       try {
         const response = await axiosInstance.get(`/incidents/get-incident/${id}`);
-        if (response.data && Array.isArray(response.data.incidents) && response.data.incidents.length > 0) {
-          setIncident(response.data.incidents[0]);
+        if (response.data && response.data.incident) {
+          setIncident(response.data.incident);
+          console.log("Incident data:", response.data.incident);
         } else {
           setError("Incident details not found.");
         }
@@ -63,7 +64,12 @@ const ViewIncident = ({setView, id}) => {
       }
     };
 
-    fetchIncident();
+    if (id) {
+      fetchIncident();
+    } else {
+      setError("No incident ID provided");
+      setLoading(false);
+    }
   }, [id]);
 
   // Get formatted date
@@ -88,6 +94,22 @@ const ViewIncident = ({setView, id}) => {
     }
   };
 
+  // Get severity class
+  const getSeverityClass = (severity) => {
+    switch(severity?.toLowerCase()) {
+      case 'critical':
+        return 'bg-red-100 text-red-800';
+      case 'high':
+        return 'bg-orange-100 text-orange-800';
+      case 'medium':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'low':
+        return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-blue-100 text-blue-800';
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
@@ -103,6 +125,15 @@ const ViewIncident = ({setView, id}) => {
         <FaExclamationCircle className="text-red-600 text-5xl mb-4" />
         <div className="text-red-600 font-semibold text-lg mb-2">{error}</div>
         
+      </div>
+    );
+  }
+
+  if (!incident) {
+    return (
+      <div className="flex flex-col justify-center items-center h-screen">
+        <FaExclamationCircle className="text-amber-600 text-5xl mb-4" />
+        <div className="text-amber-600 font-semibold text-lg mb-2">Incident not found</div>
       </div>
     );
   }
@@ -190,116 +221,146 @@ const ViewIncident = ({setView, id}) => {
                       {incident.reporter}
                     </div>
                   </div>
-            <div> 
+                  <div> 
                     <div className="text-sm text-gray-500 mb-1">Inmate Involved</div>
                     <div className="font-medium text-gray-900 p-3 bg-gray-50 rounded-md">
                       {incident.inmate}
                     </div>
                   </div>
                 </div>
-            </div>
+                </div>
 
-              {/* Description */}
+              {/* Incident details */}
               <div className="bg-white border rounded-lg overflow-hidden shadow-sm print:shadow-none">
                 <div className="px-6 py-4 border-b bg-gray-50 print:bg-white">
                   <h3 className="text-lg font-semibold text-gray-800 flex items-center">
                     <FaInfoCircle className="mr-2 text-teal-600" />
-                    Incident Description
+                    Incident Details
                   </h3>
                 </div>
                 <div className="p-6">
-                  <div className="font-medium text-gray-900 p-4 bg-gray-50 rounded-md whitespace-pre-wrap">
-                    {incident.description}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                      <div className="text-sm text-gray-500 mb-1">Incident Type</div>
+                      <div className="font-medium text-gray-900 p-3 bg-gray-50 rounded-md">
+                        {incident.incidentType}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <div className="text-sm text-gray-500 mb-1">Severity Level</div>
+                      <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${getSeverityClass(incident.severity || 'Low')}`}>
+                        {incident.severity || 'Low'}
+                        {incident.isRepeat && (
+                          <span className="ml-2 bg-red-100 text-red-800 text-xs px-2 py-0.5 rounded-full">
+                            Repeat #{incident.repeatCount || '?'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
+                  
+                  <div className="mb-4">
+                    <div className="text-sm text-gray-500 mb-1">Description</div>
+                    <div className="font-medium text-gray-900 p-4 bg-gray-50 rounded-md whitespace-pre-wrap">
+                      {incident.description}
+                    </div>
+                  </div>
+                  
+                  {incident.attachment && (
+                    <div>
+                      <div className="text-sm text-gray-500 mb-1">Attachment</div>
+                      <div className="mt-2">
+                        <a 
+                          href={`${import.meta.env.VITE_API_URL || 'http://localhost:5001'}/uploads/${incident.attachment}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 transition-colors"
+                        >
+                          <FaFileAlt className="mr-2" />
+                          View Attachment
+                        </a>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Right column - Additional info */}
+            {/* Right column - Status and metadata */}
             <div className="col-span-1 md:col-span-4 space-y-6">
-              {/* Incident Type */}
+              {/* Status card */}
               <div className="bg-white border rounded-lg overflow-hidden shadow-sm print:shadow-none">
                 <div className="px-6 py-4 border-b bg-gray-50 print:bg-white">
-                  <h3 className="text-lg font-semibold text-gray-800">Incident Type</h3>
+                  <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                    <FaExclamationTriangle className="mr-2 text-teal-600" />
+                    Status
+                  </h3>
                 </div>
                 <div className="p-6">
-                  <div className="inline-flex items-center px-3 py-1.5 rounded-full font-medium bg-teal-100 text-teal-800">
-                    {incident.incidentType}
-                  </div>
-                </div>
-            </div>
-
-              {/* Attachment */}
-              {incident.attachment && (
-                <div className="bg-white border rounded-lg overflow-hidden shadow-sm print:shadow-none">
-                  <div className="px-6 py-4 border-b bg-gray-50 print:bg-white">
-                    <h3 className="text-lg font-semibold text-gray-800">Attachment</h3>
-                  </div>
-                  <div className="p-4">
-                    <div className="rounded-lg overflow-hidden border">
-                      <img 
-                        src={`https://localhost:4000/uploads/${incident.attachment}`} 
-                        alt="Incident Attachment" 
-                        className="w-full h-auto"
-                      />
+                  <div className="flex flex-col space-y-4">
+                    <div>
+                      <div className="text-sm text-gray-500 mb-1">Current Status</div>
+                      <div className={`inline-flex items-center px-2.5 py-1 rounded-full text-sm font-bold ${getStatusClass(incident.status)}`}>
+                        {incident.status}
+                      </div>
                     </div>
-                    <div className="mt-2 text-xs text-gray-500 text-center">
-                      Supporting documentation
+                    
+                    <div>
+                      <div className="text-sm text-gray-500 mb-1">Last Updated</div>
+                      <div className="font-medium text-gray-900">
+                        {incident.updatedAt ? getFormattedDate(incident.updatedAt) : "Not available"}
+                      </div>
                     </div>
                   </div>
                 </div>
-              )}
-
-              {/* Other info */}
+              </div>
+              
+              {/* Tags/metadata card */}
               <div className="bg-white border rounded-lg overflow-hidden shadow-sm print:shadow-none">
                 <div className="px-6 py-4 border-b bg-gray-50 print:bg-white">
-                  <h3 className="text-lg font-semibold text-gray-800">Additional Information</h3>
+                  <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+                    <FaTag className="mr-2 text-teal-600" />
+                    Related Information
+                  </h3>
                 </div>
-                <div className="p-4">
-                  <div className="text-sm text-gray-500 py-2 border-b">Date Reported</div>
-                  <div className="font-medium text-gray-900 py-2 mb-2">
-                    {getFormattedDate(incident.createdAt || incident.incidentDate)}
-            </div>
-
-                  <div className="text-sm text-gray-500 py-2 border-b">Last Updated</div>
-                  <div className="font-medium text-gray-900 py-2">
-                    {getFormattedDate(incident.updatedAt || incident.incidentDate)}
+                <div className="p-6">
+                  <div className="flex flex-col space-y-4">
+                    <div>
+                      <div className="text-sm text-gray-500 mb-1">Incident ID</div>
+                      <div className="font-medium text-gray-900">{incident.incidentId}</div>
+                    </div>
+                    
+                    <div>
+                      <div className="text-sm text-gray-500 mb-1">Created At</div>
+                      <div className="font-medium text-gray-900">
+                        {incident.createdAt ? getFormattedDate(incident.createdAt) : "Not available"}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Footer - print only */}
-          <div className="mt-16 border-t pt-6 text-center text-gray-500 hidden print:block">
-            <p>This document was generated on {new Date().toLocaleDateString()} - Wolkite Prison Management System</p>
-            <p className="text-xs mt-1">CONFIDENTIAL - For official use only</p>
           </div>
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center p-16">
-          <FaExclamationTriangle className="text-yellow-500 text-5xl mb-4" />
-          <div className="text-center text-gray-600 font-medium text-lg">Incident not found.</div>
-          <p className="text-gray-500 mt-2">The requested incident record could not be located.</p>
-            <button
-            onClick={() => navigate("/admin-dashboard/incidents")}
-            className="mt-6 flex items-center px-4 py-2 bg-teal-600 text-white hover:bg-teal-700 rounded transition-colors"
-            >
-            <TiArrowBack className="mr-2" />
-            Return to Incidents
-            </button>
+        <div className="p-10 text-center">
+          <FaExclamationCircle className="mx-auto text-4xl text-red-500 mb-4" />
+          <p className="text-gray-700">Incident data not available.</p>
         </div>
       )}
 
-               <ConfirmModal
-                 open={openDelete}
-                 message="Do you really want to delete this Incident? This action cannot be undone."
-                 onConfirm={() => {
-                   deleteIncident();
-                   setOpenDelete(false);
-                 }}
-                 onCancel={() => setOpenDelete(false)}
-               />
+      {/* Delete confirmation modal */}
+      <ConfirmModal
+        open={openDelete}
+        setOpen={setOpenDelete}
+        title="Delete Incident"
+        message="Are you sure you want to delete this incident record? This action cannot be undone."
+        confirmText="Delete"
+        cancelText="Cancel"
+        onConfirm={deleteIncident}
+        confirmButtonColor="bg-red-600 hover:bg-red-700"
+      />
     </div>
   );
 };

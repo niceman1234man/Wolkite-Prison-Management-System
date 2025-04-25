@@ -43,6 +43,8 @@ import ScheduleDetailModal from "../visitorDashboaard/partials/ScheduleDetailMod
 
 // Import the new update modals
 import UpdateScheduleModal from "../Modals/UpdateScheduleModal";
+import LanguageSelector from "../common/LanguageSelector";
+import { T } from "../common/TranslatedText";
 
 // Error Boundary component to catch rendering errors
 class ErrorBoundary extends React.Component {
@@ -652,161 +654,173 @@ const VisitorList = () => {
   };
 
   return (
-    <div className="flex-1 transition-all duration-300 ease-in-out">
-      <div className="p-4 md:p-6 lg:p-8 ml-0 md:ml-16 lg:ml-64 mb-6 mt-8">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
-            <div className="flex items-center gap-4">
-              <h1 className="text-2xl font-bold text-gray-800">Visitor List</h1>
-              <div className="flex items-center gap-2">
-              <button
-                  onClick={() => setDisplayMode('card')}
-                  className={`p-2 rounded-lg ${displayMode === 'card' ? 'bg-teal-100 text-teal-600' : 'text-gray-500 hover:bg-gray-100'}`}
-              >
-                  <FaThLarge />
-              </button>
+    <ErrorBoundary>
+      <div className="visitor-container">
+        <div className="flex justify-between items-center mb-4 p-3 bg-white rounded-lg shadow-sm">
+          <div className="flex items-center space-x-2">
+            <h1 className="visitor-title text-2xl font-semibold text-gray-800">
+              <T>Visitor Management</T>
+            </h1>
+            <LanguageSelector className="ml-4" />
+          </div>
+          <div className="flex space-x-2">
             <button
-                  onClick={() => setDisplayMode('table')}
-                  className={`p-2 rounded-lg ${displayMode === 'table' ? 'bg-teal-100 text-teal-600' : 'text-gray-500 hover:bg-gray-100'}`}
-                >
-                  <FaTable />
+              onClick={() => setDisplayMode('card')}
+              className={`p-2 rounded-lg ${displayMode === 'card' ? 'bg-teal-100 text-teal-600' : 'text-gray-500 hover:bg-gray-100'}`}
+            >
+              <FaThLarge />
+            </button>
+            <button
+              onClick={() => setDisplayMode('table')}
+              className={`p-2 rounded-lg ${displayMode === 'table' ? 'bg-teal-100 text-teal-600' : 'text-gray-500 hover:bg-gray-100'}`}
+            >
+              <FaTable />
             </button>
           </div>
         </div>
-            <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
-              <div className="relative flex-grow sm:flex-grow-0">
-              <input
-                type="text"
-                  placeholder="Search visitors..."
-                value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full sm:w-64 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                />
-                <FaSearch className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              </div>
-              <button
-                onClick={() => setOpen(true)}
-                className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 whitespace-nowrap"
-              >
-                <FaUserPlus /> Add Visitor
-              </button>
-            </div>
-            </div>
-            
-          {loading ? (
-            <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
-            </div>
-          ) : displayMode === 'card' ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredVisitorsMemo.map((visitor) => (
-                <div key={visitor._id} className="bg-white rounded-lg shadow-md p-4 border border-gray-200 hover:shadow-lg transition-shadow">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-800">
-                        {`${visitor.firstName || ''} ${visitor.middleName || ''} ${visitor.lastName || ''}`}
-                      </h3>
-                      <p className="text-gray-600">{visitor.phone || 'N/A'}</p>
+
+        <div className="flex-1 transition-all duration-300 ease-in-out">
+          <div className="p-4 md:p-6 lg:p-8 ml-0 md:ml-16 lg:ml-64 mb-6 mt-8">
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+                    <div className="relative flex-grow sm:flex-grow-0">
+                      <input
+                        type="text"
+                        placeholder="Search visitors..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="w-full sm:w-64 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                      />
+                      <FaSearch className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                     </div>
-                    <StatusBadge status={visitor.status || 'Pending'} />
-                  </div>
-                  <div className="space-y-2 mb-4">
-                    <p className="text-gray-700">
-                      <span className="font-medium">Purpose:</span> {visitor.purpose || 'N/A'}
-                    </p>
-                    <p className="text-gray-700">
-                      <span className="font-medium">Visit Date:</span> {formatDate(visitor.date)}
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
                     <button
-                      onClick={() => handleViewDetailsLocal(visitor)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm flex items-center"
+                      onClick={() => setOpen(true)}
+                      className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 whitespace-nowrap"
                     >
-                      <FaEye className="mr-1" /> View
+                      <FaUserPlus /> Add Visitor
                     </button>
-                    <button
-                      onClick={() => handleUpdate(visitor)}
-                      className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-md text-sm flex items-center"
-                    >
-                      <FaEdit className="mr-1" /> Update
-                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-              ))}
-          </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Purpose</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Visit Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+              
+              {loading ? (
+                <div className="flex justify-center items-center h-64">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
+                </div>
+              ) : displayMode === 'card' ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filteredVisitorsMemo.map((visitor) => (
-                    <tr key={visitor._id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm font-medium text-gray-900">
-                          {`${visitor.firstName || ''} ${visitor.middleName || ''} ${visitor.lastName || ''}`}
-                </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">{visitor.phone || 'N/A'}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">{visitor.purpose || 'N/A'}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-500">{formatDate(visitor.date)}</div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                    <div key={visitor._id} className="bg-white rounded-lg shadow-md p-4 border border-gray-200 hover:shadow-lg transition-shadow">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-800">
+                            {`${visitor.firstName || ''} ${visitor.middleName || ''} ${visitor.lastName || ''}`}
+                          </h3>
+                          <p className="text-gray-600">{visitor.phone || 'N/A'}</p>
+                        </div>
                         <StatusBadge status={visitor.status || 'Pending'} />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center">
-                        <div className="flex justify-center gap-2">
-                          <button
-                            onClick={() => handleViewDetailsLocal(visitor)}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm flex items-center"
-                          >
-                            <FaEye className="mr-1" /> View
-                          </button>
-                          <button
-                            onClick={() => handleUpdate(visitor)}
-                            className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-md text-sm flex items-center"
-                          >
-                            <FaEdit className="mr-1" /> Update
-                          </button>
-                </div>
-                      </td>
-                    </tr>
+                      </div>
+                      <div className="space-y-2 mb-4">
+                        <p className="text-gray-700">
+                          <span className="font-medium">Purpose:</span> {visitor.purpose || 'N/A'}
+                        </p>
+                        <p className="text-gray-700">
+                          <span className="font-medium">Visit Date:</span> {formatDate(visitor.date)}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => handleViewDetailsLocal(visitor)}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm flex items-center"
+                        >
+                          <FaEye className="mr-1" /> View
+                        </button>
+                        <button
+                          onClick={() => handleUpdate(visitor)}
+                          className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-md text-sm flex items-center"
+                        >
+                          <FaEdit className="mr-1" /> Update
+                        </button>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Purpose</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Visit Date</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {filteredVisitorsMemo.map((visitor) => (
+                        <tr key={visitor._id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm font-medium text-gray-900">
+                              {`${visitor.firstName || ''} ${visitor.middleName || ''} ${visitor.lastName || ''}`}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-500">{visitor.phone || 'N/A'}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-500">{visitor.purpose || 'N/A'}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-500">{formatDate(visitor.date)}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <StatusBadge status={visitor.status || 'Pending'} />
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <div className="flex justify-center gap-2">
+                              <button
+                                onClick={() => handleViewDetailsLocal(visitor)}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm flex items-center"
+                              >
+                                <FaEye className="mr-1" /> View
+                              </button>
+                              <button
+                                onClick={() => handleUpdate(visitor)}
+                                className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded-md text-sm flex items-center"
+                              >
+                                <FaEdit className="mr-1" /> Update
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </div>
         </div>
 
-      {/* Modals */}
-      <AddModal open={open} setOpen={setOpen} fetchVisitors={fetchVisitors} />
+        {/* Modals */}
+        <AddModal open={open} setOpen={setOpen} fetchVisitors={fetchVisitors} />
         <UpdateVisitorModal
-        open={showUpdateVisitorModal}
-        setOpen={setShowUpdateVisitorModal}
+          open={showUpdateVisitorModal}
+          setOpen={setShowUpdateVisitorModal}
           visitor={selectedVisitor}
-        fetchVisitors={fetchVisitors}
-      />
+          fetchVisitors={fetchVisitors}
+        />
         <VisitorDetailModal
-        open={showDetailModalState}
-        setOpen={setShowDetailModalState}
+          open={showDetailModalState}
+          setOpen={setShowDetailModalState}
           visitor={selectedVisitor}
-      />
-    </div>
+        />
+      </div>
+    </ErrorBoundary>
   );
 };
 

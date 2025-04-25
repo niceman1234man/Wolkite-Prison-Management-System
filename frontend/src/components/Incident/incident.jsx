@@ -4,7 +4,7 @@ import DataTable from "react-data-table-component";
 import { useDispatch, useSelector } from "react-redux";
 import axiosInstance from "../../utils/axiosInstance";
 import { setIncident } from "../../redux/incidentSlice";
-import { FaArrowLeft, FaSearch } from "react-icons/fa";
+import { FaArrowLeft, FaSearch, FaExclamationTriangle, FaHistory } from "react-icons/fa";
 import AddModal from "../Modals/AddModal";
 import Add from "./Add";
 import UpdateIncident from "./UpdateIncident";
@@ -13,8 +13,8 @@ import ViewIncident from "./ViewIncident";
 const customStyles = {
   headCells: {
     style: {
-      backgroundColor: "#D2B48C",
-      color: "#5A3E1B",
+      backgroundColor: "#20B2AA",
+      color: "#FFFFFF",
       fontWeight: "bold",
       fontSize: "14px",
       textTransform: "uppercase",
@@ -23,7 +23,7 @@ const customStyles = {
   rows: {
     style: {
       "&:hover": {
-        backgroundColor: "#F5DEB3",
+        backgroundColor: "#E0F2F1",
         cursor: "pointer",
         transition: "background-color 0.2s ease-in-out",
       },
@@ -44,6 +44,7 @@ const Incident = () => {
   const [view, setView] = useState(false);
   const [edit, setEdit] = useState(false);
   const [selectedIncidentId, setSelectedIncidentId] = useState(null); // Store only the ID
+  const [inmateIdMap, setInmateIdMap] = useState({});
 
   // Fetch Incidents
   useEffect(() => {
@@ -55,6 +56,10 @@ const Incident = () => {
           dispatch(setIncident(response.data.incidents));
           setIncidents(response.data.incidents);
           setFilteredIncidents(response.data.incidents);
+          
+          // Extract unique inmate names to fetch their IDs
+          const uniqueInmateNames = [...new Set(response.data.incidents.map(incident => incident.inmate))];
+          await fetchInmateIds(uniqueInmateNames);
         }
       } catch (error) {
         console.error("Error fetching incidents:", error);
@@ -64,6 +69,35 @@ const Incident = () => {
     };
     getIncidents();
   }, [dispatch]);
+  
+  // Fetch inmate IDs for all inmates mentioned in incidents
+  const fetchInmateIds = async (inmateNames) => {
+    try {
+      // If there are no inmates, don't make the API call
+      if (!inmateNames.length) return;
+      
+      const response = await axiosInstance.get("/inmates/allInmates");
+      if (response.data?.inmates) {
+        // Create a map of inmate names to their IDs
+        const idMap = {};
+        response.data.inmates.forEach(inmate => {
+          const fullName = `${inmate.firstName} ${inmate.middleName} ${inmate.lastName}`.trim();
+          idMap[fullName] = inmate._id;
+        });
+        
+        setInmateIdMap(idMap);
+      }
+    } catch (error) {
+      console.error("Error fetching inmate IDs:", error);
+    }
+  };
+  
+  // Navigate to inmate history page
+  const viewInmateHistory = (inmateName) => {
+    if (inmateIdMap[inmateName]) {
+      navigate(`/policeOfficer-dashboard/incidents/inmate/${inmateIdMap[inmateName]}`);
+    }
+  };
 
   // Filter incidents by search query
   const filterByInput = (e) => {
@@ -114,8 +148,54 @@ const Incident = () => {
       },
       { name: "Reporter", selector: (row) => row.reporter, sortable: true },
       { name: "Type", selector: (row) => row.incidentType, sortable: true },
-      { name: "Inmate", selector: (row) => row.inmate, sortable: true },
-      { name: "Status", selector: (row) => row.status, sortable: true },
+      { 
+        name: "Inmate", 
+        cell: (row) => (
+          <div className="flex items-center">
+            <span>{row.inmate}</span>
+            {inmateIdMap[row.inmate] && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  viewInmateHistory(row.inmate);
+                }}
+                className="ml-2 text-blue-600 hover:text-blue-800"
+                title="View inmate incident history"
+              >
+                <FaHistory size={14} />
+              </button>
+            )}
+          </div>
+        ),
+        sortable: true 
+      },
+      { 
+        name: "Status", 
+        cell: (row) => (
+          <div className={`px-2 py-1 rounded text-sm ${
+            row.status === 'Resolved' ? 'bg-green-100 text-green-800' :
+            row.status === 'Escalated' ? 'bg-red-100 text-red-800' :
+            'bg-yellow-100 text-yellow-800'
+          }`}>
+            {row.status}
+          </div>
+        ),
+        sortable: true 
+      },
+      { 
+        name: "Severity", 
+        cell: (row) => (
+          <div className={`px-2 py-1 rounded text-sm ${
+            row.severity === 'Critical' ? 'bg-red-100 text-red-800' :
+            row.severity === 'High' ? 'bg-orange-100 text-orange-800' :
+            row.severity === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+            'bg-green-100 text-green-800'
+          }`}>
+            {row.severity || 'Low'}
+          </div>
+        ),
+        sortable: true 
+      },
       {
         name: "Reported Date",
         selector: (row) => new Date(row.incidentDate).toLocaleDateString(),
@@ -141,7 +221,18 @@ const Incident = () => {
         ),
       },
     ],
-    []
+    [inmateIdMap]
+  );
+
+  // Add a note about inmate history feature
+  const helpText = (
+    <div className="bg-blue-50 p-3 rounded-md mb-4 text-sm flex items-start">
+      <FaHistory className="text-blue-600 mr-2 mt-0.5 flex-shrink-0" />
+      <div className="text-blue-800">
+        <p className="font-medium">Inmate History Feature</p>
+        <p>Click the history icon <FaHistory className="inline text-blue-600" size={12} /> next to an inmate's name to view their complete incident history.</p>
+      </div>
+    </div>
   );
 
   return (
@@ -178,6 +269,14 @@ const Incident = () => {
               onChange={filterByInput}
             />
           </div>
+
+          {/* Repeat Offenders Button */}
+          <button
+            onClick={() => navigate('/policeOfficer-dashboard/repeat-offenders')}
+            className="h-10 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md flex items-center justify-center min-w-[180px] md:w-auto mr-2"
+          >
+            <FaExclamationTriangle className="mr-2" /> Repeat Offenders
+          </button>
 
           {/* Add New Incident Button (Modal Trigger) */}
           <button
@@ -224,6 +323,9 @@ const Incident = () => {
               Escalated
             </button>
           </div>
+
+          {/* Help text with inmate history instructions */}
+          {helpText}
 
           {loading ? (
             <div className="text-center text-gray-600">
