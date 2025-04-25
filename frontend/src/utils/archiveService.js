@@ -7,7 +7,9 @@ import axiosInstance from './axiosInstance';
  */
 export const getArchivedItems = async (params = {}) => {
   try {
+    console.log("Fetching archived items with params:", params);
     const response = await axiosInstance.get('/archive', { params });
+    console.log("Archive API detailed response:", response.data);
     return response.data;
   } catch (error) {
     console.error('Error fetching archived items:', error);

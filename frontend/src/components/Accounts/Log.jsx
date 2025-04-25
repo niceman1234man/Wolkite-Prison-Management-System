@@ -50,17 +50,24 @@ const ActivityLog = () => {
         console.log(`Fetched ${logs.length} logs: `, 
           logs.map(log => `${log.action}:${log.timestamp}`).join(', '));
         
-        // Debug information about the types of logs
+        // Enhanced debugging information about the types of logs
         const actionCounts = {};
         logs.forEach(log => {
           actionCounts[log.action] = (actionCounts[log.action] || 0) + 1;
         });
         console.log('Action types in logs:', actionCounts);
         
+        // Log complete data for the first few logs to inspect
+        if (logs.length > 0) {
+          console.log('Sample log entries (first 3):', logs.slice(0, 3));
+        }
+        
         if (logs.length === 0) {
+          console.log('No logs found. Current filters:', filters);
           toast.info('No logs found matching the criteria');
         }
       } else {
+        console.error('Failed to fetch logs with error:', response.data.message);
         toast.error(`Failed to fetch activity logs: ${response.data.message || 'Unknown error'}`);
       }
     } catch (error) {
@@ -135,6 +142,20 @@ const ActivityLog = () => {
     setCurrentPage(1);
     setFilterOpen(false);
     fetchLogs();
+  };
+
+  // View all activities (convenience function)
+  const viewAllActivities = () => {
+    setFilters({
+      user: '',
+      action: '',
+      resourceType: '',
+      startDate: '',
+      endDate: '',
+      status: ''
+    });
+    setCurrentPage(1);
+    setTimeout(() => fetchLogs(), 100); // Small delay to ensure state is updated
   };
 
   // Export logs to CSV
@@ -263,6 +284,13 @@ const ActivityLog = () => {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
+              <button
+                onClick={viewAllActivities}
+                className="px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 transition-colors flex items-center"
+              >
+                <FaListAlt className="mr-2" />
+                All Activities
+              </button>
               <button
                 onClick={() => setFilterOpen(!filterOpen)}
                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors flex items-center"
@@ -446,6 +474,9 @@ const ActivityLog = () => {
                   <option value="upload">Upload</option>
                   <option value="backup">Backup</option>
                   <option value="restore">Restore</option>
+                  <option value="password_change">Password Change</option>
+                  <option value="account_activation">Account Activation</option>
+                  <option value="account_deactivation">Account Deactivation</option>
                 </select>
               </div>
               

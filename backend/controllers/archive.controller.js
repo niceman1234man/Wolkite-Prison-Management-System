@@ -128,8 +128,14 @@ export const getArchivedItems = async (req, res) => {
     // Role-based filtering
     const userRole = req.user.role;
     
+    // Special case for security staff - show all clearance items
+    if (userRole === 'security' && (entityType === 'clearance' || !entityType)) {
+      console.log('Security staff requesting clearance archives - showing all clearance items');
+      query.entityType = 'clearance';
+      // Don't restrict by deletedBy - show all clearance items
+    }
     // Non-admin users can only see specific entity types and their own archives
-    if (userRole && userRole !== 'admin') {
+    else if (userRole && userRole !== 'admin') {
       // Entity types by role mapping
       const roleEntityTypeMap = {
         'inspector': ['prison', 'notice'],

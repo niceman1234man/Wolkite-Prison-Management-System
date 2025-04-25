@@ -1,42 +1,38 @@
 import { archiveItem } from '../controllers/archive.controller.js';
 
 /**
- * Archive middleware - adds archiving functionality to existing controllers
+ * Archive middleware - archives an entity before deletion
  * @param {String} entityType - The type of entity (prison, inmate, etc.)
  * @returns {Function} - Express middleware function
  */
 export const archiveMiddleware = (entityType) => {
   return async (req, res, next) => {
-    // Store the original delete method
-    const originalDelete = res.json;
-    
-    // Overwrite the json method to intercept delete responses
-    res.json = function (data) {
-      // If it's a successful deletion and we have an item ID, archive it
-      if (data.success && data.message && data.message.includes('deleted') && req.params.id) {
-        try {
-          // Get user ID from request
-          const userId = req.user.id;
-          
-          // Get reason if provided in request body
-          const reason = req.body.reason || '';
-          
-          // Archive the item
-          archiveItem(entityType, req.params.id, userId, reason)
-            .then(() => {
-              console.log(`Successfully archived ${entityType} with ID ${req.params.id}`);
-            })
-            .catch(err => {
-              console.error(`Error archiving ${entityType}:`, err);
-            });
-        } catch (error) {
-          console.error(`Error in archive middleware for ${entityType}:`, error);
+    try {
+      // Only proceed if we have an item ID
+      if (req.params.id) {
+        // Get user ID from request
+        const userId = req.user?.id;
+        
+        if (!userId) {
+          console.error('User ID not found in request for archiving');
+          return next();
         }
+        
+        // Get reason if provided in request body
+        const reason = req.body.reason || `${entityType} deleted by user`;
+        
+        // Archive the item before deletion
+        await archiveItem(entityType, req.params.id, userId, reason);
+        
+        // Set a flag to indicate this item has been archived
+        req.archived = true;
+        
+        console.log(`Successfully archived ${entityType} with ID ${req.params.id}`);
       }
-      
-      // Call the original json method
-      return originalDelete.call(this, data);
-    };
+    } catch (error) {
+      console.error(`Error in archive middleware for ${entityType}:`, error);
+      // Continue even if archiving fails - the controller may handle it
+    }
     
     next();
   };
@@ -67,6 +63,9 @@ export const enhanceControllerWithArchiving = (controller, methodName, entityTyp
       
       // Archive the item before deletion
       await archiveItem(entityType, itemId, userId, reason);
+      
+      // Set a flag to indicate this item has been archived
+      req.archived = true;
       
       // Call the original delete method
       return originalMethod(req, res);

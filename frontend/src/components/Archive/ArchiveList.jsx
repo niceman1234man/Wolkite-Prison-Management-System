@@ -204,8 +204,20 @@ const ArchiveList = () => {
         }
       }
       
-      // For non-admin users, add filter to only show items they deleted
-      if (role && role !== 'admin') {
+      // Special handling for security staff with clearance
+      if (role === 'security') {
+        // For security staff, we want to show all clearance items they can manage
+        // without limiting to only ones they deleted
+        const initialFilters = {
+          ...filters,
+          entityType: 'clearance'  // Focus on clearance items for security staff
+        };
+        
+        setFilters(initialFilters);
+        console.log("Set security staff filters:", initialFilters);
+      }
+      // For other non-admin users, add filter to only show items they deleted  
+      else if (role && role !== 'admin') {
         setFilters(prev => ({
           ...prev,
           deletedBy: userData?.id || ''
@@ -253,8 +265,13 @@ const ArchiveList = () => {
       searchTerm: ''
     };
     
-    // For non-admin users, maintain the deletedBy filter
-    if (role && role !== 'admin') {
+    // Special case for security staff - focus on clearance items
+    if (role === 'security') {
+      resetState.entityType = 'clearance';
+      console.log("Reset filters for security staff");
+    }
+    // For other non-admin users, maintain the deletedBy filter
+    else if (role && role !== 'admin') {
       resetState.deletedBy = userId;
     }
     
@@ -389,6 +406,12 @@ const ArchiveList = () => {
     // Admin can manage all items
     if (role === 'admin') return true;
     
+    // Special case for security staff with clearance items
+    if (role === 'security' && item.entityType === 'clearance') {
+      console.log("Security staff can manage clearance item:", item._id);
+      return true; // Security staff can manage all clearance items
+    }
+    
     // Return false if deletedBy is missing
     if (!item.deletedBy) return false;
     
@@ -476,8 +499,17 @@ const ArchiveList = () => {
               <div className="flex">
                 <div className="py-1"><FaUserShield className="h-5 w-5 text-blue-600" /></div>
                 <div className="ml-4">
-                  <p className="font-medium">Role-Based Access: {userRole}</p>
-                  <p className="text-sm mt-1">As a {userRole}, you can only view and manage archive items that you created, according to your role permissions.</p>
+                  {userRole === 'security' ? (
+                    <>
+                      <p className="font-medium">Role-Based Access: {userRole}</p>
+                      <p className="text-sm mt-1">As security staff, you can view and manage all clearance archive items, regardless of who created them.</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-medium">Role-Based Access: {userRole}</p>
+                      <p className="text-sm mt-1">As a {userRole}, you can only view and manage archive items that you created, according to your role permissions.</p>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -511,9 +543,18 @@ const ArchiveList = () => {
             </div>
           ) : archivedItems.length === 0 ? (
             <div className="text-center p-8 bg-gray-50 rounded-lg border border-gray-200">
+              {console.log("No archived items found. Current filters:", filters)}
+              {console.log("User role:", userRole)}
               <FaArchive className="mx-auto text-gray-400 text-5xl mb-4" />
               <h3 className="text-xl font-medium text-gray-700 mb-2">No Archived Items Found</h3>
-              <p className="text-gray-500">There are no archived items matching your criteria.</p>
+              {userRole === 'security' ? (
+                <p className="text-gray-500">
+                  No clearance archives found. This could be because no clearances have been deleted yet.
+                  Try deleting a clearance item first and then check this archive page.
+                </p>
+              ) : (
+                <p className="text-gray-500">There are no archived items matching your criteria.</p>
+              )}
               {Object.values(filters).some(v => v !== '') && (
                 <button
                   onClick={resetFilters}
@@ -537,10 +578,21 @@ const ArchiveList = () => {
                   
                   {userRole && userRole !== 'admin' && (
                     <div className="mb-4 bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded relative">
-                      <strong className="font-medium">Role-based access: </strong>
-                      <span className="block sm:inline">
-                        As a {userRole}, you can only manage archives for specific items you have created.
-                      </span>
+                      {userRole === 'security' ? (
+                        <>
+                          <strong className="font-medium">Role-based access: </strong>
+                          <span className="block sm:inline">
+                            As security staff, you have access to all clearance archives in the system.
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <strong className="font-medium">Role-based access: </strong>
+                          <span className="block sm:inline">
+                            As a {userRole}, you can only manage archives for specific items you have created.
+                          </span>
+                        </>
+                      )}
                     </div>
                   )}
                   

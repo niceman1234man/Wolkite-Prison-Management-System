@@ -70,13 +70,19 @@ function ViewClearance({id}) {
       const deleteClearance = async () => {
         try {
           console.log("Attempting to delete clearance with ID:", id);
-          // Updated to use the correct API endpoint defined in backend routes
-          const response = await axiosInstance.delete(`/clearance/deleteClearance/${id}`);
+          
+          // Include deletion reason to store in the archive
+          const deleteData = {
+            reason: "Clearance deleted by security staff"
+          };
+          
+          // Updated to use the correct API endpoint defined in backend routes with deletion reason
+          const response = await axiosInstance.delete(`/clearance/deleteClearance/${id}`, { data: deleteData });
           
           console.log("Delete response:", response.data);
           
           if (response.data && response.data.success) {
-            toast.success("Clearance deleted successfully!");
+            toast.success("Clearance deleted and archived successfully!");
             navigate("/securityStaff-dashboard/clearance");
           } else {
             const errorMsg = response.data?.message || "Failed to delete clearance. Please try again.";
@@ -490,7 +496,7 @@ function ViewClearance({id}) {
           {/* ConfirmModal - always render it but control visibility with open prop */}
           <ConfirmModal
             open={openDelete}
-            message="Do you want to delete this clearance? This action will archive the clearance and can be restored from the archive system if needed."
+            message="Do you want to delete this clearance? This action will move the clearance to the archive system where security staff can restore it if needed."
             onConfirm={() => {
               deleteClearance();
               setOpenDelete(false);

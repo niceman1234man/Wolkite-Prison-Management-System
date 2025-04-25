@@ -5,12 +5,18 @@ import { toast } from "react-toastify"; // Import toast
 import "react-toastify/dist/ReactToastify.css"; // Import toast CSS
 import { TiArrowBack } from "react-icons/ti";
 import { FaExclamationCircle, FaCheckCircle, FaUpload, FaCalendarAlt, 
-         FaUser, FaUserShield, FaTag, FaClipboardList, FaFileAlt } from "react-icons/fa";
+         FaUser, FaUserShield, FaTag, FaClipboardList, FaFileAlt, FaHistory } from "react-icons/fa";
+import { useSelector } from "react-redux"; // Import useSelector from Redux
 
 const Add = ({ setOpen }) => {
+  // Get the current user from Redux store
+  const userState = useSelector((state) => state.user);
+  const currentUser = userState?.user;
+  
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     incidentId: `INC-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`,
-    reporter: "",
+    reporter: currentUser ? `${currentUser.firstName || ''} ${currentUser.middleName || ''} ${currentUser.lastName || ''}`.trim() : "",
     inmate: "",
     incidentDate: new Date().toISOString().split('T')[0],
     incidentType: "",
@@ -22,7 +28,19 @@ const Add = ({ setOpen }) => {
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [attachmentPreview, setAttachmentPreview] = useState(null);
-  const navigate = useNavigate();
+  const [selectedInmateId, setSelectedInmateId] = useState("");
+  const [showHistoryOption, setShowHistoryOption] = useState(false);
+
+  // Update reporter name whenever user data changes
+  useEffect(() => {
+    if (currentUser) {
+      const fullName = `${currentUser.firstName || ''} ${currentUser.middleName || ''} ${currentUser.lastName || ''}`.trim();
+      setFormData(prev => ({
+        ...prev,
+        reporter: fullName
+      }));
+    }
+  }, [currentUser]);
 
   // Fetch inmates from the backend
   useEffect(() => {
@@ -51,10 +69,34 @@ const Add = ({ setOpen }) => {
 
   // Handle form input changes
   const handleChange = (e) => {
+    const { name, value } = e.target;
+    
     setFormData((prevData) => ({
       ...prevData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     }));
+    
+    // If inmate field was changed, find the corresponding inmate ID
+    if (name === "inmate") {
+      const selectedInmate = inmates.find(inmate => 
+        `${inmate.firstName} ${inmate.middleName} ${inmate.lastName}` === value
+      );
+      
+      if (selectedInmate) {
+        setSelectedInmateId(selectedInmate._id);
+        setShowHistoryOption(true);
+      } else {
+        setSelectedInmateId("");
+        setShowHistoryOption(false);
+      }
+    }
+  };
+
+  // Navigate to inmate history page
+  const viewInmateHistory = () => {
+    if (selectedInmateId) {
+      navigate(`/policeOfficer-dashboard/incidents/inmate/${selectedInmateId}`);
+    }
   };
 
   // Handle attachment change
@@ -242,9 +284,15 @@ const Add = ({ setOpen }) => {
                 value={formData.reporter}
                 placeholder="Enter full name of reporter"
               onChange={handleChange}
-                className="p-2 block w-full border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500"
+                className="p-2 block w-full border border-gray-300 rounded-md focus:ring-teal-500 focus:border-teal-500 bg-gray-100"
               required
+              readOnly={currentUser !== null}
             />
+            {currentUser && (
+              <p className="mt-1 text-xs text-gray-500">
+                This field is automatically filled with your name.
+              </p>
+            )}
           </div>
 
             {/* Inmate Selection */}
@@ -253,6 +301,8 @@ const Add = ({ setOpen }) => {
                 <FaUser className="inline-block mr-1 text-teal-600" />
                 Inmate Involved <span className="text-red-500">*</span>
             </label>
+            <div className="flex items-start gap-2">
+              <div className="flex-grow">
             <select
               name="inmate"
                 value={formData.inmate}
@@ -265,12 +315,31 @@ const Add = ({ setOpen }) => {
                 <option disabled>Loading inmates...</option>
               ) : (
                 inmates.map((inmate) => (
-                  <option key={inmate._id} value={inmate.fullName}>
+                      <option key={inmate._id} value={`${inmate.firstName} ${inmate.middleName} ${inmate.lastName}`}>
                     {inmate.firstName} {inmate.middleName} {inmate.lastName}
                   </option>
                 ))
               )}
             </select>
+              </div>
+              
+              {showHistoryOption && (
+                <button 
+                  type="button"
+                  onClick={viewInmateHistory}
+                  className="p-2 bg-blue-50 text-blue-600 rounded-md border border-blue-200 hover:bg-blue-100 transition-colors flex items-center"
+                >
+                  <FaHistory className="mr-1" />
+                  <span className="hidden sm:inline">View History</span>
+                </button>
+              )}
+            </div>
+            
+            {showHistoryOption && (
+              <p className="mt-1 text-xs text-blue-600">
+                This inmate has previous incidents. Click "View History" to review.
+              </p>
+            )}
           </div>
           </div>
         </div>

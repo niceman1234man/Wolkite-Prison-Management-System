@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaArrowLeft, FaSearch, FaSync, FaClipboardCheck } from "react-icons/fa";
+import { FaArrowLeft, FaSearch, FaSync, FaClipboardCheck, FaExclamationTriangle } from "react-icons/fa";
 import DataTable from "react-data-table-component";
 import { columns, InmateButtons } from "../../utils/ParoleSendHelper";
 import axiosInstance from "../../utils/axiosInstance";
@@ -16,8 +16,28 @@ const ParoleSend = () => {
   const [filteredInmates, setFilteredInmates] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeFilter, setActiveFilter] = useState("all");
+  const [activeReportFilter, setActiveReportFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   
+  // Custom column definition with isReported field
+  const customColumns = [
+    ...columns.slice(0, 6), // Keep the first 6 columns as they are
+    {
+      name: "Reported",
+      selector: (row) => row.isReported,
+      sortable: true,
+      cell: (row) => (
+        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${
+          row.isReported ? "bg-red-100 text-red-800 border border-red-200" : "bg-green-100 text-green-800 border border-green-200"
+        }`}>
+          {row.isReported ? "Yes" : "No"}
+        </span>
+      ),
+      width: "120px",
+    },
+    ...columns.slice(6), // Add the remaining columns
+  ];
+
   const customStyles = {
     headRow: {
       style: {
@@ -62,27 +82,33 @@ const ParoleSend = () => {
     setLoading(true);
     try {
       const response = await axiosInstance.get("/parole-tracking");
-     
+      
       if (response.data && response.data.parole) {
-        // Filter only eligible inmates
+        // Ensure we get all parole records that are eligible, not just reported ones
         const eligibleInmates = response.data.parole.filter(inmate => inmate.paroleEligible);
         
         dispatch(setInmate(eligibleInmates));
         let sno = 1;
-        const formattedData = eligibleInmates.map((parole) => ({
-          _id: parole.inmateId,
-          sno: sno++,
-          inmate_name: parole.fullName || "N/A",
-          age: parole.age || "N/A",
-          gender: parole.gender || "N/A",
-          sentence: parole.caseType || "N/A",
-          status: parole.status || "N/A",
-          paroleDate:parole.paroleDate,
-          action: <InmateButtons _id={parole.inmateId} onDelete={fetchInmates} status={parole.status} />,
-        }));
+        const formattedData = eligibleInmates.map((parole) => {
+          // Directly access the isReported field from the database
+          return {
+            _id: parole.inmateId,
+            sno: sno++,
+            inmate_name: parole.fullName || "N/A",
+            age: parole.age || "N/A",
+            gender: parole.gender || "N/A",
+            sentence: parole.caseType || "N/A",
+            status: parole.status || "N/A",
+            paroleDate: parole.paroleDate,
+            isReported: parole.isReported === true, // Ensure it's a boolean
+            action: <InmateButtons _id={parole.inmateId} onDelete={fetchInmates} status={parole.status} />,
+          };
+        });
 
         setInmates(formattedData);
         setFilteredInmates(formattedData);
+        
+        console.log("Parole data with isReported:", formattedData);
       } else {
         console.error("Invalid API response:", response);
         toast.error("Failed to fetch eligible inmates");
@@ -100,7 +126,7 @@ const ParoleSend = () => {
   }, []);
 
   // Enhance columns with status styling
-  const enhancedColumns = columns.map(col => {
+  const enhancedColumns = customColumns.map(col => {
     if (col.name === "Status") {
       return {
         ...col,
@@ -130,29 +156,29 @@ const ParoleSend = () => {
     return col;
   });
 
-  // Instant Search
-  const handleSearch = (e) => {
-    const query = e.target.value.toLowerCase();
-    setSearchTerm(query);
-    applyFilters(query, activeFilter);
-  };
-
   // Filter by status
   const filterByStatus = (status) => {
     setActiveFilter(status);
-    applyFilters(searchTerm, status);
+    applyFilters(searchTerm, status, activeReportFilter);
   };
 
-  // Apply both filters
-  const applyFilters = (query, status) => {
+  // Filter by report status
+  const filterByReportStatus = (reportStatus) => {
+    setActiveReportFilter(reportStatus);
+    applyFilters(searchTerm, activeFilter, reportStatus);
+  };
+
+  // Apply all filters
+  const applyFilters = (query, status, reportStatus) => {
     let result = inmates;
     
     // Apply search filter
     if (query) {
       result = result.filter((inmate) =>
-      (inmate.inmate_name?.toLowerCase() || "").includes(query) || 
-      (inmate.status?.toLowerCase() || "").includes(query)
-    );
+        (inmate.inmate_name?.toLowerCase() || "").includes(query) || 
+        (inmate.status?.toLowerCase() || "").includes(query) ||
+        (inmate.isReported ? "yes" : "no").includes(query.toLowerCase())
+      );
     }
     
     // Apply status filter
@@ -162,20 +188,33 @@ const ParoleSend = () => {
       );
     }
     
+    // Apply report status filter
+    if (reportStatus !== "all") {
+      const isReported = reportStatus === "reported";
+      result = result.filter((inmate) => inmate.isReported === isReported);
+    }
+    
     setFilteredInmates(result);
+  };
+
+  // Update handleSearch to use all filters
+  const handleSearch = (e) => {
+    const query = e.target.value.toLowerCase();
+    setSearchTerm(query);
+    applyFilters(query, activeFilter, activeReportFilter);
   };
 
   return (
     <div className={`p-6 transition-all duration-300 mt-10 ${isCollapsed ? "ml-16" : "ml-64"}`}>
       {/* Header with back button */}
       <div className="mb-6 flex flex-wrap items-center gap-4">
-      <button
+        <button
           className="flex items-center text-gray-600 hover:text-gray-900 pr-4"
-        onClick={() => navigate(-1)}
-      >
+          onClick={() => navigate(-1)}
+        >
           <FaArrowLeft className="mr-2" />
           <span className="text-sm font-medium">Back</span>
-      </button>
+        </button>
 
         <div>
           <h1 className="text-2xl font-bold text-gray-800 flex items-center">
@@ -196,13 +235,13 @@ const ParoleSend = () => {
             <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
               <FaSearch className="text-gray-400" />
             </div>
-        <input
-          type="text"
-          placeholder="Search by inmate name or status..."
+            <input
+              type="text"
+              placeholder="Search by inmate name, status, or reporting status..."
               className="pl-10 pr-4 py-2.5 block w-full border border-gray-300 rounded-lg focus:ring-teal-500 focus:border-teal-500"
               value={searchTerm}
-          onChange={handleSearch}
-        />
+              onChange={handleSearch}
+            />
           </div>
           
           {/* Refresh Button */}
@@ -263,13 +302,51 @@ const ParoleSend = () => {
             Rejected
           </button>
         </nav>
-        </div>
+      </div>
+
+      {/* Reported Status Filter Tabs */}
+      <div className="mb-6 border-b border-gray-200">
+        <nav className="flex flex-wrap -mb-px">
+          <button
+            onClick={() => filterByReportStatus("all")}
+            className={`inline-flex items-center py-3 px-4 text-sm font-medium border-b-2 ${
+              activeReportFilter === "all"
+                ? "border-teal-500 text-teal-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            All Reports
+          </button>
+          <button
+            onClick={() => filterByReportStatus("reported")}
+            className={`inline-flex items-center py-3 px-4 text-sm font-medium border-b-2 ${
+              activeReportFilter === "reported"
+                ? "border-red-500 text-red-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            <FaExclamationTriangle className="mr-1" />
+            Reported
+          </button>
+          <button
+            onClick={() => filterByReportStatus("not-reported")}
+            className={`inline-flex items-center py-3 px-4 text-sm font-medium border-b-2 ${
+              activeReportFilter === "not-reported"
+                ? "border-green-500 text-green-600"
+                : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            }`}
+          >
+            Not Reported
+          </button>
+        </nav>
+      </div>
 
       {/* Results Summary */}
       <div className="mb-4">
         <p className="text-sm text-gray-500">
           Showing {filteredInmates.length} {filteredInmates.length === 1 ? 'inmate' : 'inmates'}
           {activeFilter !== "all" ? ` with status "${activeFilter}"` : ''}
+          {activeReportFilter !== "all" ? ` that are ${activeReportFilter === "reported" ? "reported" : "not reported"}` : ''}
           {searchTerm ? ` matching "${searchTerm}"` : ''}
         </p>
       </div>
@@ -306,7 +383,7 @@ const ParoleSend = () => {
               </div>
               <h3 className="text-lg font-medium text-gray-700">No eligible inmates found</h3>
               <p className="text-gray-500 mt-2 max-w-md mx-auto">
-                {activeFilter !== "all" || searchTerm 
+                {activeFilter !== "all" || activeReportFilter !== "all" || searchTerm 
                   ? "Try adjusting your search criteria or filters" 
                   : "There are currently no inmates eligible for parole consideration"}
               </p>

@@ -121,6 +121,8 @@ import PoliceArchivePage from './components/PoliceOfficerDashboard/PoliceArchive
 import PoliceArchiveDetailPage from './components/PoliceOfficerDashboard/PoliceArchiveDetailPage';
 import SecurityArchivePage from './components/SecurityStaff/SecurityArchivePage';
 import SecurityArchiveDetailPage from './components/SecurityStaff/SecurityArchiveDetailPage';
+import RepeatOffenders from "./components/Incident/RepeatOffenders.jsx";
+import InmateIncidentHistory from "./components/Incident/InmateIncidentHistory.jsx";
 
 function App() {
   return (
@@ -155,8 +157,10 @@ function App() {
                 <Route path="parole-request" element={<RequestParole />} />
                 <Route path="ParoleList/:inmateId" element={<ParoleList />} />
                 <Route path="incident" element={<Insident />} />
+                <Route path="repeat-offenders" element={<RepeatOffenders />} />
                 <Route path="reports" element={<PoliceOfficerReports />} />
                 <Route path="add-incident" element={<Add />} />
+                <Route path="incidents/inmate/:inmateId" element={<InmateIncidentHistory />} />
                 <Route path="incident-details/:id" element={<ViewIncident />} />
                 <Route path="edit-incident/:id" element={<UpdateIncident />} />
                 <Route path="status/:_id" element={<InmateBehaviorGraph />} />

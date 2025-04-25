@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axiosInstance from "../utils/axiosInstance"; // Axios utility
-import { useSelector } from "react-redux"; // To access sidebar state
+import { useSelector } from "react-redux"; // To access sidebar state and user data
 import { FaExclamationTriangle } from "react-icons/fa";
 const behaviorRules = [
   { id: 1, label: "የማ/ቤቱ አባሎች የሚያከብር", options: [1, 2, 3, 4, 5] },
@@ -44,9 +44,15 @@ const InmateBehavior = () => {
   const [loadingInmates, setLoadingInmates] = useState(false); 
   const [trackedDays, setTrackedDays] = useState(0); 
   const [signature, setSignature] = useState(null);
+  
+  // Get the current user from Redux store
+  const userState = useSelector((state) => state.user);
+  const currentUser = userState?.user;
+  
   const [formdata, setFormData] = useState({
-    committeeName: ""
+    committeeName: currentUser ? `${currentUser.firstName || ''} ${currentUser.middleName || ''} ${currentUser.lastName || ''}`.trim() : ""
   });
+  
   const [alreadyTrackedThisMonth, setAlreadyTrackedThisMonth] = useState(false);
   const [lastTrackedDate, setLastTrackedDate] = useState(null);
   const [isOneMonthPassed, setIsOneMonthPassed] = useState(true);
@@ -59,6 +65,17 @@ const InmateBehavior = () => {
     if (!dateString) return "Not available";
     return new Date(dateString).toLocaleDateString();
   };
+
+  // Update committeeName whenever user data changes
+  useEffect(() => {
+    if (currentUser) {
+      const fullName = `${currentUser.firstName || ''} ${currentUser.middleName || ''} ${currentUser.lastName || ''}`.trim();
+      setFormData(prev => ({
+        ...prev,
+        committeeName: fullName
+      }));
+    }
+  }, [currentUser]);
 
   // Fetch inmate details based on the inmate ID
   const fetchInmateById = async () => {
@@ -503,10 +520,17 @@ const InmateBehavior = () => {
                   <input 
                     type="text" 
                     name="committeeName" 
+                    value={formdata.committeeName}
                     onChange={handleChange} 
                     className="w-full border border-gray-300 rounded-md p-2 focus:ring-2 focus:ring-teal-500 focus:border-transparent"
                     placeholder="Enter committee name"
+                    readOnly={currentUser !== null}
                   />
+                  {currentUser && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      This field is automatically filled with your name.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-gray-700 mb-2">ፌርማ</label>

@@ -13,6 +13,9 @@ import axiosInstance from "../../utils/axiosInstance";
 import { parseISO, isAfter, isPast, format, addDays } from "date-fns";
 import '../../styles/table.css'; // Import the table styles
 import '../../styles/responsive.css'; // Import the responsive utility classes
+import LanguageSelector from "../common/LanguageSelector";
+import { T } from "../common/TranslatedText";
+import TranslatedText from "../common/TranslatedText";
 
 const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null, onRefreshCapacity = null }) => {
   // Get data from custom hook - include version for memoization
@@ -1286,7 +1289,7 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
             <div className="flex items-center">
               <FaExclamationTriangle className="h-4 w-4 text-yellow-500 mr-2 flex-shrink-0" />
               <p className="text-sm text-yellow-700">
-                The prison has reached its visitor capacity for today. Please schedule a visit for another day.
+                <T>The prison has reached its visitor capacity for today. Please schedule a visit for another day.</T>
               </p>
             </div>
           </div>

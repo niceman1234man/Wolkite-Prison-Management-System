@@ -22,6 +22,12 @@ export const inmateRouter=express.Router();
 inmateRouter.post('/new-inmate', authenticateToken, upload.single('inmatePhoto'), addnewInmate);
 inmateRouter.get('/allInmates', authenticateToken, getAllInmates);
 inmateRouter.get('/get-inmate/:id', authenticateToken, getInmate);
+inmateRouter.get('/inmate/:id', authenticateToken, getInmate);
 inmateRouter.put('/update-inmate/:id', authenticateToken, updateInmate);
 inmateRouter.delete('/delete-inmate/:id', authenticateToken, archiveMiddleware('inmate'), deleteInmate);
+
+// Add a simple test endpoint that doesn't require authentication
+inmateRouter.get('/test', (req, res) => {
+  res.status(200).json({ message: "Inmate router is working correctly!" });
+});
 

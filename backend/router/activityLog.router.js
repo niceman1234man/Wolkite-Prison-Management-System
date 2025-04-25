@@ -19,6 +19,47 @@ router.get('/logs', getActivityLogs);
 router.get('/summary', getActivitySummary);
 router.get('/user/:userId', getUserActivityLogs);
 
+// Main endpoint to handle activity logging from frontend
+router.post('/log', async (req, res) => {
+  try {
+    const logData = req.body;
+    
+    // Add user info from token if not provided
+    if (!logData.user && req.user) {
+      logData.user = req.user.id;
+      
+      // Add additional user details if available
+      if (!logData.userEmail) logData.userEmail = req.user.email;
+      if (!logData.userName) logData.userName = req.user.name || req.user.firstName + ' ' + req.user.lastName;
+      if (!logData.userRole) logData.userRole = req.user.role;
+    }
+    
+    // Add IP and user agent
+    if (!logData.ipAddress) {
+      logData.ipAddress = req.ip;
+    }
+    if (!logData.userAgent) {
+      logData.userAgent = req.headers['user-agent'];
+    }
+    
+    console.log('Creating activity log from frontend:', JSON.stringify(logData, null, 2));
+    const savedLog = await logActivity(logData);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Activity log created successfully',
+      log: savedLog
+    });
+  } catch (error) {
+    console.error('Error creating activity log from frontend:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error creating activity log',
+      error: error.message
+    });
+  }
+});
+
 // Direct route to create an activity log (for testing)
 router.post('/create', async (req, res) => {
   try {

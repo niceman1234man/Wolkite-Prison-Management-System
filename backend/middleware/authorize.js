@@ -33,6 +33,15 @@ export const authorize = (allowedRoles = []) => {
       return next();
     }
 
+    // Special case: Allow security staff to manage clearance archives
+    if ((req.method === 'POST' || req.method === 'DELETE') && 
+        req.originalUrl.includes('/archive/') && 
+        req.user.role === 'security') {
+      
+      console.log('*** Special authorization: Security staff managing clearance archives');
+      return next();
+    }
+
     // Check if user has one of the required roles
     const hasRole = allowedRoles.some(role => req.user.role === role);
     

@@ -13,12 +13,12 @@ const formatEntityType = (type) => {
 
 // Role-based entity type mapping
 const roleEntityTypeMap = {
-  'admin': ['user', 'prison', 'inmate', 'notice', 'clearance', 'visitor', 'report', 'transfer', 'incident'],
-  'inspector': ['prison', 'notice'],
+  'ademin': ['user', 'prison', 'inmate', 'notice', 'clearance', 'visitor', 'report', 'transfer', 'incident'],
+  'inspctor': ['prison', 'notice'],
   'police-officer': ['incident', 'visitor', 'transfer'],
-  'court': ['clearance'],
-  'woreda': ['inmate'],
-  'security': ['inmate', 'clearance', 'visitor', 'transfer', 'report']
+  'court': ['virdict'],
+  'woreda': ['woredaInmate'],
+  'security':['clearance','inmate','transfer']
 };
 
 const ArchiveDetail = () => {
@@ -182,8 +182,6 @@ const ArchiveDetail = () => {
         
         if (role === 'police-officer') {
           navigate('/policeOfficer-dashboard/archive');
-        } else if (role === 'security') {
-          navigate('/securityStaff-dashboard/archive');
         } else {
           navigate('/archive');
         }
@@ -214,8 +212,6 @@ const ArchiveDetail = () => {
         
         if (role === 'police-officer') {
           navigate('/policeOfficer-dashboard/archive');
-        } else if (role === 'security') {
-          navigate('/securityStaff-dashboard/archive');
         } else {
           navigate('/archive');
         }
@@ -313,8 +309,6 @@ const ArchiveDetail = () => {
     
     if (role === 'police-officer') {
       navigate('/policeOfficer-dashboard/archive');
-    } else if (role === 'security') {
-      navigate('/securityStaff-dashboard/archive');
     } else {
       navigate('/archive');
     }

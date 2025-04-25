@@ -6,7 +6,7 @@ export const columns = [
   {
     name: "S No",
     selector: (row) => row.sno,
-    width: "70px",
+    width: "90px",
     center: true,
     sortable: true,
     style: {
@@ -22,6 +22,7 @@ export const columns = [
     style: {
       fontWeight: "500",
     },
+    width: "220px",
     grow: 2
   },
   {
@@ -35,7 +36,7 @@ export const columns = [
     name: "Gender",
     selector: (row) => row.gender || "N/A",
     sortable: true,
-    width: "100px",
+    width: "130px",
     center: true,
     cell: row => (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
