@@ -646,16 +646,6 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
             <FaBook className="-ml-1 mr-2 h-5 w-5" />
             Schedule New Visit
           </button>
-<<<<<<< HEAD
-        </div>
-      )}
-      {hasPendingSchedule && (
-        <div className="mt-4 text-sm text-yellow-600 bg-yellow-50 p-3 rounded-md border border-yellow-200">
-          <FaExclamationTriangle className="inline-block mr-1" />
-          You already have a pending visit schedule. You cannot create a new schedule until your current one is approved, rejected, or canceled.
-        </div>
-      )}
-=======
         </div>
       )}
       {hasPendingSchedule && (
@@ -666,7 +656,6 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
           </div>
         </div>
       )}
->>>>>>> be01017164c2d53f02dca990e3d7a9027d63f3da
     </div>
   );
 
@@ -679,21 +668,6 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
     // Can reschedule if it's not pending (handled separately) and it's upcoming
     const canReschedule = schedule.status?.toLowerCase() !== 'pending';
 
-<<<<<<< HEAD
-    return (
-      <div key={schedule._id} className="visitor-item-card">
-        <div className="flex justify-between items-start mb-2">
-          <h3 className="font-medium text-sm">
-            <TranslatedText text={`Visit to ${visitorName}`} />
-          </h3>
-          <span className={`visitor-badge ${schedule.status?.toLowerCase() === 'pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' : 
-                                               schedule.status?.toLowerCase() === 'approved' ? 'bg-green-100 text-green-800 border-green-300' : 
-                                               schedule.status?.toLowerCase() === 'cancelled' ? 'bg-gray-100 text-gray-700 border-gray-300' :
-                                               schedule.status?.toLowerCase() === 'rejected' ? 'bg-red-100 text-red-800 border-red-300' :
-                                               'bg-blue-100 text-blue-800 border-blue-300'}`}>
-            <T>{schedule.status}</T>
-          </span>
-=======
     // Calculate the actual display index based on pagination
     const displayIndex = indexOfFirstItem + index + 1;
     
@@ -764,7 +738,6 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
             </span>
             </div>
           </div>
->>>>>>> be01017164c2d53f02dca990e3d7a9027d63f3da
         </div>
         
         {/* Card body with information */}
@@ -856,67 +829,6 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
 
   const renderTableView = (schedules) => {
     return (
-<<<<<<< HEAD
-      <div className="visitor-table-container">
-        <table className="visitor-table">
-          <thead className="bg-gray-50">
-            <tr>
-              <th>Visitor</th>
-              <th>Inmate</th>
-              <th className="hidden sm:table-cell">Visit Date & Time</th>
-              <th className="hidden md:table-cell">Duration</th>
-              <th className="hidden md:table-cell">Purpose</th>
-              <th>Status</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {schedules.map((schedule) => {
-              const visitorName = getVisitorName(schedule);
-              // Find the inmate in the inmates array using the inmateId
-              const inmate = inmates.find(i => i._id === schedule.inmateId?._id);
-              const inmateName = inmate ? inmate.inmate_name : "Unknown Inmate";
-              const canEdit = schedule.status?.toLowerCase() === 'pending';
-              
-              return (
-                <tr key={schedule._id}>
-                  <td className="font-medium">
-                    <TranslatedText text={`Visit to ${visitorName}`} />
-                  </td>
-                  <td>{inmateName}</td>
-                  <td className="hidden sm:table-cell">
-                    {new Date(schedule.visitDate).toLocaleDateString()} <br />
-                    <span className="text-xs text-gray-500">{schedule.visitTime}</span>
-                  </td>
-                  <td className="hidden md:table-cell">{schedule.visitDuration || schedule.duration || 30} min</td>
-                  <td className="hidden md:table-cell">{schedule.purpose}</td>
-                  <td>
-                    <span className={`visitor-badge ${schedule.status?.toLowerCase() === 'pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-300' : 
-                                                    schedule.status?.toLowerCase() === 'approved' ? 'bg-green-100 text-green-800 border-green-300' : 
-                                                    schedule.status?.toLowerCase() === 'cancelled' ? 'bg-gray-100 text-gray-700 border-gray-300' :
-                                                    schedule.status?.toLowerCase() === 'rejected' ? 'bg-red-100 text-red-800 border-red-300' :
-                                                    'bg-blue-100 text-blue-800 border-blue-300'}`}>
-                      <T>{schedule.status}</T>
-                    </span>
-                  </td>
-                  <td>
-                    <div className="flex gap-1">
-                      <button 
-                        onClick={() => viewScheduleDetails(schedule)}
-                        className="visitor-button visitor-button-light text-xs"
-                      >
-                        <FaEye />
-                      </button>
-                      {canEdit && (
-                        <button 
-                          onClick={() => editSchedule(schedule)}
-                          className="visitor-button visitor-button-primary text-xs"
-                        >
-                          <FaEdit />
-                        </button>
-                      )}
-                    </div>
-=======
       <div className="w-full bg-white rounded-lg shadow-md overflow-hidden mb-6">
         {loading && (
           <div className="p-4 text-center">
@@ -960,7 +872,6 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
                 <tr>
                   <td colSpan="7" className="px-4 py-4 text-center text-gray-500 italic">
                     No visits scheduled
->>>>>>> be01017164c2d53f02dca990e3d7a9027d63f3da
                   </td>
                 </tr>
               ) : (
@@ -1232,42 +1143,6 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
 
   return (
     <div className={`visitor-container ${isCollapsed ? 'ml-16' : 'ml-64'}`}>
-<<<<<<< HEAD
-      {/* Page Header */}
-      <div className="visitor-card mb-4 p-3 h-32 mt-10">
-        <div className="visitor-header">
-          <div className="visitor-title">
-            <FaClipboardCheck className="visitor-title-icon" />
-            <h2 className="visitor-title-text">
-              <T>Visit Schedules</T>
-            </h2>
-          </div>
-          
-          <div className="visitor-actions flex justify-end">
-            <button
-              onClick={() => {
-                if (!checkPendingSchedules() || hasPendingSchedule === false) {
-                  setShowScheduleForm(true);
-                } else {
-                  toast.error("You already have a pending visit schedule. You cannot create a new schedule until your current one is approved, rejected, or canceled.");
-                }
-              }}
-              disabled={loading || isCapacityReached || hasPendingSchedule}
-              className={`visitor-button visitor-button-primary ${(loading || isCapacityReached || hasPendingSchedule) ? "opacity-50 cursor-not-allowed" : ""}`}
-            >
-              <FaSave className="mr-1" /> <T>Create Schedule</T>
-            </button>
-            
-            <button
-              onClick={fetchSchedules}
-              disabled={loading}
-              className={`visitor-button visitor-button-secondary ${loading ? "opacity-50 cursor-not-allowed" : ""}`}
-            >
-              <FaSync className={loading ? "animate-spin" : ""} /> <T>Refresh</T>
-            </button>
-            
-            <div className="flex gap-1 ml-1">
-=======
       {/* Fixed Header Section */}
       <div className={`bg-white shadow-md fixed top-14 z-20 transition-all duration-300 ${
         isCollapsed ? "left-16 w-[calc(100%-4rem)]" : "left-64 w-[calc(100%-16rem)]"
@@ -1284,7 +1159,6 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
             
             {/* Primary actions */}
             <div className="flex items-center space-x-2">
->>>>>>> be01017164c2d53f02dca990e3d7a9027d63f3da
               <button
                 onClick={handleRefresh}
                 className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200"
@@ -1419,53 +1293,8 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
               </p>
             </div>
           </div>
-<<<<<<< HEAD
-        </div>
-      )}
-
-      {/* Filter and Search Controls */}
-      <div className="visitor-controls">
-        <div className="visitor-control-group">
-          <div>
-            <label htmlFor="statusFilter" className="sr-only">Filter by Status</label>
-            <div className="flex">
-              <div className="flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500">
-                <FaFilter className="h-4 w-4" />
-              </div>
-              <select
-                id="statusFilter"
-                name="statusFilter"
-                value={statusFilter}
-                onChange={(e) => handleStatusFilterChange(e.target.value)}
-                className="visitor-select rounded-l-none"
-              >
-                <option value="all">All Statuses</option>
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
-              </select>
-            </div>
-          </div>
-          
-          <div className="flex-1">
-            <label htmlFor="search" className="sr-only">Search</label>
-            <input
-              type="text"
-              name="search"
-              id="search"
-              value={searchQuery}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="visitor-input"
-              placeholder="Search by visitor name, inmate name, or purpose..."
-            />
-          </div>
-        </div>
-=======
         )}
         
->>>>>>> be01017164c2d53f02dca990e3d7a9027d63f3da
       </div>
       
       {/* Push content down to prevent overlap with fixed header - adjust based on warnings */}
