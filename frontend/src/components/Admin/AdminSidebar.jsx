@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { toggleSidebar, setSidebarState } from "../../redux/sidebarSlice";
-import { FaBars, FaBuilding, FaCogs, FaTachometerAlt, FaUsers, FaUserPlus, FaUserEdit, FaChartBar, FaDatabase, FaList, FaUserShield, FaCog, FaSignOutAlt, FaHome, FaQuestionCircle, FaHistory } from "react-icons/fa";
+import { FaBars, FaBuilding, FaCogs, FaTachometerAlt, FaUsers, FaUserPlus, FaUserEdit, FaChartBar, FaDatabase, FaList, FaUserShield, FaCog, FaSignOutAlt, FaHome, FaQuestionCircle, FaHistory, FaArchive } from "react-icons/fa";
 
 const AdminSidebar = () => {
   const dispatch = useDispatch();
@@ -66,6 +66,18 @@ const AdminSidebar = () => {
           >
             <FaUsers className="h-6 w-6" />
             {!isCollapsed && <span className="ml-3">Users</span>}
+          </NavLink>
+
+          <NavLink
+            to="/archive"
+            className={({ isActive }) =>
+              `flex items-center p-2 rounded-lg hover:bg-teal-600 transition-colors ${
+                isActive ? "bg-teal-600" : ""
+              } ${isCollapsed ? "justify-center" : "justify-start"}`
+            }
+          >
+            <FaArchive className="h-6 w-6" />
+            {!isCollapsed && <span className="ml-3">Archive System</span>}
           </NavLink>
 
           <NavLink

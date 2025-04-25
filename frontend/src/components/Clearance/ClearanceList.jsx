@@ -67,7 +67,7 @@ const ClearanceButtons = ({ _id, onDelete }) => {
       
       <ConfirmModal
         open={openDelete}
-        message="Do you want to delete this clearance? This action cannot be undone."
+        message="Do you want to delete this clearance? This action will archive the clearance and can be restored from the archive system if needed."
         onConfirm={() => {
           handleDelete();
           setOpenDelete(false);

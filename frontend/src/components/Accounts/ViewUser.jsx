@@ -36,13 +36,16 @@ const [openActivate, setOpenActivate] = useState(false);
 
   const deleteUser = async () => {
       try {
-        await axiosInstance.delete(`/user/delete-user/${id}`);
+        const response = await axiosInstance.delete(`/user/delete-user/${id}`);
         navigate("/admin-dashboard/users");
         setOpenDelete(false);
-        toast.success("User deleted successfully!");
-       
+        if(response.data.success) {
+          toast.success("User deleted and archived successfully!");
+        } else {
+          toast.error(response.data.message || "Error deleting user");
+        }
       } catch (error) {
-        toast.error(error.response?.data?.error || "Error deleting user");
+        toast.error(error.response?.data?.message || "Error deleting user");
       }
   };
 

@@ -12,7 +12,8 @@ import {
   FaFileAlt, 
   FaClipboardList, 
   FaExchangeAlt, 
-  FaUserShield 
+  FaUserShield,
+  FaArchive
 } from "react-icons/fa";
 
 const InspectorSidebar = () => {
@@ -101,6 +102,18 @@ const InspectorSidebar = () => {
           >
             <FaChartBar className="h-6 w-6" />
             {!isCollapsed && <span className="ml-3">Reports</span>}
+          </NavLink>
+          
+          <NavLink
+            to="/archive"
+            className={({ isActive }) =>
+              `flex items-center p-2 rounded-lg hover:bg-teal-600 transition-colors ${
+                isActive ? "bg-teal-600" : ""
+              } ${isCollapsed ? "justify-center" : "justify-start"}`
+            }
+          >
+            <FaArchive className="h-6 w-6" />
+            {!isCollapsed && <span className="ml-3">Archive System</span>}
           </NavLink>
           
           <NavLink

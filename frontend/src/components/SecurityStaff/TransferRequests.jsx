@@ -1412,8 +1412,7 @@ const TransferRequests = () => {
             </div>
             
             <div className="mb-6">
-              <p className="text-gray-700 mb-2">Are you sure you want to delete this transfer request?</p>
-              <p className="text-gray-500 text-sm">This action cannot be undone. All data associated with this transfer will be permanently removed.</p>
+              <p className="text-gray-700 mb-2">Are you sure you want to delete this transfer request? This action will archive the transfer and it can be restored from the archive system if needed.</p>
             </div>
             
             <div className="flex justify-end gap-3">

@@ -1,0 +1,304 @@
+[
+  {
+    "_id": "67ed2fdaf00321b40e877c7f",
+    "title": "hey",
+    "description": "hhhhhhhhhhhhh",
+    "roles": [
+      "Admin",
+      "Police Officer",
+      "Visitor"
+    ],
+    "date": "2025-04-04T00:00:00.000Z",
+    "priority": "High",
+    "isPosted": true,
+    "readBy": [
+      "67b9596c1765cd4791f54209",
+      "67ba0647a5d75475ea6c8fdf",
+      "67ba0647a5d75475ea6c8fdf",
+      "67c69230357dd4ef7d522e37",
+      "67e9914c6462f6f1d299350c",
+      "67c69576356cfb7018fc1c43",
+      "67ba63a1d53b256a864fa434",
+      "67ba0829a5d75475ea6c8ffb",
+      "67e79faa7f7b06ee51d7d0ea",
+      "67e991ae83e6dd159013bba6",
+      "6805f03edeb2b621db78c544"
+    ],
+    "targetAudience": "all",
+    "createdAt": "2025-04-02T12:38:50.765Z",
+    "updatedAt": "2025-04-22T20:52:31.914Z",
+    "__v": 11
+  },
+  {
+    "_id": "67ed4dde80376d590461cb21",
+    "title": "selam to  all",
+    "description": "how are you guys? are you good?",
+    "roles": [
+      "Visitor",
+      "Security Staff",
+      "Court",
+      "Admin",
+      "Police Officer"
+    ],
+    "date": "2025-04-03T00:00:00.000Z",
+    "priority": "Urgent",
+    "isPosted": true,
+    "readBy": [
+      "67b9596c1765cd4791f54209",
+      "67ba0647a5d75475ea6c8fdf",
+      "67ba0647a5d75475ea6c8fdf",
+      "67e9914c6462f6f1d299350c",
+      "67c69230357dd4ef7d522e37",
+      "67c69576356cfb7018fc1c43",
+      "67ba63a1d53b256a864fa434",
+      "67ba0829a5d75475ea6c8ffb",
+      "67e79faa7f7b06ee51d7d0ea",
+      "67e991ae83e6dd159013bba6"
+    ],
+    "targetAudience": "all",
+    "createdAt": "2025-04-02T14:46:54.177Z",
+    "updatedAt": "2025-04-09T19:05:01.097Z",
+    "__v": 10
+  },
+  {
+    "_id": "67f068b667ad71a57af80602",
+    "title": "fghvgfd",
+    "description": "sdfsdfsedfsdf",
+    "roles": [
+      "Visitor",
+      "Admin",
+      "Police Officer",
+      "Security Staff"
+    ],
+    "date": "2025-04-12T00:00:00.000Z",
+    "priority": "Urgent",
+    "isPosted": true,
+    "readBy": [
+      "67ba0829a5d75475ea6c8ffb",
+      "67b9596c1765cd4791f54209",
+      "67e9914c6462f6f1d299350c",
+      "67e991ae83e6dd159013bba6",
+      "67e79faa7f7b06ee51d7d0ea",
+      "67ba63a1d53b256a864fa434",
+      "67c69230357dd4ef7d522e37",
+      "67c69576356cfb7018fc1c43",
+      "67ba0647a5d75475ea6c8fdf",
+      "6805f03edeb2b621db78c544"
+    ],
+    "targetAudience": "all",
+    "createdAt": "2025-04-04T23:18:14.588Z",
+    "updatedAt": "2025-04-22T20:52:18.490Z",
+    "__v": 10
+  },
+  {
+    "_id": "67f69137237c2c42be4a3144",
+    "title": "fdsfwdsf",
+    "description": "dsfcdsxzfcdsfwsa",
+    "roles": [
+      "Visitor",
+      "Admin",
+      "Security Staff",
+      "Court",
+      "Police Officer"
+    ],
+    "date": "2025-04-10T00:00:00.000Z",
+    "priority": "High",
+    "isPosted": true,
+    "readBy": [
+      "67ba63a1d53b256a864fa434",
+      "67ba0829a5d75475ea6c8ffb",
+      "67ba0647a5d75475ea6c8fdf",
+      "67c69576356cfb7018fc1c43",
+      "67b9596c1765cd4791f54209",
+      "67e991ae83e6dd159013bba6",
+      "67e9914c6462f6f1d299350c",
+      "67e79faa7f7b06ee51d7d0ea",
+      "67c69230357dd4ef7d522e37",
+      "6805f03edeb2b621db78c544"
+    ],
+    "targetAudience": "all",
+    "createdAt": "2025-04-09T15:24:39.284Z",
+    "updatedAt": "2025-04-24T16:59:35.398Z",
+    "__v": 10
+  },
+  {
+    "_id": "67f693af237c2c42be4a31af",
+    "title": "dfgcsdv",
+    "description": "fsdfsdf",
+    "roles": [
+      "Visitor",
+      "Admin",
+      "Police Officer",
+      "Security Staff"
+    ],
+    "date": "2025-04-10T00:00:00.000Z",
+    "priority": "Normal",
+    "isPosted": true,
+    "readBy": [
+      "67c69576356cfb7018fc1c43",
+      "67e991ae83e6dd159013bba6",
+      "67e9914c6462f6f1d299350c",
+      "67ba63a1d53b256a864fa434",
+      "67e79faa7f7b06ee51d7d0ea",
+      "67c69230357dd4ef7d522e37",
+      "67ba0829a5d75475ea6c8ffb",
+      "67ba0647a5d75475ea6c8fdf",
+      "67b9596c1765cd4791f54209",
+      "6805f03edeb2b621db78c544"
+    ],
+    "targetAudience": "all",
+    "createdAt": "2025-04-09T15:35:11.589Z",
+    "updatedAt": "2025-04-22T20:52:20.894Z",
+    "__v": 10
+  },
+  {
+    "_id": "67f69d9e237c2c42be4a3351",
+    "title": "rfsdfsdfs",
+    "description": "dfsdfsdf",
+    "roles": [
+      "Security Staff",
+      "Admin",
+      "Police Officer",
+      "Court",
+      "Visitor"
+    ],
+    "date": "2025-04-10T00:00:00.000Z",
+    "priority": "High",
+    "isPosted": true,
+    "readBy": [
+      "67ba63a1d53b256a864fa434",
+      "67ba0829a5d75475ea6c8ffb",
+      "67ba0647a5d75475ea6c8fdf",
+      "67c69576356cfb7018fc1c43",
+      "67b9596c1765cd4791f54209",
+      "67e991ae83e6dd159013bba6",
+      "67e9914c6462f6f1d299350c",
+      "67e79faa7f7b06ee51d7d0ea",
+      "67c69230357dd4ef7d522e37",
+      "6805f03edeb2b621db78c544"
+    ],
+    "targetAudience": "all",
+    "createdAt": "2025-04-09T16:17:34.986Z",
+    "updatedAt": "2025-04-22T20:52:29.700Z",
+    "__v": 10
+  },
+  {
+    "_id": "6800cf68a9d46b13adab0066",
+    "title": "erter",
+    "description": "ertert",
+    "roles": [
+      "Police Officer",
+      "Admin",
+      "Security Staff"
+    ],
+    "date": "2025-04-18T00:00:00.000Z",
+    "priority": "High",
+    "isPosted": true,
+    "readBy": [
+      "67ba63a1d53b256a864fa434",
+      "67b9596c1765cd4791f54209",
+      "67ba0829a5d75475ea6c8ffb",
+      "67e79faa7f7b06ee51d7d0ea",
+      "6805f03edeb2b621db78c544",
+      "67c69576356cfb7018fc1c43",
+      "67ba0647a5d75475ea6c8fdf",
+      "67e9914c6462f6f1d299350c"
+    ],
+    "targetAudience": "all",
+    "createdAt": "2025-04-17T09:52:40.569Z",
+    "updatedAt": "2025-04-24T20:03:09.510Z",
+    "__v": 8
+  },
+  {
+    "_id": "68065e304be47c2bbad4fa51",
+    "title": "meeting",
+    "description": "ዛሬ በ 7፡30 ከ ዋናው አዳ",
+    "roles": [
+      "Security Staff"
+    ],
+    "date": "2025-04-22T00:00:00.000Z",
+    "priority": "Low",
+    "isPosted": true,
+    "readBy": [
+      "67ba0829a5d75475ea6c8ffb"
+    ],
+    "targetAudience": "security",
+    "createdAt": "2025-04-21T15:03:13.036Z",
+    "updatedAt": "2025-04-24T13:12:05.139Z",
+    "__v": 1
+  },
+  {
+    "_id": "680a34cae39dee8e95550118",
+    "title": "ለ መስሪአ ቤቱ ሰራተኞች በሙሉ",
+    "description": "ፍክልድግ፤ስግክፍድልገ",
+    "roles": [
+      "Police Officer",
+      "Security Staff",
+      "Court"
+    ],
+    "date": "2025-04-25T00:00:00.000Z",
+    "priority": "Normal",
+    "isPosted": true,
+    "readBy": [
+      "6805f03edeb2b621db78c544",
+      "67ba0647a5d75475ea6c8fdf",
+      "67e9914c6462f6f1d299350c",
+      "67e79faa7f7b06ee51d7d0ea",
+      "67b9596c1765cd4791f54209"
+    ],
+    "targetAudience": "all",
+    "createdAt": "2025-04-24T12:55:38.542Z",
+    "updatedAt": "2025-04-24T21:07:02.076Z",
+    "__v": 5
+  },
+  {
+    "_id": "680a38eee39dee8e955501e7",
+    "title": "fgdf",
+    "description": "dfgr",
+    "roles": [
+      "Security Staff"
+    ],
+    "date": "2025-04-25T00:00:00.000Z",
+    "priority": "Normal",
+    "isPosted": true,
+    "readBy": [],
+    "targetAudience": "security",
+    "createdAt": "2025-04-24T13:13:18.663Z",
+    "updatedAt": "2025-04-24T13:13:35.086Z",
+    "__v": 0
+  },
+  {
+    "_id": "680a40abe39dee8e95550395",
+    "title": "urgent noticce",
+    "description": "we will have meeting today at",
+    "roles": [
+      "Security Staff"
+    ],
+    "date": "2025-04-25T00:00:00.000Z",
+    "priority": "Urgent",
+    "isPosted": true,
+    "readBy": [],
+    "targetAudience": "security",
+    "createdAt": "2025-04-24T13:46:19.387Z",
+    "updatedAt": "2025-04-24T13:46:19.387Z",
+    "__v": 0
+  },
+  {
+    "_id": "680a49bce39dee8e955504f7",
+    "title": "new notice",
+    "description": "does not have body",
+    "roles": [
+      "Visitor"
+    ],
+    "date": "2025-04-25T00:00:00.000Z",
+    "priority": "High",
+    "isPosted": true,
+    "readBy": [
+      "67e9914c6462f6f1d299350c"
+    ],
+    "targetAudience": "visitors",
+    "createdAt": "2025-04-24T14:25:00.212Z",
+    "updatedAt": "2025-04-24T20:02:57.097Z",
+    "__v": 1
+  }
+]

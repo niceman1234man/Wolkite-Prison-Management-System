@@ -113,6 +113,14 @@ import { SocketProvider } from './context/SocketContext';
 import AuthContext from './context/authContext';
 import PoliceVisitorManagementPage from "./components/policeofficerdashboard/PoliceVisitorManagementPage";
 import ActivityLog from "./components/Accounts/Log";
+import ArchiveList from './components/Archive/ArchiveList';
+import ArchiveDetail from './components/Archive/ArchiveDetail';
+import System from './page/System';
+import SystemDashboard from './components/SystemSetting/SystemDashboard';
+import PoliceArchivePage from './components/PoliceOfficerDashboard/PoliceArchivePage';
+import PoliceArchiveDetailPage from './components/PoliceOfficerDashboard/PoliceArchiveDetailPage';
+import SecurityArchivePage from './components/SecurityStaff/SecurityArchivePage';
+import SecurityArchiveDetailPage from './components/SecurityStaff/SecurityArchiveDetailPage';
 
 function App() {
   return (
@@ -157,6 +165,8 @@ function App() {
                 <Route path="settingsPage" element={<SettingPage />} />
                 <Route path="notices" element={<DashboardNoticeList dashboardType="police" />} />
                 <Route path="notices/view/:id" element={<NoticeView />} />
+                <Route path="archive" element={<PoliceArchivePage />} />
+                <Route path="archive/:id" element={<PoliceArchiveDetailPage />} />
               </Route>
 
               {/* Admin Dashboard Routes */}
@@ -183,6 +193,19 @@ function App() {
                 <Route path="notices" element={<NoticesList />} />
                 <Route path="reports" element={<Reports />} />
                 <Route path="homepage-settings" element={<InspectorHomepageSettings />} />
+              </Route>
+
+              {/* System Dashboard Routes */}
+              <Route path="/system-dashboard" element={
+                <PrivateRoute allowedRoles={['system']}>
+                  <System />
+                </PrivateRoute>
+              }>
+                <Route index element={<SystemDashboard />} />
+                <Route path="users" element={<ListofUsers />} />
+                <Route path="settings" element={<SystemSetting />} />
+                <Route path="database" element={<BackeUp />} />
+                <Route path="analytics" element={<AccountReport />} />
               </Route>
 
               {/* Court Dashboard Routes */}
@@ -259,7 +282,21 @@ function App() {
                 <Route path="view-clearance/:id" element={<ViewClearance />} />
                 <Route path="notices" element={<DashboardNoticeList dashboardType="security" />} />
                 <Route path="notices/view/:id" element={<NoticeView />} />
+                <Route path="archive" element={<SecurityArchivePage />} />
+                <Route path="archive/:id" element={<SecurityArchiveDetailPage />} />
               </Route>
+
+              {/* Add Archive System Routes */}
+              <Route path="/archive" element={
+                <PrivateRoute allowedRoles={['admin', 'inspector', 'system', 'woreda', 'police-officer', 'security']}>
+                  <ArchiveList />
+                </PrivateRoute>
+              } />
+              <Route path="/archive/:id" element={
+                <PrivateRoute allowedRoles={['admin', 'inspector', 'system','woreda','police-officer','security']}>
+                  <ArchiveDetail />
+                </PrivateRoute>
+              } />
             </Route>
           </Routes>
         </SocketProvider>

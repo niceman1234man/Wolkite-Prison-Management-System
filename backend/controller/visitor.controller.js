@@ -1,4 +1,5 @@
 import { Visitor } from "../model/visitor.model.js";
+import { archiveItem } from '../controllers/archive.controller.js';
 
 
 export const visitorInformation = async (req, res) => {
@@ -91,11 +92,23 @@ export const allVisitors = async (req, res) => {
 export const deleteVisitor = async (req, res) => {
   try {
     const { id } = req.params;
-    const deletedVisitor = await Visitor.findByIdAndDelete(id);
+    const visitor = await Visitor.findById(id);
 
-    if (!deletedVisitor) {
+    if (!visitor) {
       return res.status(404).json({ message: "Visitor not found" });
     }
+
+    // Archive the visitor before deletion
+    try {
+      await archiveItem('visitor', visitor._id, req.user.id, 'Visitor deleted by police officer');
+      console.log(`Visitor archived successfully`);
+    } catch (archiveError) {
+      console.error("Error archiving visitor:", archiveError);
+      // Continue with deletion even if archiving fails
+    }
+
+    console.log(`Deleting visitor`);
+    await visitor.deleteOne();
 
     res.status(200).json({ message: "Visitor deleted successfully" });
   } catch (error) {

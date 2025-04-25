@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { toggleSidebar, setSidebarState } from "../../redux/sidebarSlice";
-import { FaBars, FaBuilding, FaCogs, FaExclamationCircle, FaTachometerAlt, FaUsers, FaCalendarAlt, FaBell, FaUserFriends } from "react-icons/fa";
+import { FaBars, FaBuilding, FaCogs, FaExclamationCircle, FaTachometerAlt, FaUsers, FaCalendarAlt, FaBell, FaUserFriends, FaArchive } from "react-icons/fa";
 
 const PoliceOfficerSidebar = () => {
   const dispatch = useDispatch();
@@ -114,6 +114,18 @@ const PoliceOfficerSidebar = () => {
           >
             <FaBell className="h-6 w-6" />
             {!isCollapsed && <span className="ml-3">Notices</span>}
+          </NavLink>
+
+          <NavLink
+            to="/policeOfficer-dashboard/archive"
+            className={({ isActive }) =>
+              `flex items-center p-2 rounded-lg hover:bg-teal-600 transition-colors ${
+                isActive ? "bg-teal-600" : ""
+              } ${isCollapsed ? "justify-center" : "justify-start"}`
+            }
+          >
+            <FaArchive className="h-6 w-6" />
+            {!isCollapsed && <span className="ml-3">Archive System</span>}
           </NavLink>
 
           <NavLink

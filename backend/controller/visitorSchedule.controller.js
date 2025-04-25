@@ -1,4 +1,5 @@
 import VisitorSchedule from "../model/visitorSchedule.model.js";
+import { archiveItem } from '../controllers/archive.controller.js';
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -866,6 +867,15 @@ export const deleteVisitorSchedule = async (req, res) => {
         success: false,
         message: "Not authorized to delete this schedule",
       });
+    }
+
+    // Archive the schedule before deletion
+    try {
+      await archiveItem('visitor', schedule._id, req.user.id, 'Visit schedule deleted by user');
+      console.log(`Visit schedule archived successfully`);
+    } catch (archiveError) {
+      console.error("Error archiving visit schedule:", archiveError);
+      // Continue with deletion even if archiving fails
     }
 
     // Delete the schedule
