@@ -6,7 +6,7 @@ const archiveSchema = new mongoose.Schema(
     entityType: {
       type: String,
       required: true,
-      enum: ['prison', 'inmate', 'notice', 'clearance', 'visitor', 'report', 'transfer', 'incident', 'user'],
+      enum: ['prison', 'inmate', 'woredaInmate', 'notice', 'clearance', 'visitor', 'report', 'transfer', 'incident', 'user'],
       index: true
     },
     

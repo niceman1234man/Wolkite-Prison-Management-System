@@ -9,11 +9,13 @@ import VisitorAccount from '../model/visitorAccount.model.js';
 import { DailyIntake, TransferStats } from '../model/report.js';
 import { Transfer } from '../model/transfer.model.js';
 import { Incident } from '../model/Incident.model.js';
+import { WoredaInmate } from '../model/woredaInmate.model.js';
 
 // Map of entity types to their corresponding models
 const entityModels = {
   'prison': Prison,
   'inmate': Inmate,
+  'woredaInmate': WoredaInmate,
   'notice': Notice,
   'clearance': Clearance,
   'visitor': VisitorAccount,
@@ -141,7 +143,7 @@ export const getArchivedItems = async (req, res) => {
         'inspector': ['prison', 'notice'],
         'police-officer': ['incident', 'visitor', 'transfer'],
         'court': ['clearance'],
-        'woreda': ['inmate']
+        'woreda': ['woredaInmate']
       };
       
       // If role has restrictions and no entityType is specified in query
@@ -352,7 +354,7 @@ export const permanentlyDeleteArchivedItem = async (req, res) => {
         'inspector': ['prison', 'notice'],
         'police-officer': ['incident', 'visitor', 'transfer'],
         'court': ['clearance'],
-        'woreda': ['inmate']
+        'woreda': ['woredaInmate']
       };
       
       // Check if this user role can access this entity type

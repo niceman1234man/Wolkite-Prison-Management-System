@@ -8,26 +8,44 @@ import { archiveItem } from '../controllers/archive.controller.js';
 export const archiveMiddleware = (entityType) => {
   return async (req, res, next) => {
     try {
+      console.log(`Archive middleware running for ${entityType}...`);
+      console.log("Request headers:", req.headers);
+      console.log("Request user object:", req.user);
+      
       // Only proceed if we have an item ID
       if (req.params.id) {
+        console.log(`Item ID found: ${req.params.id}`);
         // Get user ID from request
         const userId = req.user?.id;
         
         if (!userId) {
           console.error('User ID not found in request for archiving');
+          console.log('Full req.user object:', req.user);
+          console.log('Auth header:', req.headers.authorization);
           return next();
         }
         
+        console.log(`User ID found: ${userId}`);
+        
         // Get reason if provided in request body
         const reason = req.body.reason || `${entityType} deleted by user`;
+        console.log(`Reason for deletion: ${reason}`);
         
-        // Archive the item before deletion
-        await archiveItem(entityType, req.params.id, userId, reason);
-        
-        // Set a flag to indicate this item has been archived
-        req.archived = true;
-        
-        console.log(`Successfully archived ${entityType} with ID ${req.params.id}`);
+        try {
+          // Archive the item before deletion
+          console.log(`Attempting to archive ${entityType} with ID ${req.params.id}...`);
+          const archiveResult = await archiveItem(entityType, req.params.id, userId, reason);
+          console.log(`Archive result:`, archiveResult);
+          
+          // Set a flag to indicate this item has been archived
+          req.archived = true;
+          
+          console.log(`Successfully archived ${entityType} with ID ${req.params.id}`);
+        } catch (archiveError) {
+          console.error(`Failed to archive ${entityType}:`, archiveError);
+        }
+      } else {
+        console.log('No item ID found in request params');
       }
     } catch (error) {
       console.error(`Error in archive middleware for ${entityType}:`, error);

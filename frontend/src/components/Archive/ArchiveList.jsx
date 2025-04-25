@@ -43,7 +43,7 @@ const formatEntityType = (type) => {
   return type.charAt(0).toUpperCase() + type.slice(1);
 };
 
-const ArchiveList = () => {
+const ArchiveList = ({ standalone = true }) => {
   console.log("ArchiveList component rendering");
   const navigate = useNavigate();
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
@@ -450,360 +450,346 @@ const ArchiveList = () => {
   };
 
   return (
-    <div className="flex">
-      <div className={`transition-all duration-300 ${isCollapsed ? "w-16" : "w-64"}`} />
-      <div className="flex-1 relative">
-        {/* Header */}
-        <div className={`bg-white shadow-md p-4 fixed top-14 z-20 flex flex-wrap items-center justify-between transition-all duration-300 ${
-          isCollapsed ? "left-16 w-[calc(100%-4rem)]" : "left-64 w-[calc(100%-16rem)]"
-        }`}>
-          <div className="flex items-center">
-            <button
-              className="flex items-center text-white bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg shadow-md transition duration-300 mr-4"
-              onClick={() => navigate(-1)}
-            >
-              <FaArrowLeft className="mr-2 text-lg" /> Back
-            </button>
-            <h1 className="text-2xl font-bold text-gray-800">Archive System</h1>
-          </div>
-          
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <FaSearch className="absolute left-3 top-2.5 text-gray-500" />
-              <input
-                type="text"
-                placeholder="Search archived items..."
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-md w-64"
-                value={filters.searchTerm}
-                onChange={handleSearch}
-              />
+    <div className={standalone ? "flex" : ""}>
+      {standalone && <div className={`transition-all duration-300 ${isCollapsed ? "w-16" : "w-64"}`} />}
+      <div className={standalone ? "flex-1 relative" : "w-full"}>
+        {/* Header (only show if standalone) */}
+        {standalone && (
+          <div className={`bg-white shadow-md p-4 fixed top-14 z-20 flex flex-wrap items-center justify-between transition-all duration-300 ${
+            isCollapsed ? "left-16 w-[calc(100%-4rem)]" : "left-64 w-[calc(100%-16rem)]"
+          }`}>
+            <div className="flex items-center">
+              <button
+                className="flex items-center text-white bg-teal-600 hover:bg-teal-700 px-4 py-2 rounded-lg shadow-md transition duration-300 mr-4"
+                onClick={() => navigate(-1)}
+              >
+                <FaArrowLeft className="mr-2 text-lg" /> Back
+              </button>
+              <h1 className="text-2xl font-bold text-gray-800">Archive System</h1>
             </div>
             
-            <button
-              onClick={() => setFilterOpen(!filterOpen)}
-              className={`p-2 rounded-md flex items-center gap-2 ${
-                filterOpen || Object.values(filters).some(v => v !== '') 
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-              }`}
-            >
-              <FaFilter /> Filters
-            </button>
+            <div className="flex items-center gap-3 mt-2 sm:mt-0">
+              <div className="relative">
+                <FaSearch className="absolute left-3 top-2.5 text-gray-500" />
+                <input
+                  type="text"
+                  placeholder="Search archived items..."
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-md w-64"
+                  value={filters.searchTerm}
+                  onChange={handleSearch}
+                />
+              </div>
+              
+              <button
+                onClick={() => setFilterOpen(!filterOpen)}
+                className={`p-2 rounded-md flex items-center gap-2 ${
+                  filterOpen || Object.values(filters).some(v => v !== '') 
+                    ? "bg-teal-600 text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                <FaFilter /> Filters
+              </button>
+            </div>
           </div>
-        </div>
+        )}
         
         {/* Main Content */}
-        <div className="p-6 mt-28">
-          {userRole && userRole !== 'admin' && (
-            <div className="mb-6 bg-blue-50 border-l-4 border-blue-500 text-blue-700 p-4 rounded shadow">
-              <div className="flex">
-                <div className="py-1"><FaUserShield className="h-5 w-5 text-blue-600" /></div>
-                <div className="ml-4">
-                  {userRole === 'security' ? (
-                    <>
-                      <p className="font-medium">Role-Based Access: {userRole}</p>
-                      <p className="text-sm mt-1">As security staff, you can view and manage all clearance archive items, regardless of who created them.</p>
-                    </>
-                  ) : (
-                    <>
-                      <p className="font-medium">Role-Based Access: {userRole}</p>
-                      <p className="text-sm mt-1">As a {userRole}, you can only view and manage archive items that you created, according to your role permissions.</p>
-                    </>
-                  )}
+        <div className={standalone ? "p-6 mt-24" : ""}>
+          {/* Search and Filters (when not standalone) */}
+          {!standalone && (
+            <div className="flex flex-wrap justify-between items-center mb-6">
+              <div className="relative mb-3 sm:mb-0">
+                <FaSearch className="absolute left-3 top-2.5 text-gray-500" />
+                <input
+                  type="text"
+                  placeholder="Search archived items..."
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-md w-64"
+                  value={filters.searchTerm}
+                  onChange={handleSearch}
+                />
+              </div>
+              
+              <button
+                onClick={() => setFilterOpen(!filterOpen)}
+                className={`p-2 rounded-md flex items-center gap-2 ${
+                  filterOpen || Object.values(filters).some(v => v !== '') 
+                    ? "bg-teal-600 text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                <FaFilter /> Filters
+              </button>
+            </div>
+          )}
+          
+          {/* Filters Panel */}
+          {filterOpen && (
+            <div className="bg-white p-4 mb-6 rounded-lg shadow-md">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Entity Type Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Entity Type</label>
+                  <select
+                    className="w-full border-gray-300 rounded-md shadow-sm focus:border-teal-500 focus:ring-teal-500"
+                    value={filters.entityType}
+                    onChange={(e) => handleFilterChange('entityType', e.target.value)}
+                  >
+                    <option value="">All Types</option>
+                    {userRole === 'admin' && <option value="user">Users</option>}
+                    {(userRole === 'admin' || userRole === 'inspector') && <option value="prison">Prisons</option>}
+                    {(userRole === 'admin' || userRole === 'woreda' || userRole === 'security') && <option value="woredaInmate">Inmates</option>}
+                    {(userRole === 'admin' || userRole === 'inspector') && <option value="notice">Notices</option>}
+                    {(userRole === 'admin' || userRole === 'court' || userRole === 'security') && <option value="clearance">Clearances</option>}
+                    {(userRole === 'admin' || userRole === 'police-officer' || userRole === 'security') && <option value="visitor">Visitors</option>}
+                    {(userRole === 'admin' || userRole === 'security') && <option value="report">Reports</option>}
+                    {(userRole === 'admin' || userRole === 'police-officer' || userRole === 'security') && <option value="transfer">Transfers</option>}
+                    {(userRole === 'admin' || userRole === 'police-officer') && <option value="incident">Incidents</option>}
+                  </select>
+                </div>
+                
+                {/* Date Range Filters */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                  <input
+                    type="date"
+                    className="w-full border-gray-300 rounded-md shadow-sm focus:border-teal-500 focus:ring-teal-500"
+                    value={filters.startDate}
+                    onChange={(e) => handleFilterChange('startDate', e.target.value)}
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                  <input
+                    type="date"
+                    className="w-full border-gray-300 rounded-md shadow-sm focus:border-teal-500 focus:ring-teal-500"
+                    value={filters.endDate}
+                    onChange={(e) => handleFilterChange('endDate', e.target.value)}
+                  />
+                </div>
+                
+                {/* Restoration Status */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <select
+                    className="w-full border-gray-300 rounded-md shadow-sm focus:border-teal-500 focus:ring-teal-500"
+                    value={filters.isRestored}
+                    onChange={(e) => handleFilterChange('isRestored', e.target.value)}
+                  >
+                    <option value="">All</option>
+                    <option value="false">Archived Only</option>
+                    <option value="true">Restored Only</option>
+                  </select>
+                </div>
+                
+                {/* Filter Actions */}
+                <div className="md:col-span-2 lg:col-span-3 flex justify-end gap-2 mt-2">
+                  <button
+                    onClick={resetFilters}
+                    className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
+                  >
+                    Clear Filters
+                  </button>
+                  <button
+                    onClick={applyFilters}
+                    className="px-4 py-2 text-white bg-teal-600 hover:bg-teal-700 rounded-md"
+                  >
+                    Apply Filters
+                  </button>
                 </div>
               </div>
             </div>
           )}
           
-          {loading ? (
-            <div className="flex justify-center items-center p-8">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700"></div>
+          {/* Loading and Error States */}
+          {loading && (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600" />
             </div>
-          ) : error ? (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
-              <strong className="font-bold">Error: </strong>
-              <span className="block sm:inline">{error}</span>
-              <button 
-                className="mt-4 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-                onClick={() => fetchArchivedItems()}
-              >
-                Retry
-              </button>
+          )}
+          
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-md mb-4">
+              <div className="flex items-center">
+                <FaExclamationTriangle className="text-red-500 mr-2" />
+                <span>Error loading archived items: {error}</span>
+              </div>
             </div>
-          ) : !apiAvailable ? (
-            <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded relative" role="alert">
-              <strong className="font-bold">Service Unavailable: </strong>
-              <span className="block sm:inline">The archive service is currently unavailable. Please try again later.</span>
-              <button 
-                className="mt-4 bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded"
-                onClick={() => fetchArchivedItems()}
-              >
-                Retry Connection
-              </button>
+          )}
+          
+          {!apiAvailable && (
+            <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 p-4 rounded-md mb-4">
+              <div className="flex items-center">
+                <FaExclamationTriangle className="text-yellow-500 mr-2" />
+                <span>Archive system is not available. Please try again later or contact the administrator.</span>
+              </div>
             </div>
-          ) : archivedItems.length === 0 ? (
-            <div className="text-center p-8 bg-gray-50 rounded-lg border border-gray-200">
-              {console.log("No archived items found. Current filters:", filters)}
-              {console.log("User role:", userRole)}
-              <FaArchive className="mx-auto text-gray-400 text-5xl mb-4" />
-              <h3 className="text-xl font-medium text-gray-700 mb-2">No Archived Items Found</h3>
-              {userRole === 'security' ? (
-                <p className="text-gray-500">
-                  No clearance archives found. This could be because no clearances have been deleted yet.
-                  Try deleting a clearance item first and then check this archive page.
-                </p>
-              ) : (
-                <p className="text-gray-500">There are no archived items matching your criteria.</p>
-              )}
-              {Object.values(filters).some(v => v !== '') && (
-                <button
-                  onClick={resetFilters}
-                  className="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-                >
-                  Clear Filters
-                </button>
-              )}
-            </div>
-          ) : (
+          )}
+          
+          {/* Content when data is loaded */}
+          {!loading && !error && apiAvailable && (
             <>
-              {/* Filter panel */}
-              {filterOpen && (
-                <div className="mb-6 p-4 bg-white rounded-lg shadow-md">
-                  <div className="flex justify-between mb-4">
-                    <h3 className="text-lg font-medium">Filter Archives</h3>
-                    <button onClick={() => setFilterOpen(false)} className="text-gray-500 hover:text-gray-700">
-                      <FaTimes />
-                    </button>
+              {archivedItems.length === 0 ? (
+                <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
+                  <div className="flex justify-center mb-4">
+                    <FaArchive className="text-5xl text-gray-400" />
+                  </div>
+                  <h3 className="text-xl font-medium text-gray-700 mb-2">No archived items found</h3>
+                  <p className="text-gray-500">
+                    {filters.entityType || filters.startDate || filters.endDate || filters.isRestored || filters.searchTerm
+                      ? "Try changing your filters or search criteria"
+                      : "When you delete items, they will appear here for potential restoration"}
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-gray-600 mb-4">Found {pagination.total} archived item(s)</p>
+                  
+                  {/* Archive Items Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {archivedItems.map(item => (
+                      <div 
+                        key={item._id} 
+                        className={`bg-white border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 cursor-pointer ${
+                          item.isRestored ? 'bg-green-50 border-green-200' : ''
+                        }`}
+                        onClick={() => viewDetails(item)}
+                      >
+                        <div className="p-4">
+                          <div className="flex items-center mb-2">
+                            <div className="mr-3 text-teal-600">
+                              {entityIcons[item.entityType] || <FaFileAlt className="text-teal-500" />}
+                            </div>
+                            <div className="flex-1">
+                              <div className="font-medium">{item.title || item.name || getItemTitle(item)}</div>
+                              <div className="text-xs text-gray-500">{formatEntityType(item.entityType)}</div>
+                            </div>
+                            {item.isRestored && (
+                              <span className="ml-auto bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
+                                Restored
+                              </span>
+                            )}
+                          </div>
+                          
+                          <div className="text-sm text-gray-600 line-clamp-2 mb-3">
+                            {getItemDescription(item)}
+                          </div>
+                          
+                          <div className="flex justify-between text-xs text-gray-500">
+                            <div className="flex items-center">
+                              <FaCalendarAlt className="mr-1" />
+                              {formatDate(item.archivedAt || item.createdAt)}
+                            </div>
+                            
+                            <div className="flex space-x-2">
+                              {!item.isRestored && item && canManageItem(item) && (
+                                <>
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      confirmRestore(item);
+                                    }}
+                                    className="p-1 text-green-600 hover:text-green-800"
+                                    title="Restore"
+                                  >
+                                    <FaUndo />
+                                  </button>
+                                  
+                                  <button 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      confirmDelete(item);
+                                    }}
+                                    className="p-1 text-red-600 hover:text-red-800"
+                                    title="Delete Permanently"
+                                  >
+                                    <FaTrash />
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                   
-                  {userRole && userRole !== 'admin' && (
-                    <div className="mb-4 bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded relative">
-                      {userRole === 'security' ? (
-                        <>
-                          <strong className="font-medium">Role-based access: </strong>
-                          <span className="block sm:inline">
-                            As security staff, you have access to all clearance archives in the system.
+                  {/* Pagination */}
+                  {pagination.pages > 1 && (
+                    <div className="flex justify-between items-center mt-6">
+                      <div className="text-sm text-gray-600">
+                        Showing {((pagination.page - 1) * pagination.limit) + 1} - {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} items
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <select 
+                          value={pagination.limit} 
+                          onChange={handleLimitChange}
+                          className="border border-gray-300 rounded-md text-sm p-1"
+                        >
+                          <option value="10">10 per page</option>
+                          <option value="25">25 per page</option>
+                          <option value="50">50 per page</option>
+                          <option value="100">100 per page</option>
+                        </select>
+                        
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => handlePageChange(1)}
+                            disabled={pagination.page === 1}
+                            className={`px-3 py-1 rounded ${
+                              pagination.page === 1
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                          >
+                            First
+                          </button>
+                          
+                          <button
+                            onClick={() => handlePageChange(pagination.page - 1)}
+                            disabled={pagination.page === 1}
+                            className={`px-3 py-1 rounded ${
+                              pagination.page === 1
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                          >
+                            Prev
+                          </button>
+                          
+                          <span className="px-3 py-1 bg-teal-600 text-white rounded">
+                            {pagination.page}
                           </span>
-                        </>
-                      ) : (
-                        <>
-                          <strong className="font-medium">Role-based access: </strong>
-                          <span className="block sm:inline">
-                            As a {userRole}, you can only manage archives for specific items you have created.
-                          </span>
-                        </>
-                      )}
+                          
+                          <button
+                            onClick={() => handlePageChange(pagination.page + 1)}
+                            disabled={pagination.page === pagination.pages}
+                            className={`px-3 py-1 rounded ${
+                              pagination.page === pagination.pages
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                          >
+                            Next
+                          </button>
+                          
+                          <button
+                            onClick={() => handlePageChange(pagination.pages)}
+                            disabled={pagination.page === pagination.pages}
+                            className={`px-3 py-1 rounded ${
+                              pagination.page === pagination.pages
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                          >
+                            Last
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   )}
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Entity Type
-                      </label>
-                      <select
-                        name="entityType"
-                        value={filters.entityType}
-                        onChange={handleFilterChange}
-                        className="w-full border border-gray-300 rounded-md p-2"
-                      >
-                        {getEntityTypeOptions().map(type => (
-                          <option key={type.value} value={type.value}>
-                            {type.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Date Range
-                      </label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">Start Date</div>
-                          <input
-                            type="date"
-                            name="startDate"
-                            value={filters.startDate}
-                            onChange={handleFilterChange}
-                            className="w-full border border-gray-300 rounded-md p-2"
-                          />
-                        </div>
-                        <div>
-                          <div className="text-xs text-gray-500 mb-1">End Date</div>
-                          <input
-                            type="date"
-                            name="endDate"
-                            value={filters.endDate}
-                            onChange={handleFilterChange}
-                            className="w-full border border-gray-300 rounded-md p-2"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Restoration Status
-                      </label>
-                      <select
-                        name="isRestored"
-                        value={filters.isRestored}
-                        onChange={handleFilterChange}
-                        className="w-full border border-gray-300 rounded-md p-2"
-                      >
-                        {restorationStatuses.map(status => (
-                          <option key={status.value} value={status.value}>
-                            {status.label}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    
-                    <div className="flex gap-2 pt-2">
-                      <button
-                        onClick={resetFilters}
-                        className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
-                      >
-                        Reset
-                      </button>
-                      <button
-                        onClick={applyFilters}
-                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                      >
-                        Apply
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {/* Archive items list */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {archivedItems.map(item => (
-                  <div 
-                    key={item._id} 
-                    className={`border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 cursor-pointer ${
-                      item.isRestored ? 'bg-green-50 border-green-200' : 'bg-white'
-                    }`}
-                    onClick={() => viewDetails(item)}
-                  >
-                    <div className="p-4">
-                      <div className="flex items-center mb-2">
-                        <div className="mr-3">
-                          {entityIcons[item.entityType] || <FaFileAlt className="text-gray-500" />}
-                        </div>
-                        <div>
-                          <div className="font-medium">{item.title || item.name || `Archived ${formatEntityType(item.entityType)}`}</div>
-                          <div className="text-xs text-gray-500">{formatEntityType(item.entityType)}</div>
-                        </div>
-                        {item.isRestored && (
-                          <span className="ml-auto bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
-                            Restored
-                          </span>
-                        )}
-                      </div>
-                      
-                      <div className="text-sm text-gray-600 line-clamp-2 mb-2">
-                        {item.description || item.data?.description || 'No description available'}
-                      </div>
-                      
-                      <div className="flex justify-between text-xs text-gray-500">
-                        <div className="flex items-center">
-                          <FaCalendarAlt className="mr-1" />
-                          {formatDate(item.archivedAt || item.createdAt)}
-                        </div>
-                        
-                        <div className="flex space-x-2">
-                          {!item.isRestored && item && canManageItem(item) && (
-                            <>
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  confirmRestore(item);
-                                }}
-                                className="p-1 text-green-600 hover:text-green-800"
-                                title="Restore"
-                              >
-                                <FaUndo />
-                              </button>
-                              
-                              <button 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  confirmDelete(item);
-                                }}
-                                className="p-1 text-red-600 hover:text-red-800"
-                                title="Delete Permanently"
-                              >
-                                <FaTrash />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              
-              {/* Pagination */}
-              {pagination.pages > 1 && (
-                <div className="flex justify-center mt-6">
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => handlePageChange(1)}
-                      disabled={pagination.page === 1}
-                      className={`px-3 py-1 rounded ${
-                        pagination.page === 1
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                      }`}
-                    >
-                      First
-                    </button>
-                    
-                    <button
-                      onClick={() => handlePageChange(pagination.page - 1)}
-                      disabled={pagination.page === 1}
-                      className={`px-3 py-1 rounded ${
-                        pagination.page === 1
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                      }`}
-                    >
-                      Previous
-                    </button>
-                    
-                    <span className="px-3 py-1">
-                      Page {pagination.page} of {pagination.pages}
-                    </span>
-                    
-                    <button
-                      onClick={() => handlePageChange(pagination.page + 1)}
-                      disabled={pagination.page === pagination.pages}
-                      className={`px-3 py-1 rounded ${
-                        pagination.page === pagination.pages
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                      }`}
-                    >
-                      Next
-                    </button>
-                    
-                    <button
-                      onClick={() => handlePageChange(pagination.pages)}
-                      disabled={pagination.page === pagination.pages}
-                      className={`px-3 py-1 rounded ${
-                        pagination.page === pagination.pages
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                      }`}
-                    >
-                      Last
-                    </button>
-                  </div>
                 </div>
               )}
             </>
@@ -884,6 +870,36 @@ const ArchiveList = () => {
       )}
     </div>
   );
+};
+
+// Helper functions for better item display
+const getItemTitle = (item) => {
+  const data = item.data || {};
+  
+  if (item.entityType === 'woredaInmate') {
+    return `${data.firstName || ''} ${data.lastName || ''}`.trim() || `Archived Inmate`;
+  }
+  
+  if (item.entityType === 'prison') {
+    return data.prison_name || 'Archived Prison';
+  }
+  
+  return `Archived ${formatEntityType(item.entityType)}`;
+};
+
+const getItemDescription = (item) => {
+  const data = item.data || {};
+  
+  if (item.entityType === 'woredaInmate') {
+    const crime = data.crime || 'Unknown crime';
+    return `Crime: ${crime}`;
+  }
+  
+  if (item.entityType === 'prison') {
+    return data.prison_location || 'No location information';
+  }
+  
+  return item.description || data.description || item.deletionReason || 'No description available';
 };
 
 export default ArchiveList;

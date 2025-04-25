@@ -10,6 +10,8 @@ import {
   deleteWoredaInmate,
   releaseInmate,
 } from "../controller/woredaInmate.controller.js";
+import { archiveMiddleware } from "../utils/archiveHelper.js";
+import { authenticateToken } from "../middleware/auth.js";
 
 const router = express.Router();
 
@@ -50,7 +52,7 @@ router.post("/register", upload.array("documents"), registerWoredaInmate);
 router.get("/getall-inmates", getAllWoredaInmates);
 router.get("/get-inmate/:id", getWoredaInmateById);
 router.put("/update-inmate/:id", upload.array("documents"), updateWoredaInmate);
-router.delete("/delete-inmate/:id", deleteWoredaInmate);
+router.delete("/delete-inmate/:id", authenticateToken, archiveMiddleware("woredaInmate"), deleteWoredaInmate);
 router.put("/release-inmate/:id", releaseInmate);
 
 export default router;

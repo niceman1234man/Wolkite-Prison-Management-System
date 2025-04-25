@@ -113,7 +113,7 @@ import { SocketProvider } from './context/SocketContext';
 import AuthContext from './context/authContext';
 import PoliceVisitorManagementPage from "./components/policeofficerdashboard/PoliceVisitorManagementPage";
 import ActivityLog from "./components/Accounts/Log";
-import ArchiveList from './components/Archive/ArchiveList';
+import ArchivePage from './components/Archive/ArchivePage';
 import ArchiveDetail from './components/Archive/ArchiveDetail';
 import System from './page/System';
 import SystemDashboard from './components/SystemSetting/SystemDashboard';
@@ -188,6 +188,8 @@ function App() {
                 <Route path="reports" element={<AccountReport />} />
                 <Route path="notices" element={<DashboardNoticeList dashboardType="admin" />} />
                 <Route path="notices/view/:id" element={<NoticeView />} />
+                <Route path="archive" element={<ArchivePage />} />
+                <Route path="archive/:id" element={<PoliceArchiveDetailPage />} />
               </Route>
 
               {/* Inspector Dashboard Routes */}
@@ -247,6 +249,8 @@ function App() {
                 <Route path="prisoner/:id" element={<ViewPrisoner />} />
                 <Route path="notices" element={<DashboardNoticeList dashboardType="woreda" />} />
                 <Route path="notices/view/:id" element={<NoticeView />} />
+                <Route path="archive" element={<ArchivePage />} />
+               
               </Route>
 
               {/* Visitor Dashboard Routes */}
@@ -293,12 +297,7 @@ function App() {
               {/* Add Archive System Routes */}
               <Route path="/archive" element={
                 <PrivateRoute allowedRoles={['admin', 'inspector', 'system', 'woreda', 'police-officer', 'security']}>
-                  <ArchiveList />
-                </PrivateRoute>
-              } />
-              <Route path="/archive/:id" element={
-                <PrivateRoute allowedRoles={['admin', 'inspector', 'system','woreda','police-officer','security']}>
-                  <ArchiveDetail />
+                  <ArchivePage />
                 </PrivateRoute>
               } />
             </Route>

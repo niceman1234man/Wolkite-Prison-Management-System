@@ -321,7 +321,7 @@ export const getAllInmates = async (req, res) => {
       
       // Find the inmate to check if it exists
       const inmate = await Inmate.findById(id);
-      
+  
       if (!inmate) {
         return res.status(404).json({ message: "Inmate not found" });
       }
@@ -340,7 +340,7 @@ export const getAllInmates = async (req, res) => {
       
       // Now delete the inmate
       await inmate.deleteOne();
-      
+  
       res.status(200).json({ message: "Inmate deleted successfully" });
     } catch (error) {
       console.error("Error in deleteInmate:", error);

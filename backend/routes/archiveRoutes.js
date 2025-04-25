@@ -33,14 +33,14 @@ router.get('/:id',
 // Add inspector explicitly for restoring prison archives
 router.post('/:id/restore', 
   authenticateToken, 
-  authorize(['admin', 'inspector', 'police-officer', 'security']),
+  authorize(['admin', 'inspector', 'police-officer', 'security', 'woreda']),
   restoreArchivedItem
 );
 
 // Permanently delete an archived item
 router.delete('/:id', 
   authenticateToken, 
-  authorize(['admin', 'inspector', 'police-officer', 'security']),
+  authorize(['admin', 'inspector', 'police-officer', 'security', 'woreda']),
   permanentlyDeleteArchivedItem
 );
 

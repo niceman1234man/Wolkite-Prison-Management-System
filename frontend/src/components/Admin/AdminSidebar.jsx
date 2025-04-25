@@ -69,7 +69,7 @@ const AdminSidebar = () => {
           </NavLink>
 
           <NavLink
-            to="/archive"
+            to="/admin-dashboard/archive"
             className={({ isActive }) =>
               `flex items-center p-2 rounded-lg hover:bg-teal-600 transition-colors ${
                 isActive ? "bg-teal-600" : ""
