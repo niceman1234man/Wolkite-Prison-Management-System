@@ -27,7 +27,8 @@ import {
   FaUserTie,
   FaFileUpload,
   FaFileImage,
-  FaCheck
+  FaCheck,
+  FaUserShield
 } from "react-icons/fa";
 import { toast } from "react-toastify";
 import { Link } from "react-router-dom";
@@ -35,21 +36,54 @@ import { useDispatch, useSelector } from "react-redux";
 
 const CommitteeForm = ({ isOpen, onClose, onSubmit, inmateData }) => {
   const initialCommittee = [
-    { name: "", position: "Chairperson", signature: null, fileName: "" },
-    { name: "", position: "Security Officer", signature: null, fileName: "" },
-    { name: "", position: "Rehabilitation Officer", signature: null, fileName: "" },
-    { name: "", position: "Social Worker", signature: null, fileName: "" },
-    { name: "", position: "Prison Administrator", signature: null, fileName: "" }
+    { name: "", committeeId: "", position: "Chairperson", signature: null, fileName: "" },
+    { name: "", committeeId: "", position: "Security Officer", signature: null, fileName: "" },
+    { name: "", committeeId: "", position: "Rehabilitation Officer", signature: null, fileName: "" },
+    { name: "", committeeId: "", position: "Social Worker", signature: null, fileName: "" },
+    { name: "", committeeId: "", position: "Prison Administrator", signature: null, fileName: "" }
   ];
   
   const [committee, setCommittee] = useState(initialCommittee);
   const [loading, setLoading] = useState(false);
   const [signaturePreviews, setSignaturePreviews] = useState([null, null, null, null, null]);
+  const [committeeMembers, setCommitteeMembers] = useState([]);
+  const [loadingCommittee, setLoadingCommittee] = useState(false);
   
-  const handleNameChange = (index, value) => {
-    const newCommittee = [...committee];
-    newCommittee[index] = { ...newCommittee[index], name: value };
-    setCommittee(newCommittee);
+  // Fetch committee members when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchCommitteeMembers();
+    }
+  }, [isOpen]);
+  
+  const fetchCommitteeMembers = async () => {
+    setLoadingCommittee(true);
+    try {
+      const response = await axiosInstance.get("/parole-committee/members");
+      setCommitteeMembers(response.data.members || []);
+      
+      // If we have committee members, pre-fill the form
+      if (response.data.members && response.data.members.length === 5) {
+        const newCommittee = [...committee];
+        response.data.members.forEach((member, index) => {
+          if (index < 5) {
+            newCommittee[index] = { 
+              ...newCommittee[index], 
+              name: `${member.firstName} ${member.lastName}`,
+              committeeId: member._id
+            };
+          }
+        });
+        setCommittee(newCommittee);
+      } else {
+        toast.warning("No complete parole committee found. Please contact an administrator.");
+      }
+    } catch (error) {
+      console.error("Error fetching committee members:", error);
+      toast.error("Failed to load committee members. Please try again.");
+    } finally {
+      setLoadingCommittee(false);
+    }
   };
   
   const handleSignatureUpload = (index, event) => {
@@ -101,7 +135,7 @@ const CommitteeForm = ({ isOpen, onClose, onSubmit, inmateData }) => {
     // Validate all committee members have names
     const hasEmptyNames = committee.some(member => !member.name.trim());
     if (hasEmptyNames) {
-      toast.error("Please enter names for all committee members");
+      toast.error("Please wait for committee members to load or refresh the form");
       return;
     }
     
@@ -195,130 +229,147 @@ const CommitteeForm = ({ isOpen, onClose, onSubmit, inmateData }) => {
               </div>
             </div>
           )}
-        
-          <form onSubmit={handleSubmit}>
-            <div className="mb-4">
-              <p className="text-gray-700 mb-2 flex items-center">
-                <FaFileUpload className="mr-2 text-teal-600" />
-                Upload signed documents from all committee members:
-              </p>
-              
-              <div className="border rounded-lg overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-gray-700 font-medium">Position</th>
-                      <th className="px-4 py-3 text-left text-gray-700 font-medium">Name</th>
-                      <th className="px-4 py-3 text-left text-gray-700 font-medium">Signature File</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {committee.map((member, index) => (
-                      <tr key={index} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
-                        <td className="px-4 py-3 flex items-center">
-                          <FaUserTie className="mr-2 text-gray-500" />
-                          {member.position}
-                        </td>
-                        <td className="px-4 py-3">
-                          <input
-                            type="text"
-                            value={member.name}
-                            onChange={(e) => handleNameChange(index, e.target.value)}
-                            placeholder="Enter name"
-                            className="border rounded px-3 py-1.5 w-full focus:ring-teal-500 focus:border-teal-500"
-                            required
-                          />
-                        </td>
-                        <td className="px-4 py-2">
-                          {!member.signature ? (
-                            <label className="flex items-center justify-center px-3 py-2 border border-dashed border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 transition-colors">
-                              <FiUpload className="mr-2 text-gray-500" />
-                              <span className="text-gray-500">Upload signature</span>
-                              <input
-                                type="file"
-                                className="hidden"
-                                accept=".jpg,.jpeg,.png,.pdf"
-                                onChange={(e) => handleSignatureUpload(index, e)}
-                              />
-                            </label>
-                          ) : (
-                            <div className="flex flex-col space-y-2">
-                              <div className="flex items-center text-sm text-gray-600">
-                                {signaturePreviews[index] === "pdf" ? (
-                                  <FaFileContract className="mr-2 text-red-500" />
-                                ) : (
-                                  <FaFileImage className="mr-2 text-blue-500" />
-                                )}
-                                <span className="truncate max-w-[150px]">{member.fileName}</span>
-                                <FaCheck className="ml-2 text-green-500" />
+          
+          {loadingCommittee ? (
+            <div className="flex justify-center items-center p-8">
+              <div className="animate-spin h-8 w-8 border-b-2 border-teal-500 rounded-full mr-3"></div>
+              <span className="text-gray-600">Loading committee members...</span>
+            </div>
+          ) : (
+            committeeMembers.length === 0 ? (
+              <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-100 mb-4 text-center">
+                <FaUserShield className="text-yellow-500 text-2xl mx-auto mb-2" />
+                <p className="text-yellow-700 font-medium">No parole committee has been formed yet</p>
+                <p className="text-yellow-600 text-sm mt-1">
+                  Please contact your administrator to establish a parole committee before proceeding.
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit}>
+                <div className="mb-4">
+                  <p className="text-gray-700 mb-2 flex items-center">
+                    <FaFileUpload className="mr-2 text-teal-600" />
+                    Upload signed documents from all committee members:
+                  </p>
+                  
+                  <div className="border rounded-lg overflow-hidden">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-gray-700 font-medium">Position</th>
+                          <th className="px-4 py-3 text-left text-gray-700 font-medium">Name</th>
+                          <th className="px-4 py-3 text-left text-gray-700 font-medium">Signature File</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {committee.map((member, index) => (
+                          <tr key={index} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                            <td className="px-4 py-3 flex items-center">
+                              <FaUserTie className="mr-2 text-gray-500" />
+                              {member.position}
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center">
+                                <FaUserShield className="mr-2 text-teal-500" />
+                                <span>{member.name || "Loading..."}</span>
                               </div>
-                              
-                              {signaturePreviews[index] && signaturePreviews[index] !== "pdf" && (
-                                <div className="mt-1 border rounded-md overflow-hidden w-24 h-12">
-                                  <img 
-                                    src={signaturePreviews[index]} 
-                                    alt="Signature preview" 
-                                    className="object-contain w-full h-full"
+                            </td>
+                            <td className="px-4 py-2">
+                              {!member.signature ? (
+                                <label className="flex items-center justify-center px-3 py-2 border border-dashed border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 transition-colors">
+                                  <FiUpload className="mr-2 text-gray-500" />
+                                  <span className="text-gray-500">Upload signature</span>
+                                  <input
+                                    type="file"
+                                    className="hidden"
+                                    accept=".jpg,.jpeg,.png,.pdf"
+                                    onChange={(e) => handleSignatureUpload(index, e)}
                                   />
+                                </label>
+                              ) : (
+                                <div className="flex flex-col space-y-2">
+                                  <div className="flex items-center text-sm text-gray-600">
+                                    {signaturePreviews[index] === "pdf" ? (
+                                      <FaFileContract className="mr-2 text-red-500" />
+                                    ) : (
+                                      <FaFileImage className="mr-2 text-blue-500" />
+                                    )}
+                                    <span className="truncate max-w-[150px]">{member.fileName}</span>
+                                    <FaCheck className="ml-2 text-green-500" />
+                                  </div>
+                                  
+                                  {signaturePreviews[index] && signaturePreviews[index] !== "pdf" && (
+                                    <div className="mt-1 border rounded-md overflow-hidden w-24 h-12">
+                                      <img 
+                                        src={signaturePreviews[index]} 
+                                        alt="Signature preview" 
+                                        className="object-contain w-full h-full"
+                                      />
+                                    </div>
+                                  )}
+                                  
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const newCommittee = [...committee];
+                                      newCommittee[index] = { ...newCommittee[index], signature: null, fileName: "" };
+                                      setCommittee(newCommittee);
+                                      
+                                      const newPreviews = [...signaturePreviews];
+                                      newPreviews[index] = null;
+                                      setSignaturePreviews(newPreviews);
+                                    }}
+                                    className="text-xs text-red-600 hover:text-red-800"
+                                  >
+                                    Replace file
+                                  </button>
                                 </div>
                               )}
-                              
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const newCommittee = [...committee];
-                                  newCommittee[index] = { ...newCommittee[index], signature: null, fileName: "" };
-                                  setCommittee(newCommittee);
-                                  
-                                  const newPreviews = [...signaturePreviews];
-                                  newPreviews[index] = null;
-                                  setSignaturePreviews(newPreviews);
-                                }}
-                                className="text-xs text-red-600 hover:text-red-800"
-                              >
-                                Replace file
-                              </button>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              
-              <p className="text-xs text-gray-500 mt-2">
-                Accepted file types: JPG, PNG, PDF (max 2MB)
-              </p>
-            </div>
-            
-            <div className="mt-6 flex justify-end space-x-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 transition-colors flex items-center"
-              >
-                {loading ? (
-                  <>
-                    <div className="animate-spin h-4 w-4 mr-2 border-b-2 border-white rounded-full"></div>
-                    Processing...
-                  </>
-                ) : (
-                  <>
-                    <FaStamp className="mr-2" />
-                    Submit Committee Approval
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  
+                  <p className="text-xs text-gray-500 mt-2">
+                    Accepted file types: JPG, PNG, PDF (max 2MB)
+                  </p>
+                </div>
+                
+                <div className="mt-6 flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading || committeeMembers.length < 5}
+                    className={`px-4 py-2 rounded-md flex items-center transition-colors ${
+                      loading || committeeMembers.length < 5 
+                        ? "bg-gray-300 text-gray-500 cursor-not-allowed" 
+                        : "bg-teal-600 text-white hover:bg-teal-700"
+                    }`}
+                  >
+                    {loading ? (
+                      <>
+                        <div className="animate-spin h-4 w-4 mr-2 border-b-2 border-white rounded-full"></div>
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <FaStamp className="mr-2" />
+                        Submit Committee Approval
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )
+          )}
         </div>
       </div>
     </div>

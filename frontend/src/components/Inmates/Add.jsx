@@ -70,7 +70,10 @@ const AddInmate = ({setOpen}) => {
     releasedDate: initialData.releasedDate || "",
     paroleDate: initialData.paroleDate || "",
     durationToParole: initialData.durationToParole || "",
-    durationFromParoleToEnd: initialData.durationFromParoleToEnd || ""
+    durationFromParoleToEnd: initialData.durationFromParoleToEnd || "",
+    status: initialData.status || "active",
+    paroleEligibility: initialData.paroleEligibility || "",
+    guiltyStatus: initialData.guiltyStatus || ""
   });
 
   const [activeSection, setActiveSection] = useState("personal");
@@ -337,7 +340,10 @@ const AddInmate = ({setOpen}) => {
         releasedDate: formData.releasedDate || "",
         paroleDate: formData.paroleDate || "",
         durationToParole: formData.durationToParole || "",
-        durationFromParoleToEnd: formData.durationFromParoleToEnd || ""
+        durationFromParoleToEnd: formData.durationFromParoleToEnd || "",
+        status: formData.status || "active",
+        paroleEligibility: formData.paroleEligibility || "",
+        guiltyStatus: formData.guiltyStatus || ""
       };
       
       console.log("Submitting inmate data:", inmateData);
@@ -1007,6 +1013,22 @@ const AddInmate = ({setOpen}) => {
                 {renderError('eyeColor')}
               </div>
             </div>
+            <div className="flex justify-between mt-6">
+              <button 
+                type="button" 
+                onClick={() => setActiveSection("location")}
+                className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors flex items-center"
+              >
+                <FaMapMarkerAlt className="mr-2" /> Previous
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setActiveSection("contact")}
+                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors flex items-center"
+              >
+                Next <FaPhone className="ml-2" />
+              </button>
+            </div>
           </div>
         )}
 
@@ -1097,6 +1119,22 @@ const AddInmate = ({setOpen}) => {
                 {renderError('phoneNumber')}
               </div>
             </div>
+            <div className="flex justify-between mt-6">
+              <button 
+                type="button" 
+                onClick={() => setActiveSection("physical")}
+                className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors flex items-center"
+              >
+                <FaIdCard className="mr-2" /> Previous
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setActiveSection("case")}
+                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors flex items-center"
+              >
+                Next <FaGavel className="ml-2" />
+              </button>
+            </div>
           </div>
         )}
 
@@ -1123,6 +1161,21 @@ const AddInmate = ({setOpen}) => {
                   <option value="Administrative">Administrative</option>
                 </select>
                 {renderError('caseType')}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Guilty Status</label>
+                <select
+                  name="guiltyStatus"
+                  value={formData.guiltyStatus}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  className={`w-full px-4 py-2 border ${errors.guiltyStatus ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                >
+                  <option value="">Select guilty status</option>
+                  <option value="guilty">Guilty</option>
+                  <option value="not_guilty">Not Guilty</option>
+                </select>
+                {renderError('guiltyStatus')}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Sentence Year</label>
@@ -1175,6 +1228,21 @@ const AddInmate = ({setOpen}) => {
                 {renderError('releasedDate')}
               </div>
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Parole Eligibility</label>
+                <select
+                  name="paroleEligibility"
+                  value={formData.paroleEligibility}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  className={`w-full px-4 py-2 border ${errors.paroleEligibility ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                >
+                  <option value="">Select eligibility</option>
+                  <option value="eligible">Eligible</option>
+                  <option value="not_eligible">Not Eligible</option>
+                </select>
+                {renderError('paroleEligibility')}
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Parole Date</label>
                 <input
                   type="date"
@@ -1212,6 +1280,30 @@ const AddInmate = ({setOpen}) => {
                 />
                 {renderError('durationFromParoleToEnd')}
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  className={`w-full px-4 py-2 border ${errors.status ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                >
+                  <option value="">Select status</option>
+                  <option value="active">Active</option>
+                  <option value="released">Released</option>
+                </select>
+                {renderError('status')}
+              </div>
+            </div>
+            <div className="flex justify-between mt-6">
+              <button 
+                type="button" 
+                onClick={() => setActiveSection("contact")}
+                className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors flex items-center"
+              >
+                <FaPhone className="mr-2" /> Previous
+              </button>
             </div>
           </div>
         )}

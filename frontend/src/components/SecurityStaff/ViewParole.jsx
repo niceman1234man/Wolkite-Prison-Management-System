@@ -4,12 +4,14 @@ import ParoleRequestForm from "@/parole/ParoleRequestForm";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { FaCalendarAlt, FaUser, FaBalanceScale, FaClock, FaCalendarCheck, 
-  FaUserCheck, FaCheckCircle, FaTimesCircle, FaSpinner, FaPaperPlane } from "react-icons/fa";
+  FaUserCheck, FaCheckCircle, FaTimesCircle, FaSpinner, FaPaperPlane, FaUsers, FaSignature, FaFileSignature, FaInfoCircle } from "react-icons/fa";
 
 const ViewParole = ({ id }) => {
   const [inmates, setInmates] = useState(null);
   const [loading, setLoading] = useState(true);
   const [openAccept, setOpenAccept] = useState(false);
+  const [committeeMembers, setCommitteeMembers] = useState([]);
+  const [loadingCommittee, setLoadingCommittee] = useState(false);
 
   // Fetch parole details
   const fetchInmates = async () => {
@@ -19,6 +21,11 @@ const ViewParole = ({ id }) => {
 
       if (response.data && response.data.parole) {
         setInmates(response.data.parole);
+        
+        // If the parole request has been submitted, fetch committee members
+        if (response.data.parole.status) {
+          fetchCommitteeMembers();
+        }
       } else {
         console.error("Invalid API response:", response.data);
         setInmates(null);
@@ -28,6 +35,29 @@ const ViewParole = ({ id }) => {
       setInmates(null);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch committee members
+  const fetchCommitteeMembers = async () => {
+    setLoadingCommittee(true);
+    try {
+      const response = await axiosInstance.get("/parole-committee/members");
+      
+      if (response.data && response.data.members) {
+        // Simulate signature status for demonstration - in a real app, this would come from the backend
+        const membersWithSignature = response.data.members.map((member, index) => ({
+          ...member,
+          hasSigned: Math.random() > 0.5, // Random signature status for demo
+          signatureDate: member.hasSigned ? new Date().toISOString() : null
+        }));
+        setCommitteeMembers(membersWithSignature);
+      }
+    } catch (error) {
+      console.error("Error fetching committee members:", error);
+      toast.error("Failed to load committee members");
+    } finally {
+      setLoadingCommittee(false);
     }
   };
 
@@ -41,6 +71,8 @@ const ViewParole = ({ id }) => {
       await axiosInstance.post(`/parole-request`, { inmateId: id });
       toast.success("Parole request submitted successfully!");
       setOpenAccept(false);
+      // Refresh data after submission
+      fetchInmates();
     } catch (error) {
       console.error("Error submitting parole request:", error);
       toast.error(error.response?.data?.message || "Failed to submit parole request.");
@@ -254,6 +286,100 @@ const ViewParole = ({ id }) => {
                 </div>
               </div>
             </div>
+
+            {/* Committee Members and Signatures Section */}
+            {inmates.status && (
+              <div className="mt-6 bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                  <h2 className="text-lg font-semibold text-gray-800 flex items-center">
+                    <FaUsers className="mr-2 text-teal-600" />
+                    Committee Members Signatures
+                  </h2>
+                </div>
+                
+                <div className="p-4">
+                  {loadingCommittee ? (
+                    <div className="flex justify-center items-center py-8">
+                      <FaSpinner className="animate-spin text-teal-600 text-2xl mr-3" />
+                      <span className="text-gray-600">Loading committee members...</span>
+                    </div>
+                  ) : committeeMembers.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Member Name
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Position
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Signature Status
+                            </th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              Date Signed
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {committeeMembers.map((member, index) => (
+                            <tr key={member._id} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center">
+                                  <div className="flex-shrink-0 h-10 w-10 rounded-full bg-teal-100 flex items-center justify-center">
+                                    <FaUser className="text-teal-600" />
+                                  </div>
+                                  <div className="ml-4">
+                                    <div className="text-sm font-medium text-gray-900">
+                                      {member.firstName} {member.lastName}
+                                    </div>
+                                    <div className="text-sm text-gray-500">{member.email}</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="text-sm text-gray-900">Parole Committee Member</div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                {member.hasSigned ? (
+                                  <span className="px-3 py-1 inline-flex text-sm leading-5 font-medium rounded-full bg-green-100 text-green-800 items-center">
+                                    <FaSignature className="mr-1" /> Signed
+                                  </span>
+                                ) : (
+                                  <span className="px-3 py-1 inline-flex text-sm leading-5 font-medium rounded-full bg-gray-100 text-gray-800 items-center">
+                                    <FaFileSignature className="mr-1" /> Awaiting Signature
+                                  </span>
+                                )}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {member.hasSigned ? formatDate(member.signatureDate) : "-"}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      
+                      <div className="mt-4 p-4 bg-gray-50 border-t border-gray-200 text-sm text-gray-600 rounded-b-lg">
+                        <p className="flex items-center">
+                          <FaInfoCircle className="mr-2 text-teal-600" />
+                          {inmates.status === "accepted" 
+                            ? "This parole request has been approved by the committee." 
+                            : inmates.status === "rejected"
+                            ? "This parole request has been rejected by the committee."
+                            : "This parole request is awaiting review from all committee members."}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <FaUsers className="mx-auto text-gray-300 text-4xl mb-3" />
+                      <p className="text-gray-500">No committee members assigned to this parole request.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
             
             {/* Parole Status Card */}
             <div className="mt-6 bg-gray-50 rounded-lg border border-gray-200 p-5">

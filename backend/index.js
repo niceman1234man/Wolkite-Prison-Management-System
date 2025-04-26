@@ -37,6 +37,7 @@ import messageRoutes from "./routes/messageRoutes.js";
 import { EventEmitter } from 'events';
 import backupRouter from "./router/backup.js";
 import activityLogRouter from "./router/activityLog.router.js";
+import paroleCommitteeRouter from "./router/paroleCommittee.router.js";
 EventEmitter.defaultMaxListeners = 15; // Increase from default 10
 
 // Load environment variables
@@ -84,6 +85,7 @@ app.use("/api/incidents", incidentRouter);
 app.use("/api/inmates", inmateRouter);
 app.use("/api/prison", prisonRouter);
 app.use("/api/parole-tracking", paroleRouter);
+app.use("/api/parole-committee", paroleCommitteeRouter);
 app.use("/api/notice", noticeRouter);
 app.use("/api/instruction", instructionRouter);
 app.use("/api/transfer", transferRouter);

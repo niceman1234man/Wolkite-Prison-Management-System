@@ -462,6 +462,109 @@ const BackeUp = () => {
             </div>
           </div>
         </div>
+
+        {/* Disaster Recovery Guide */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mt-6">
+          <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+            <FaExclamationTriangle className="mr-2 text-amber-500" />
+            System Crash & Disaster Recovery Guide
+          </h2>
+          
+          <div className="border-l-4 border-amber-500 bg-amber-50 p-4 mb-6">
+            <p className="text-sm text-amber-800">
+              This guide helps you recover the system in case of a complete crash, data loss, or hardware failure. 
+              Follow these steps carefully to restore your prison management system to a working state.
+            </p>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="bg-gray-50 p-4 rounded-md">
+              <h3 className="font-medium text-gray-700 mb-2 flex items-center">
+                <span className="bg-gray-200 text-gray-700 rounded-full w-6 h-6 inline-flex items-center justify-center mr-2">1</span>
+                System Reinstallation
+              </h3>
+              <p className="text-sm text-gray-600 ml-8">
+                If necessary, reinstall the operating system and required software dependencies 
+                (Node.js, MongoDB, etc.) on your server. Ensure that all system requirements are met.
+              </p>
+            </div>
+            
+            <div className="bg-gray-50 p-4 rounded-md">
+              <h3 className="font-medium text-gray-700 mb-2 flex items-center">
+                <span className="bg-gray-200 text-gray-700 rounded-full w-6 h-6 inline-flex items-center justify-center mr-2">2</span>
+                Application Redeployment
+              </h3>
+              <p className="text-sm text-gray-600 ml-8">
+                Clone the application repository from your version control system (GitHub, GitLab, etc.) 
+                or redeploy using your deployment pipeline. Install all dependencies using npm or yarn.
+              </p>
+            </div>
+            
+            <div className="bg-gray-50 p-4 rounded-md">
+              <h3 className="font-medium text-gray-700 mb-2 flex items-center">
+                <span className="bg-gray-200 text-gray-700 rounded-full w-6 h-6 inline-flex items-center justify-center mr-2">3</span>
+                Backup File Access
+              </h3>
+              <p className="text-sm text-gray-600 ml-8">
+                Retrieve your most recent backup file from:
+              </p>
+              <ul className="list-disc list-inside text-sm text-gray-600 ml-8 mt-2">
+                <li>Local backup storage (if available)</li>
+                <li>Cloud storage (if configured)</li>
+                <li>External backup media (USB drive, external hard disk)</li>
+                <li>Download from backup platform (if using external backup service)</li>
+              </ul>
+            </div>
+            
+            <div className="bg-gray-50 p-4 rounded-md">
+              <h3 className="font-medium text-gray-700 mb-2 flex items-center">
+                <span className="bg-gray-200 text-gray-700 rounded-full w-6 h-6 inline-flex items-center justify-center mr-2">4</span>
+                Manual Restoration Process
+              </h3>
+              <p className="text-sm text-gray-600 ml-8">
+                For a complete system crash, perform these steps:
+              </p>
+              <ol className="list-decimal list-inside text-sm text-gray-600 ml-8 mt-2">
+                <li>Place your backup file in the server's restoration directory (default: <code>/backup/restore</code>)</li>
+                <li>Run the restoration script: <code>npm run restore path/to/backup-file.zip</code></li>
+                <li>The system will extract the backup and restore the database</li>
+                <li>Restart the application server: <code>npm run restart</code></li>
+                <li>Verify the restoration by logging in and checking critical data</li>
+              </ol>
+            </div>
+            
+            <div className="bg-gray-50 p-4 rounded-md">
+              <h3 className="font-medium text-gray-700 mb-2 flex items-center">
+                <span className="bg-gray-200 text-gray-700 rounded-full w-6 h-6 inline-flex items-center justify-center mr-2">5</span>
+                Post-Recovery Verification
+              </h3>
+              <p className="text-sm text-gray-600 ml-8">
+                After restoration, perform these essential checks:
+              </p>
+              <ul className="list-disc list-inside text-sm text-gray-600 ml-8 mt-2">
+                <li>Verify user accounts and permissions</li>
+                <li>Check inmate records and critical data integrity</li>
+                <li>Test key system functionalities (reporting, scheduling, etc.)</li>
+                <li>Create a new full backup immediately after successful recovery</li>
+                <li>Document the recovery process and any issues encountered</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div className="mt-6 bg-teal-50 border border-teal-200 rounded-md p-4">
+            <h3 className="font-medium text-teal-700 mb-2 flex items-center">
+              <FaLock className="mr-2" />
+              Need Technical Assistance?
+            </h3>
+            <p className="text-sm text-teal-600">
+              For emergency recovery support, contact the system administrator or technical support team at:
+              <br />
+              <span className="font-medium">Email: </span>support@wolkiteprison.gov.et
+              <br />
+              <span className="font-medium">Emergency Phone: </span>+251 912 345 678
+            </p>
+          </div>
+        </div>
       </div>
 
       {/* Schedule Modal */}
