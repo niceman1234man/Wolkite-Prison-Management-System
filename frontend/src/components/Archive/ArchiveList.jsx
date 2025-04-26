@@ -384,8 +384,33 @@ const ArchiveList = ({ standalone = true }) => {
     if (role === 'police-officer') {
       navigate(`/policeOfficer-dashboard/archive/${item._id}`);
     } else {
-      navigate(`/archive/${item._id}`);
+      navigate(`/policeOfficer-dashboard/archive/${item._id}`);
     }
+    if (role === 'security') {
+      navigate(`/securityStaff-dashboard/archive/${item._id}`);
+    } else {
+      navigate(`/securityStaff-dashboard/archive/${item._id}`);
+    }
+
+    if (role === 'woreda') {
+      navigate(`/woreda-dashboard/archive/${item._id}`);
+    } else {
+      navigate(`/woreda-dashboard/archive/${item._id}`);
+    }
+
+    if (role === 'woreda') {
+      navigate(`/court-dashboard/archive/${item._id}`);
+    } else {
+      navigate(`/court-dashboard/archive/${item._id}`);
+    }
+
+    if (role === 'admin') {
+      navigate(`/admin-dashboard/archive/${item._id}`);
+    } else {
+      navigate(`/admin-dashboard/archive/${item._id}`);
+    }
+
+
   };
 
   // Format date
