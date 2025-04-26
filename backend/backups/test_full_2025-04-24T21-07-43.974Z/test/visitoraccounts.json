@@ -1,0 +1,63 @@
+[
+  {
+    "_id": "67e93a73eb74f49ec6652e04",
+    "firstName": "Selomon",
+    "middleName": "Andargie",
+    "lastName": "Dagnie",
+    "email": "visitor@gmail.com",
+    "password": "$2b$10$IWtk9LHEEsnbOq1uQLjJI.5YVSDeeYZWo9qjtTIvhkQMn1TKSYD4a",
+    "phone": "0920352016",
+    "role": "visitor",
+    "isActive": true,
+    "createdAt": "2025-03-30T12:34:59.831Z",
+    "updatedAt": "2025-03-30T12:34:59.831Z",
+    "__v": 0
+  },
+  {
+    "_id": "67e94950ac6e5a2b53c52a97",
+    "firstName": "Selomon",
+    "middleName": "Andargie",
+    "lastName": "one",
+    "email": "security@gmail.com",
+    "password": "$2b$10$LjPi.q25fjKnV6r6HchQVeAGd98DFrtT3m4IF/V9QWguzfUqCd5E2",
+    "phone": "0920352016",
+    "role": "visitor",
+    "isActive": true,
+    "createdAt": "2025-03-30T13:38:24.647Z",
+    "updatedAt": "2025-03-30T13:38:24.647Z",
+    "__v": 0
+  },
+  {
+    "_id": "67e9914c6462f6f1d299350c",
+    "firstName": "Selomon",
+    "middleName": "Andarge",
+    "lastName": "Dagnie",
+    "email": "semaryaselomon@gmail.com",
+    "password": "$2b$12$R7ewNbmuAwkyiQCHqF8ex.chliIzkN4RS7KuS1GN.sJhzupIIe4RS",
+    "phone": "0920352016",
+    "role": "visitor",
+    "isActive": true,
+    "loginAttempts": 0,
+    "createdAt": "2025-03-30T18:45:32.137Z",
+    "updatedAt": "2025-04-24T20:01:59.364Z",
+    "__v": 0,
+    "lastLogin": "2025-04-24T20:01:59.361Z",
+    "passwordChangedAt": "2025-04-20T20:03:44.195Z"
+  },
+  {
+    "_id": "67e991ae83e6dd159013bba6",
+    "firstName": "Selomon",
+    "middleName": "Andargie",
+    "lastName": "Dagnie",
+    "email": "abisol@gmail.com",
+    "password": "$2b$12$CQuTz.zUAKwjHeV/7Rd10eovelGUs6dFx0KPHqfZ0tatzhPzKPbdG",
+    "phone": "0920352016",
+    "role": "visitor",
+    "isActive": true,
+    "loginAttempts": 0,
+    "createdAt": "2025-03-30T18:47:10.714Z",
+    "updatedAt": "2025-04-10T19:24:06.882Z",
+    "__v": 0,
+    "lastLogin": "2025-04-10T19:24:06.881Z"
+  }
+]

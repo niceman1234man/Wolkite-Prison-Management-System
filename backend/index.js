@@ -37,7 +37,11 @@ import messageRoutes from "./routes/messageRoutes.js";
 import { EventEmitter } from 'events';
 import backupRouter from "./router/backup.js";
 import activityLogRouter from "./router/activityLog.router.js";
+<<<<<<< HEAD
 import paroleCommitteeRouter from "./router/paroleCommittee.router.js";
+=======
+import archiveRoutes from "./routes/archiveRoutes.js"; // Import archive routes
+>>>>>>> ff16bd86187ac0ae2c3e9dadebf0fdc3244e1bef
 EventEmitter.defaultMaxListeners = 15; // Increase from default 10
 
 // Load environment variables
@@ -101,6 +105,7 @@ app.use("/api/dashboard", dashboardRouter);
 app.use("/api/auth", visitorAccountRouter);
 app.use("/api/visitor/schedule", visitorScheduleRouter);
 app.use("/api/messages", messageRoutes);
+app.use("/api/archive", archiveRoutes); // Add archive routes
 
 // Socket.io event handlers
 io.on('connection', (socket) => {

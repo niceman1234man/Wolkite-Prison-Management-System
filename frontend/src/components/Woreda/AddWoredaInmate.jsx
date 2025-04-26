@@ -958,21 +958,21 @@ export default function AddWoredaInmate() {
       try {
         const response = await axiosInstance.delete(`/woreda-inmate/delete-inmate/${inmateId}`);
         
-      if (response.data?.success) {
-        toast.success("Inmate deleted successfully");
-        fetchInmates(); // Refresh the inmate list
-      } else if (response.data?.error === "Inmate not found") {
+        if (response.data?.success) {
+          toast.success("Inmate deleted and archived successfully. You can access it in the Archive System.");
+          fetchInmates(); // Refresh the inmate list
+        } else if (response.data?.error === "Inmate not found") {
           toast.info("Inmate was already removed from the system");
           fetchInmates(); // Refresh the list
-      } else {
+        } else {
           toast.info(response.data?.message || "Delete request was processed but returned an unexpected response");
           fetchInmates(); // Refresh the list
-      }
-    } catch (error) {
+        }
+      } catch (error) {
         console.error("Delete API error:", error.message);
         
         // Check if this is a "not found" error - which seems to be happening for inmates with transfers
-      if (error.response?.status === 404) {
+        if (error.response?.status === 404) {
           if (error.response?.data?.error === "Inmate not found" && inmateToDelete.transferStatus) {
             console.log("Inmate not found in woreda-inmate collection but has transfer status. Handling as special case.");
             
@@ -987,25 +987,20 @@ export default function AddWoredaInmate() {
               "It has been hidden from your view. Please contact the administrator to fix this data inconsistency.",
               { autoClose: 5000 }
             );
-        } else {
+          } else {
             toast.error("Unable to delete this inmate. The record may no longer exist.");
-        }
-      } else {
+          }
+        } else {
           toast.error(`Failed to delete inmate: ${error.message || "Unknown error"}`);
         }
         
         fetchInmates(); // Refresh the list anyway
       }
-      
-    } catch (error) {
-      console.error("Overall delete operation failed:", error.message);
-      toast.error(`Failed to delete inmate: ${error.message || "Unknown error"}`);
-      fetchInmates(); // Refresh the list anyway
     } finally {
-      setLoading(false);
-      setDeleteLoading(false);
       setDeleteConfirmOpen(false);
       setInmateToDelete(null);
+      setLoading(false);
+      setDeleteLoading(false);
     }
   };
   

@@ -109,6 +109,7 @@
  
 
 import { Clearance } from "../model/clearance.model.js";
+import { archiveItem } from '../controllers/archive.controller.js';
 
 // Get all clearances
 export const getAllClearances = async (req, res) => {
@@ -286,13 +287,28 @@ export const updateClearance = async (req, res) => {
 // Delete a clearance
 export const deleteClearance = async (req, res) => {
   try {
-    const deletedClearance = await Clearance.findByIdAndDelete(req.params.id);
+    const deletedClearance = await Clearance.findById(req.params.id);
+    
     if (!deletedClearance) {
       return res.status(404).json({ 
         success: false, 
         message: "Clearance not found" 
       });
     }
+    
+    // Manual archive before deletion
+    try {
+      const reason = req.body.reason || 'Clearance deleted by user';
+      await archiveItem('clearance', deletedClearance._id, req.user.id, reason);
+      console.log(`Clearance ${deletedClearance.clearanceId} archived successfully`);
+    } catch (archiveError) {
+      console.error("Error archiving clearance:", archiveError);
+      // Continue with deletion even if archiving fails
+    }
+    
+    // Delete the clearance
+    await Clearance.findByIdAndDelete(req.params.id);
+    
     res.status(200).json({ 
       success: true, 
       message: "Clearance deleted successfully" 

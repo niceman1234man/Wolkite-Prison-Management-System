@@ -1,4 +1,5 @@
 import { Incident } from "../model/Incident.model.js";
+import { archiveItem } from '../controllers/archive.controller.js';
 import mongoose from "mongoose";
 const Inmate = mongoose.model("Inmate");
 
@@ -348,11 +349,23 @@ export const updateIncident = async (req, res) => {
 export const deleteIncident = async (req, res) => {
   try {
     const { id } = req.params;
-    const deletedIncident = await Incident.findByIdAndDelete(id);
+    const incident = await Incident.findById(id);
 
-    if (!deletedIncident) {
+    if (!incident) {
       return res.status(404).json({ message: "Incident not found" });
     }
+
+    // Archive the incident before deletion
+    try {
+      await archiveItem('incident', incident._id, req.user.id, 'Incident deleted by police officer');
+      console.log(`Incident archived successfully`);
+    } catch (archiveError) {
+      console.error("Error archiving incident:", archiveError);
+      // Continue with deletion even if archiving fails
+    }
+
+    console.log(`Deleting incident`);
+    await incident.deleteOne();
 
     res.status(200).json({ message: "Incident deleted successfully" });
   } catch (error) {

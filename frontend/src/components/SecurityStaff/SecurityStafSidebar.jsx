@@ -10,6 +10,7 @@ import {
   FaClipboardCheck,
   FaCogs,
   FaExchangeAlt,
+  FaArchive,
 } from "react-icons/fa";
 
 const SecurityStaffSidebar = () => {
@@ -59,7 +60,8 @@ const SecurityStaffSidebar = () => {
             { to: "/securityStaff-dashboard/reports", icon: <FaChartBar />, label: "Reports" },
             { to: "/securityStaff-dashboard/clearance", icon: <FaClipboardCheck />, label: "Clearance" },
             { to: "/securityStaff-dashboard/parole", icon: <FaClipboardCheck />, label: "Parole" },
-            { to: "/securityStaff-dashboard/court", icon: <FaCogs />, label: "Court" }
+            { to: "/securityStaff-dashboard/court", icon: <FaCogs />, label: "Court" },
+            { to: "/securityStaff-dashboard/archive", icon: <FaArchive />, label: "Archive" }
           ].map((item, index) => (
             <NavLink
               key={index}

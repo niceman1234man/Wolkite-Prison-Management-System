@@ -18,16 +18,21 @@ const ClearanceButtons = ({ _id, onDelete }) => {
 
   const handleDelete = async () => {
     try {
-      const response = await axiosInstance.delete(`/clearance/deleteClearance/${_id}`);
-      if (response.data && response.data.success) {
-        toast.success("Clearance deleted successfully");
+      const deleteData = {
+        reason: "Clearance deleted by security staff"
+      };
+      
+      const response = await axiosInstance.delete(`/clearance/deleteClearance/${_id}`, { data: deleteData });
+      
+      if (response.data.success) {
+        toast.success('Clearance deleted and archived successfully');
         onDelete();
       } else {
-        toast.error("Failed to delete clearance");
+        toast.error(response.data.message || 'Failed to delete clearance');
       }
     } catch (error) {
-      console.error("Error deleting clearance:", error);
-      toast.error(error.response?.data?.message || "Failed to delete clearance");
+      console.error('Error deleting clearance:', error);
+      toast.error('Error deleting clearance');
     }
   };
 
@@ -67,7 +72,7 @@ const ClearanceButtons = ({ _id, onDelete }) => {
       
       <ConfirmModal
         open={openDelete}
-        message="Do you want to delete this clearance? This action cannot be undone."
+        message="Do you want to delete this clearance? This action will move the clearance to the archive system where security staff can restore it if needed."
         onConfirm={() => {
           handleDelete();
           setOpenDelete(false);

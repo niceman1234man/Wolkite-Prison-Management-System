@@ -176,7 +176,7 @@ const InmateActionButtons = ({ inmate, onDelete, isCardView = false }) => {
         {/* Confirm Delete Modal */}
         <ConfirmModal 
           open={confirmOpen} 
-          message={`Are you sure you want to delete ${inmate.inmate_name}? This action cannot be undone.`}
+          message={`Are you sure you want to delete ${inmate.inmate_name}? This action will archive the inmate record and it can be restored from the archive system if needed.`}
           onConfirm={handleConfirmDelete}
           onCancel={() => setConfirmOpen(false)}
         />
@@ -240,7 +240,7 @@ const InmateActionButtons = ({ inmate, onDelete, isCardView = false }) => {
       {/* Confirm Delete Modal */}
       <ConfirmModal 
         open={confirmOpen} 
-        message={`Are you sure you want to delete ${inmate.inmate_name}? This action cannot be undone.`}
+        message={`Are you sure you want to delete ${inmate.inmate_name}? This action will archive the inmate record and it can be restored from the archive system if needed.`}
         onConfirm={handleConfirmDelete}
         onCancel={() => setConfirmOpen(false)}
       />

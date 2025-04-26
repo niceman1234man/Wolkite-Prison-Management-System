@@ -10,6 +10,8 @@ import {
   deleteClearance,
 } from "../controller/clearance.controller.js";
 import { upload } from "../fileMiddleware.js";
+import { archiveMiddleware } from "../utils/archiveHelper.js";
+import { authenticateToken } from "../utilities.js";
 // export const clearanceRouter = express.Router();
 // clearanceRouter.post("/add-clearance",upload.single("sign"), authenticateToken, addClearance);
 // clearanceRouter.get("/getAllClearance", authenticateToken, getAllClearance);
@@ -20,8 +22,8 @@ import { upload } from "../fileMiddleware.js";
 
 export const clearanceRoutes = express.Router();
 
-clearanceRoutes.get("/getAllClearance", getAllClearances);
-clearanceRoutes.get("/getClearance/:id", getClearanceById);
-clearanceRoutes.post("/addClearance", upload.single("sign"), createClearance);
-clearanceRoutes.put("/updateClearance/:id", upload.single("sign"), updateClearance);
-clearanceRoutes.delete("/deleteClearance/:id", deleteClearance);
+clearanceRoutes.get("/getAllClearance", authenticateToken, getAllClearances);
+clearanceRoutes.get("/getClearance/:id", authenticateToken, getClearanceById);
+clearanceRoutes.post("/addClearance", authenticateToken, upload.single("sign"), createClearance);
+clearanceRoutes.put("/updateClearance/:id", authenticateToken, upload.single("sign"), updateClearance);
+clearanceRoutes.delete("/deleteClearance/:id", authenticateToken, deleteClearance);

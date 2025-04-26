@@ -8,6 +8,7 @@ import {
 } from "../controller/transfer.controller.js";
 import { body } from "express-validator";
 import { authenticateToken } from "../utilities.js";
+import { archiveMiddleware } from "../utils/archiveHelper.js";
 // import { protect, authorize } from "../middleware/authMiddleware.js"; // For authentication and authorization
 
 const router = express.Router();
@@ -79,6 +80,7 @@ router.put(
 router.delete(
   "/:id",
   authenticateToken,
+  archiveMiddleware('transfer'),
   deleteTransfer
 );
 

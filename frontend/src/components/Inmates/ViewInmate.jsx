@@ -905,7 +905,7 @@ const ViewInmate = ({ _id, setOpen, onEdit }) => {
         open={openDelete}
         setOpen={setOpenDelete}
         title="Delete Inmate"
-        message="Are you sure you want to delete this inmate? This action cannot be undone."
+        message="Are you sure you want to delete this inmate? This action will archive the inmate record and it can be restored from the archive system if needed."
         onConfirm={handleDelete}
       />
     </div>

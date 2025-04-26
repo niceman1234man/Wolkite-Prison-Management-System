@@ -6,6 +6,7 @@ import dotenv from "dotenv";
 import bcrypt from 'bcrypt'
 import nodemailer from 'nodemailer'
 import { logActivity, logLogin, logLogout } from "../controller/activityLog.controller.js";
+import { archiveItem } from '../controllers/archive.controller.js';
 dotenv.config();
 export const createAccount = async (req, res) => {
   try {
@@ -352,16 +353,30 @@ export const updateProfile = async (req, res) => {
 export const deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
-    const deletedUser = await User.findByIdAndDelete(id);
-
-    if (!deletedUser) {
-      return res.status(404).json({ message: "User not found" });
+    
+    // Find user first to ensure it exists
+    const user = await User.findById(id);
+    
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
     }
-
-    res.status(200).json({ message: "User deleted successfully" });
+    
+    // Archive the user before deletion
+    try {
+      await archiveItem('user', id, req.user.id, 'User deleted by admin');
+      console.log(`User "${user.firstName} ${user.lastName}" archived successfully`);
+    } catch (archiveError) {
+      console.error("Error archiving user:", archiveError);
+      // Continue with deletion even if archiving fails
+    }
+    
+    // Delete the user
+    await User.findByIdAndDelete(id);
+    
+    res.status(200).json({ success: true, message: "User deleted successfully" });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Internal Server Error" });
+    res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
 
