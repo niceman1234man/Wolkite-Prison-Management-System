@@ -34,7 +34,7 @@ import '../../styles/responsive.css';
 import { format, parseISO, isAfter, isPast, differenceInDays } from 'date-fns';
 import { useSelector } from "react-redux";
 
-const PoliceVisitorManagement = () => {
+const PoliceVisitorManagement = ({ refreshTrigger = 0 }) => {
   // State management
   const [visitors, setVisitors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -63,6 +63,11 @@ const PoliceVisitorManagement = () => {
   // Confirm Modal state
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [visitorToDelete, setVisitorToDelete] = useState(null);
+  
+  // Rejection Modal state
+  const [showRejectionModal, setShowRejectionModal] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [visitorToReject, setVisitorToReject] = useState(null);
 
   // Fetch visitors data
   const fetchVisitors = useCallback(async () => {
@@ -120,10 +125,10 @@ const PoliceVisitorManagement = () => {
     }
   }, []);
 
-  // Fetch data on component mount
+  // Fetch data on component mount and when refreshTrigger changes
   useEffect(() => {
     fetchVisitors();
-  }, [fetchVisitors]);
+  }, [fetchVisitors, refreshTrigger]);
 
   // Add this effect to handle clicking outside the dropdown
   useEffect(() => {
@@ -230,7 +235,10 @@ const PoliceVisitorManagement = () => {
       if (newStatus === "approved") {
         endpoint = `/visitor/schedule/${visitorId}/approve`;
       } else if (newStatus === "rejected") {
-        endpoint = `/visitor/schedule/${visitorId}/reject`;
+        // For rejection, open the rejection reason modal
+        setVisitorToReject(visitorId);
+        setShowRejectionModal(true);
+        return; // Exit early, actual rejection will be handled by confirmRejection
       } else if (newStatus === "pending") {
         // For pending status, we'll update the schedule directly
         endpoint = `/visitor/schedule/${visitorId}`;
@@ -255,6 +263,43 @@ const PoliceVisitorManagement = () => {
       console.error("Error updating status:", error);
       toast.error(error.response?.data?.message || "Failed to update status");
     }
+  };
+
+  // Handle rejection confirmation
+  const handleConfirmRejection = async () => {
+    if (!visitorToReject || !rejectionReason.trim()) {
+      toast.error("Please provide a reason for rejection");
+      return;
+    }
+
+    try {
+      const response = await axiosInstance.put(`/visitor/schedule/${visitorToReject}/reject`, {
+        rejectionReason: rejectionReason.trim()
+      });
+
+      if (response.data.success) {
+        toast.success("Schedule rejected successfully");
+        fetchVisitors(); // Refresh the list
+        setShowRejectionModal(false);
+        setRejectionReason("");
+        setVisitorToReject(null);
+        
+        // If the rejection was for the currently selected visitor in detail view, close the detail modal
+        if (selectedVisitor && selectedVisitor._id === visitorToReject) {
+          setSelectedVisitor(null);
+        }
+      }
+    } catch (error) {
+      console.error("Error rejecting visitor:", error);
+      toast.error(error.response?.data?.message || "Failed to reject visitor");
+    }
+  };
+
+  // Handle rejection cancellation
+  const handleCancelRejection = () => {
+    setShowRejectionModal(false);
+    setRejectionReason("");
+    setVisitorToReject(null);
   };
 
   // Format date
@@ -471,9 +516,9 @@ const PoliceVisitorManagement = () => {
               console.warn('Archive status:', archiveMessage);
             }
             
-          fetchVisitors();
+            fetchVisitors();
             setVisitorToDelete(null);
-        } else {
+          } else {
             console.error('Delete API returned success:false', deleteResponse.data);
             toast.error(deleteResponse.data.message || 'Failed to delete visitor schedule');
           }
@@ -488,8 +533,8 @@ const PoliceVisitorManagement = () => {
         }
       } else {
         toast.error('Visitor data not found. Cannot delete.');
-        }
-      } catch (error) {
+      }
+    } catch (error) {
       console.error('Error in delete process:', error);
       toast.error('An unexpected error occurred during the delete process');
     }
@@ -505,7 +550,7 @@ const PoliceVisitorManagement = () => {
   const handleConfirmDelete = () => {
     if (visitorToDelete) {
       handleDelete(visitorToDelete);
-      }
+    }
     setShowConfirmModal(false);
   };
   
@@ -618,13 +663,12 @@ const PoliceVisitorManagement = () => {
             <a
               href="/police-officer/archive"
               className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1 rounded-md text-sm flex items-center"
-              title="View Archive"
+              title="View archived visitor records including rejected visits with reasons"
             >
               <FaArchive className="mr-1" /> Archives
             </a>
           </div>
         </div>
-
         {/* Filters */}
         <div className="mb-6">
           <div className="flex flex-col sm:flex-row gap-4">
@@ -688,6 +732,11 @@ const PoliceVisitorManagement = () => {
                   <p className="text-gray-700">
                     <span className="font-medium">ID:</span> {visitor.visitorDetails.idNumber || 'N/A'}
                   </p>
+                  {visitor.status?.toLowerCase() === 'rejected' && visitor.rejectionReason && (
+                    <p className="text-red-600">
+                      <span className="font-medium">Rejection Reason:</span> {visitor.rejectionReason}
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button
@@ -767,17 +816,20 @@ const PoliceVisitorManagement = () => {
               <table className="w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" style={{ width: '30%' }} onClick={() => handleSort("visitorDetails.firstName")}>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" style={{ width: '25%' }} onClick={() => handleSort("visitorDetails.firstName")}>
                       Name {getSortIcon("visitorDetails.firstName")}
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" style={{ width: '20%' }} onClick={() => handleSort("visitorDetails.phone")}>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" style={{ width: '15%' }} onClick={() => handleSort("visitorDetails.phone")}>
                       Phone {getSortIcon("visitorDetails.phone")}
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" style={{ width: '20%' }} onClick={() => handleSort("visitDate")}>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" style={{ width: '15%' }} onClick={() => handleSort("visitDate")}>
                       Visit Date {getSortIcon("visitDate")}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" style={{ width: '15%' }} onClick={() => handleSort("status")}>
                       Status {getSortIcon("status")}
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '15%' }}>
+                      Reason
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '15%', minWidth: '150px' }}>
                       Actions
@@ -787,7 +839,7 @@ const PoliceVisitorManagement = () => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredVisitors.map((visitor) => (
                     <tr key={visitor._id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 whitespace-nowrap" style={{ width: '30%' }}>
+                      <td className="px-4 py-3 whitespace-nowrap" style={{ width: '25%' }}>
                         <div className="text-sm font-medium text-gray-900">
                           {`${visitor.visitorDetails.firstName || ''} ${visitor.visitorDetails.middleName || ''} ${visitor.visitorDetails.lastName || ''}`}
                         </div>
@@ -795,14 +847,32 @@ const PoliceVisitorManagement = () => {
                           ID: {visitor.visitorDetails.idNumber || 'N/A'}
                         </div>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap" style={{ width: '20%' }}>
+                      <td className="px-4 py-3 whitespace-nowrap" style={{ width: '15%' }}>
                         <div className="text-sm text-gray-500">{visitor.visitorDetails.phone || 'N/A'}</div>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap" style={{ width: '20%' }}>
+                      <td className="px-4 py-3 whitespace-nowrap" style={{ width: '15%' }}>
                         <div className="text-sm text-gray-500">{formatDate(visitor.visitDate)}</div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap" style={{ width: '15%' }}>
                         <StatusBadge status={visitor.status || 'Pending'} />
+                      </td>
+                      <td className="px-4 py-3" style={{ width: '15%' }}>
+                        {visitor.status?.toLowerCase() === 'rejected' ? (
+                          <div 
+                            className="text-sm text-red-600 max-w-xs truncate"
+                            title={`Rejected: ${visitor.rejectionReason || 'No reason provided'}${visitor.approvedAt ? `\nDate: ${formatDate(visitor.approvedAt)}` : ''}`}
+                          >
+                            {visitor.rejectionReason || 'No reason provided'}
+                          </div>
+                        ) : visitor.status?.toLowerCase() === 'approved' ? (
+                          <div className="text-sm text-green-600">
+                            Approved
+                          </div>
+                        ) : (
+                          <div className="text-sm text-gray-500">
+                            {visitor.status?.toLowerCase() === 'pending' ? 'Awaiting review' : '-'}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-center" style={{ width: '15%', minWidth: '150px' }}>
                         <div className="flex justify-center gap-2">
@@ -1126,7 +1196,7 @@ const PoliceVisitorManagement = () => {
                                 <FaTimes className="mt-1 mr-3 text-red-500" />
                                 <div>
                                   <p className="text-sm text-gray-500">Rejection Reason</p>
-                                  <p className="font-medium text-red-600">{selectedVisitor.rejectionReason}</p>
+                                  <p className="font-medium text-red-600 whitespace-pre-wrap">{selectedVisitor.rejectionReason}</p>
                                 </div>
                               </div>
                             )}
@@ -1200,6 +1270,38 @@ const PoliceVisitorManagement = () => {
         onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
       />
+
+      {/* Rejection Reason Modal */}
+      {showRejectionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Provide Rejection Reason</h2>
+            <p className="text-gray-600 mb-4">Please provide a reason for rejecting this visitor request:</p>
+            <textarea
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="Enter rejection reason..."
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent mb-4"
+              rows={4}
+            />
+            <div className="flex justify-end gap-4">
+              <button
+                onClick={handleCancelRejection}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmRejection}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center"
+                disabled={!rejectionReason.trim()}
+              >
+                <FaTimes className="mr-2" /> Reject Visit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useEffect, useContext, useState, useMemo, useCallback } from "react";
-import { FaBook, FaClipboardCheck, FaSave, FaEye, FaExclamationTriangle, FaSync, FaEdit, FaTimes, FaTable, FaThLarge, FaTrash, FaChevronDown, FaSearch, FaCalendarAlt, FaChevronLeft, FaChevronRight, FaClock, FaUser } from "react-icons/fa";
+import { FaBook, FaClipboardCheck, FaSave, FaEye, FaExclamationTriangle, FaSync, FaEdit, FaTimes, FaTable, FaThLarge, FaTrash, FaChevronDown, FaSearch, FaCalendarAlt, FaChevronLeft, FaChevronRight, FaClock, FaUser, FaTimesCircle } from "react-icons/fa";
 import Loader from "../common/Loader";
 import { useSelector } from "react-redux";
 import { toast } from "react-hot-toast";
@@ -226,6 +226,12 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
   }, []);
 
   const viewScheduleDetails = useCallback((schedule) => {
+    // Log the raw schedule data to see what's available
+    console.log("Raw schedule data:", schedule);
+    
+    // Check if this is a rejected schedule with a reason
+    const isRejected = schedule.status?.toLowerCase() === 'rejected';
+    
     // Make sure the schedule is properly populated with all necessary data
     // Create a clean version of the schedule with all fields needed by the detail modal
     const enrichedSchedule = {
@@ -249,8 +255,26 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
       createdAt: schedule.createdAt,
       approvedAt: schedule.approvedAt || schedule.updatedAt,
       // Add full name for easy access
-      fullName: `${schedule.visitorId?.firstName || schedule.firstName || ''} ${schedule.visitorId?.middleName || schedule.middleName || ''} ${schedule.visitorId?.lastName || schedule.lastName || ''}`.trim()
+      fullName: `${schedule.visitorId?.firstName || schedule.firstName || ''} ${schedule.visitorId?.middleName || schedule.middleName || ''} ${schedule.visitorId?.lastName || schedule.lastName || ''}`.trim(),
+      // Include photo URLs - Ensure these are properly extracted
+      idPhoto: schedule.idPhoto || null,
+      visitorPhoto: schedule.visitorPhoto || null,
+      // Include inmate data with ID
+      inmateId: schedule.inmateId ? {
+        ...schedule.inmateId,
+        prisonerId: schedule.inmateId.prisonerId || schedule.inmateId.inmateId || schedule.inmateId._id || null,
+        _id: schedule.inmateId._id || null,
+        fullName: schedule.inmateId.fullName || 
+                 `${schedule.inmateId.firstName || ''} ${schedule.inmateId.middleName || ''} ${schedule.inmateId.lastName || ''}`.trim() || 
+                 'Unknown'
+      } : null,
+      // Add formatted rejection info for easier display in the modal
+      rejectionStatus: isRejected,
+      formattedRejectionInfo: isRejected && schedule.rejectionReason ? schedule.rejectionReason : null
     };
+    
+    console.log("Enriched schedule for detail modal:", enrichedSchedule);
+    console.log("Photo paths - ID Photo:", enrichedSchedule.idPhoto, "Visitor Photo:", enrichedSchedule.visitorPhoto);
     
     setSelectedSchedule(enrichedSchedule);
     setShowDetailModal(true);
@@ -715,6 +739,9 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
         break;
     }
 
+    // Add the rejection message if status is rejected
+    const isRejected = schedule.status?.toLowerCase() === 'rejected';
+
     return (
       <div className={`bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden transform hover:-translate-y-1 border ${statusColors.accent}`}>
         {/* Card header with gradient */}
@@ -823,6 +850,14 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
             </button>
           )}
         </div>
+        
+        {/* Display rejection reason if rejected */}
+        {isRejected && schedule.formattedRejectionInfo && (
+          <div className="mt-3 p-2 bg-red-50 rounded-md border border-red-100">
+            <p className="text-xs font-semibold text-red-800 mb-1">Rejection Reason:</p>
+            <p className="text-sm text-red-700">{schedule.formattedRejectionInfo}</p>
+          </div>
+        )}
       </div>
     );
   };
@@ -862,6 +897,9 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
                 <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider w-[10%]">
                   Status
                 </th>
+                <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider hidden md:table-cell w-[15%]">
+                  Reason
+                </th>
                 <th className="px-2 sm:px-4 py-3 text-center text-xs font-medium uppercase tracking-wider w-[10%]">
                   Actions
                 </th>
@@ -870,7 +908,7 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
             <tbody className="bg-white divide-y divide-gray-200">
               {schedules.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="px-4 py-4 text-center text-gray-500 italic">
+                  <td colSpan="8" className="px-4 py-4 text-center text-gray-500 italic">
                     No visits scheduled
                   </td>
                 </tr>
@@ -927,6 +965,20 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
                         {schedule.status}
                       </span>
                     </td>
+                      <td className="px-2 sm:px-4 py-3 text-sm hidden md:table-cell">
+                        {schedule.status?.toLowerCase() === 'rejected' && schedule.formattedRejectionInfo ? (
+                          <div 
+                            className="text-sm text-red-600 max-w-xs truncate"
+                            title={schedule.formattedRejectionInfo}
+                          >
+                            {schedule.formattedRejectionInfo}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-gray-500">
+                            {schedule.status?.toLowerCase() === 'rejected' ? 'No reason provided' : '-'}
+                          </div>
+                        )}
+                      </td>
                       <td className="px-2 sm:px-4 py-3 text-sm text-right">
                         <div 
                           className="flex justify-end gap-1 sm:gap-2"
@@ -977,7 +1029,7 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
             </tbody>
             <tfoot className="bg-gray-50 border-t border-gray-200">
               <tr>
-                <td colSpan="7" className="px-4 py-3 text-left text-xs font-medium text-gray-500">
+                <td colSpan="8" className="px-4 py-3 text-left text-xs font-medium text-gray-500">
                   Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, filteredSchedules.length)} of {filteredSchedules.length} records
                 </td>
               </tr>
@@ -1324,7 +1376,17 @@ const VisitSchedules = React.memo(({ isEmbedded = false, capacityReached = null,
             schedule={selectedSchedule}
             onEdit={handleUpdateFromDetail}
             onCancel={openCancelModal}
-          />
+          >
+            {/* Add Rejection Reason Banner */}
+            {selectedSchedule.status?.toLowerCase() === 'rejected' && selectedSchedule.rejectionReason && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                <h3 className="text-red-800 font-semibold mb-1 flex items-center">
+                  <FaTimesCircle className="mr-2" /> Rejection Reason
+                </h3>
+                <p className="text-red-700 text-sm whitespace-pre-wrap">{selectedSchedule.rejectionReason}</p>
+              </div>
+            )}
+          </ScheduleDetailModal>
         )}
       
         {/* Cancel Confirmation Modal */}

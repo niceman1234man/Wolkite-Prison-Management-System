@@ -5,7 +5,7 @@ import { format } from "date-fns";
 import { FaSpinner } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
-function ScheduleVisit({ schedule, onSuccess, onCancel }) {
+function ScheduleVisit({ schedule, onSuccess, onCancel, isPoliceOfficer }) {
   const navigate = useNavigate();
   const [inmates, setInmates] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -67,8 +67,28 @@ function ScheduleVisit({ schedule, onSuccess, onCancel }) {
     try {
       setInmatesLoading(true);
       const response = await axiosInstance.get("/visitor/schedule/inmates");
+      console.log("Inmates API response:", response.data);
+      
       if (response.data?.success) {
-        setInmates(response.data.data || []);
+        // The API returns data in 'inmates' property
+        const inmatesData = response.data.inmates || [];
+        
+        // Format the inmate data to have consistent properties
+        const formattedInmates = inmatesData.map(inmate => {
+          // Create fullName from firstName, middleName, lastName
+          const fullName = [inmate.firstName, inmate.middleName, inmate.lastName]
+            .filter(Boolean)
+            .join(" ");
+            
+          return {
+            _id: inmate._id,
+            fullName: fullName || "Unknown",
+            prisonerId: inmate.inmateId || "No ID"
+          };
+        });
+        
+        console.log("Processed inmates:", formattedInmates.length);
+        setInmates(formattedInmates);
       } else {
         // Handle empty response gracefully
         setInmates([]);
@@ -278,6 +298,28 @@ function ScheduleVisit({ schedule, onSuccess, onCancel }) {
         return;
       }
   
+      // Get user ID from localStorage to manually include it
+      let userId = null;
+      try {
+        const userString = localStorage.getItem('user');
+        if (userString) {
+          const userData = JSON.parse(userString);
+          userId = userData.id || userData._id;
+          if (userId) {
+            formDataToSend.append('userId', userId);
+            console.log('Added userId to form data:', userId);
+          }
+        }
+      } catch (e) {
+        console.error('Error getting user data from localStorage:', e);
+      }
+      
+      // If this is being submitted by a police officer and we have a userId, use that
+      if (isPoliceOfficer && userId) {
+        formDataToSend.append('createdBy', userId);
+        console.log('Added createdBy to form data (police officer):', userId);
+      }
+      
       // Append all form fields
       if (formData.inmateId !== "default_inmate") {
         formDataToSend.append('inmateId', formData.inmateId);
@@ -482,8 +524,8 @@ function ScheduleVisit({ schedule, onSuccess, onCancel }) {
             >
               <option value="">Select ID type</option>
               <option value="passport">Passport</option>
-              <option value="nationalId">National ID</option>
-              <option value="driversLicense">Driver's License</option>
+              <option value="national_id">National ID</option>
+              <option value="drivers_license">Driver's License</option>
               <option value="other">Other</option>
             </select>
           </div>
@@ -614,9 +656,13 @@ function ScheduleVisit({ schedule, onSuccess, onCancel }) {
             className="w-full p-2 border rounded-md focus:ring-teal-500 focus:border-teal-500"
           >
             <option value="">Select relationship</option>
-            <option value="family">Family</option>
+            <option value="parent">Parent</option>
+            <option value="spouse">Spouse</option>
+            <option value="child">Child</option>
+            <option value="sibling">Sibling</option>
+            <option value="relative">Relative</option>
             <option value="friend">Friend</option>
-            <option value="lawyer">Lawyer</option>
+            <option value="legal">Legal Representative</option>
             <option value="other">Other</option>
           </select>
         </div>
@@ -684,7 +730,6 @@ function ScheduleVisit({ schedule, onSuccess, onCancel }) {
               name="visitorPhoto"
               onChange={handleFileChange}
               accept="image/*"
-              required={!schedule}
               className="w-full p-2 border rounded-md focus:ring-teal-500 focus:border-teal-500"
             />
             <p className="mt-1 text-sm text-gray-500">
@@ -746,5 +791,6 @@ export default ScheduleVisit;
 ScheduleVisit.defaultProps = {
   schedule: null,
   onSuccess: () => {},
-  onCancel: null
+  onCancel: null,
+  isPoliceOfficer: false
 }; 

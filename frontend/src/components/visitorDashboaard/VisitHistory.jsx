@@ -414,7 +414,23 @@ function VisitHistory() {
   };
 
   const handleViewDetails = (schedule) => {
-    setSelectedSchedule(schedule);
+    // Create a copy of the schedule to avoid mutating the original data
+    const enhancedSchedule = {
+      ...schedule,
+    };
+    
+    // If this is a rejected visit with a reason, make sure it's prominently displayed
+    if (schedule.status?.toLowerCase() === 'rejected' && schedule.rejectionReason) {
+      // Add a formatted rejection reason that will be displayed in a special section
+      enhancedSchedule.formattedRejectionInfo = schedule.rejectionReason;
+      
+      // Also include it in notes for backward compatibility
+      enhancedSchedule.notes = schedule.notes 
+        ? `${schedule.notes}\n\n--- REJECTION REASON ---\n${schedule.rejectionReason}`
+        : `--- REJECTION REASON ---\n${schedule.rejectionReason}`;
+    }
+    
+    setSelectedSchedule(enhancedSchedule);
     setShowDetailModal(true);
   };
 
@@ -516,6 +532,9 @@ function VisitHistory() {
         break;
     }
       
+    // Check if the visit was rejected
+    const isRejected = visit.status?.toLowerCase() === 'rejected';
+    
     return (
       <div className={`bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden transform hover:-translate-y-1 border ${statusColors.accent}`}>
         {/* Card header with gradient */}
@@ -578,6 +597,14 @@ function VisitHistory() {
               </div>
             </div>
           </div>
+          
+          {/* Display rejection reason if rejected */}
+          {isRejected && visit.rejectionReason && (
+            <div className="mt-3 p-2 bg-red-50 rounded-md border border-red-100">
+              <p className="text-xs font-semibold text-red-800 mb-1">Rejection Reason:</p>
+              <p className="text-sm text-red-700">{visit.rejectionReason}</p>
+            </div>
+          )}
         </div>
         
         {/* Card footer with actions */}
@@ -654,6 +681,9 @@ function VisitHistory() {
                         Status <SortIcon field="status" />
                       </div>
                     </th>
+                    <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider w-[15%] hidden lg:table-cell">
+                      Reason
+                    </th>
                     <th className="px-2 sm:px-4 py-3 text-center text-xs font-medium uppercase tracking-wider w-[10%]">
                       Actions
                     </th>
@@ -702,6 +732,20 @@ function VisitHistory() {
                           <span className={`px-1 sm:px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full shadow-sm ${getStatusColor(schedule.status)}`}>
                             {schedule.status?.charAt(0).toUpperCase() + schedule.status?.slice(1)}
                           </span>
+                        </td>
+                        <td className="px-2 sm:px-4 py-3 sm:py-4 group-hover:bg-blue-100 transition-colors duration-150 hidden lg:table-cell">
+                          {schedule.status?.toLowerCase() === 'rejected' && schedule.rejectionReason ? (
+                            <div 
+                              className="text-sm text-red-600 max-w-xs truncate"
+                              title={schedule.rejectionReason}
+                            >
+                              {schedule.rejectionReason}
+                            </div>
+                          ) : (
+                            <div className="text-sm text-gray-500">
+                              {schedule.status?.toLowerCase() === 'rejected' ? 'No reason provided' : '-'}
+                            </div>
+                          )}
                         </td>
                         <td className="px-2 sm:px-4 py-3 sm:py-4 text-sm font-medium text-center group-hover:bg-blue-100 transition-colors duration-150" onClick={(e) => e.stopPropagation()}>
                           <div className="flex flex-wrap items-center justify-center gap-1">
@@ -963,7 +1007,9 @@ function VisitHistory() {
             onClose={closeDetailModal}
             schedule={selectedSchedule}
             onCancel={openCancelModal}
-          />
+          >
+            {/* Rejection reason is now handled in the notes field for better integration with the modal */}
+          </ScheduleDetailModal>
         )}
 
         {/* Cancel Confirmation Modal */}
