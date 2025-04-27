@@ -21,18 +21,57 @@ const ViewIncident = ({setView, id}) => {
   const deleteIncident = async () => {
     try {
       console.log("Attempting to delete incident with ID:", id);
-      const response = await axiosInstance.delete(`/incidents/delete-incident/${id}`);
-      console.log("Delete response:", response.data);
       
-      if (response.data && response.status === 200) {
-        toast.success("Incident deleted successfully!");
-        setOpenDelete(false);
-        navigate("/policeOfficer-dashboard/incident");
-      } else {
-        const errorMsg = response.data?.message || "Failed to delete incident. Please try again.";
-        console.error("Delete failed:", errorMsg);
-        setError(errorMsg);
-        toast.error(errorMsg);
+      // First, archive the incident
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      const userId = userData._id || userData.id;
+      
+      try {
+        // Create archive entry first
+        console.log("Creating archive for incident before deletion");
+        const archiveResponse = await axiosInstance.post("/manual-archive", {
+          entityType: "incident",
+          originalId: id,
+          data: incident,
+          deletedBy: userId,
+          deletionReason: "User initiated deletion",
+          metadata: {
+            deletedAt: new Date().toISOString(),
+            deletedByRole: userData.role || "unknown"
+          }
+        });
+        
+        console.log("Archive created successfully:", archiveResponse.data);
+        
+        // Now proceed with deletion
+        const response = await axiosInstance.delete(`/incidents/delete-incident/${id}`);
+        console.log("Delete response:", response.data);
+        
+        if (response.data && response.status === 200) {
+          toast.success("Incident deleted and archived successfully!");
+          setOpenDelete(false);
+          navigate("/policeOfficer-dashboard/incident");
+        } else {
+          const errorMsg = response.data?.message || "Failed to delete incident. Please try again.";
+          console.error("Delete failed:", errorMsg);
+          setError(errorMsg);
+          toast.error(errorMsg);
+        }
+      } catch (archiveError) {
+        console.error("Error archiving incident:", archiveError);
+        
+        // If archiving fails, ask user if they want to proceed with deletion anyway
+        if (window.confirm("Could not archive this incident. Would you like to delete it anyway? (Data will be permanently lost)")) {
+          const response = await axiosInstance.delete(`/incidents/delete-incident/${id}`);
+          if (response.data && response.status === 200) {
+            toast.success("Incident deleted (without archiving)!");
+            setOpenDelete(false);
+            navigate("/policeOfficer-dashboard/incident");
+          }
+        } else {
+          toast.info("Deletion cancelled");
+          setOpenDelete(false);
+        }
       }
     } catch (error) {
       console.error("Error deleting incident:", error);
