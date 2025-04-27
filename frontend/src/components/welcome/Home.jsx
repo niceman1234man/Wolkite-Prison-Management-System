@@ -11,6 +11,12 @@ function Home({ messages, currentMessageIndex, sideImages, loading, time, messag
     return APP_UUID;
   };
 
+  // Add a handler for image loading errors
+  const handleImageError = (e, fallbackUrl) => {
+    console.error("Image failed to load:", e.target.src);
+    e.target.src = fallbackUrl || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200' viewBox='0 0 400 200'%3E%3Crect width='400' height='200' fill='%23f0f0f0'/%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='16' text-anchor='middle' dominant-baseline='middle' fill='%23a0a0a0'%3EImage Not Found%3C/text%3E%3C/svg%3E";
+  };
+
   return (
     <div data-app-id={APP_UUID} className="relative z-10">
       {/* Hero Section with Parallax Effect */}
@@ -80,13 +86,13 @@ function Home({ messages, currentMessageIndex, sideImages, loading, time, messag
           {messages.length > 0 && (
             <div className="relative w-full max-w-5xl mx-auto">
               <div className={`${darkMode ? 'bg-gray-800/90' : 'bg-white/95'} rounded-lg overflow-hidden shadow-xl transform transition-all duration-500 backdrop-blur-sm`}>
-                {messages[currentMessageIndex].image && (
+                {messages[currentMessageIndex] && messages[currentMessageIndex].image && (
                   <div className="relative h-[400px] overflow-hidden">
                     <img
                       src={messages[currentMessageIndex].image}
                       alt="Official Announcement"
                       className="w-full h-full object-cover transform transition-transform duration-500"
-                      onError={(e) => handleImageError && handleImageError(e, "https://via.placeholder.com/800x400?text=Image+Not+Found")}
+                      onError={(e) => handleImageError(e, "https://via.placeholder.com/800x400?text=Image+Not+Found")}
                     />
                     <div className="absolute top-0 left-0 bg-black/60 text-white px-4 py-2 text-xs">
                       OFFICIAL COMMUNICATION
@@ -98,9 +104,9 @@ function Home({ messages, currentMessageIndex, sideImages, loading, time, messag
                     {advancedView ? "ADMINISTRATIVE BULLETIN" : "ANNOUNCEMENT"}
                   </h3>
                   <p className={`${darkMode ? 'text-white' : 'text-gray-800'} text-xl leading-relaxed`}>
-                    {messages[currentMessageIndex].text}
+                    {messages[currentMessageIndex] && messages[currentMessageIndex].text}
                   </p>
-                  {advancedView && messages[currentMessageIndex].date && (
+                  {advancedView && messages[currentMessageIndex] && messages[currentMessageIndex].date && (
                     <div className="mt-6 text-sm text-gray-500 flex items-center">
                       <ClockIcon className="w-4 h-4 mr-1" />
                       <span>Published: {new Date(messages[currentMessageIndex].date).toLocaleDateString()}</span>
@@ -226,18 +232,18 @@ function Home({ messages, currentMessageIndex, sideImages, loading, time, messag
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {messages.slice(0, 3).map((message) => (
+              {messages && messages.length > 0 && messages.slice(0, 3).map((message) => (
                 <div
-                  key={message._id}
+                  key={message?._id || Math.random().toString()}
                   className={`${darkMode ? 'bg-gray-800/90 border-gray-700' : 'bg-white border-gray-200'} rounded-lg overflow-hidden shadow-lg transition-all duration-300 border`}
                 >
-                  {message.image && (
+                  {message && message.image && (
                     <div className="relative h-48 overflow-hidden">
                       <img
                         src={message.image}
                         alt="Official Communication"
                         className="w-full h-full object-cover transform transition-transform duration-500"
-                        onError={(e) => handleImageError && handleImageError(e, "https://via.placeholder.com/800x400?text=Image+Not+Found")}
+                        onError={(e) => handleImageError(e, "https://via.placeholder.com/800x400?text=Image+Not+Found")}
                       />
                       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent h-16"></div>
                     </div>
@@ -247,10 +253,10 @@ function Home({ messages, currentMessageIndex, sideImages, loading, time, messag
                       {advancedView ? "BULLETIN" : "NOTICE"}
                     </div>
                     <p className={`${darkMode ? 'text-white' : 'text-gray-800'} text-lg font-medium leading-relaxed mb-3`}>
-                      {message.text.length > 120 ? message.text.substring(0, 120) + "..." : message.text}
+                      {message && message.text && message.text.length > 120 ? message.text.substring(0, 120) + "..." : (message?.text || "")}
                     </p>
                     <div className="flex justify-between items-center">
-                      {advancedView && message.date && (
+                      {advancedView && message && message.date && (
                         <div className="text-xs text-gray-500 flex items-center">
                           <ClockIcon className="w-3 h-3 mr-1" />
                           <span>{new Date(message.date).toLocaleDateString()}</span>

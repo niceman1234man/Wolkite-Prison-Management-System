@@ -198,7 +198,7 @@ function VisitHistory() {
       case "approved":
         return "bg-green-100 text-green-800 border-green-300";
       case "rejected":
-        return "bg-red-100 text-red-800 border-red-300";
+        return "bg-red-100 text-red-800 border-red-300 font-semibold";
       case "completed":
         return "bg-blue-100 text-blue-800 border-blue-300";
       case "cancelled":
@@ -414,23 +414,18 @@ function VisitHistory() {
   };
 
   const handleViewDetails = (schedule) => {
-    // Create a copy of the schedule to avoid mutating the original data
-    const enhancedSchedule = {
-      ...schedule,
-    };
-    
-    // If this is a rejected visit with a reason, make sure it's prominently displayed
+    // Add additional info about rejection reason for easier viewing in the modal
     if (schedule.status?.toLowerCase() === 'rejected' && schedule.rejectionReason) {
-      // Add a formatted rejection reason that will be displayed in a special section
-      enhancedSchedule.formattedRejectionInfo = schedule.rejectionReason;
-      
-      // Also include it in notes for backward compatibility
-      enhancedSchedule.notes = schedule.notes 
-        ? `${schedule.notes}\n\n--- REJECTION REASON ---\n${schedule.rejectionReason}`
-        : `--- REJECTION REASON ---\n${schedule.rejectionReason}`;
+      // Create a copy of the schedule to avoid mutating the original data
+      const enhancedSchedule = {
+        ...schedule,
+        // Add a formatted note about the rejection reason
+        formattedRejectionInfo: schedule.rejectionReason
+      };
+      setSelectedSchedule(enhancedSchedule);
+    } else {
+      setSelectedSchedule(schedule);
     }
-    
-    setSelectedSchedule(enhancedSchedule);
     setShowDetailModal(true);
   };
 
@@ -457,6 +452,8 @@ function VisitHistory() {
         icon = <FaCheck className="mr-1" />;
         break;
       case "rejected":
+        icon = <FaTimesCircle className="mr-1 text-red-600" />;
+        break;
       case "cancelled":
         icon = <FaTimesCircle className="mr-1" />;
         break;
@@ -464,8 +461,11 @@ function VisitHistory() {
         icon = <FaCheck className="mr-1" />;
     }
     
+    // Add a pulse animation for rejected status
+    const isRejected = status?.toLowerCase() === 'rejected';
+    
     return (
-      <span className={`visitor-badge ${getStatusColor(status)}`}>
+      <span className={`visitor-badge ${getStatusColor(status)} ${isRejected ? 'shadow-md' : ''}`}>
         {icon}
         {status?.charAt(0).toUpperCase() + status?.slice(1)}
       </span>
@@ -514,6 +514,14 @@ function VisitHistory() {
           accent: "border-green-200"
         };
         break;
+      case 'rejected':
+        statusColors = {
+          bg: "from-red-50 to-white",
+          badge: "bg-red-100 text-red-800",
+          icon: "text-red-500",
+          accent: "border-red-200"
+        };
+        break;  
       case 'missed':
         statusColors = {
           bg: "from-red-50 to-white",
@@ -600,9 +608,14 @@ function VisitHistory() {
           
           {/* Display rejection reason if rejected */}
           {isRejected && visit.rejectionReason && (
-            <div className="mt-3 p-2 bg-red-50 rounded-md border border-red-100">
-              <p className="text-xs font-semibold text-red-800 mb-1">Rejection Reason:</p>
-              <p className="text-sm text-red-700">{visit.rejectionReason}</p>
+            <div className="mt-3 p-3 bg-red-50 rounded-md border-l-4 border-red-500">
+              <div className="flex items-center mb-1">
+                <FaTimesCircle className="text-red-600 mr-1.5" size={12} />
+                <p className="text-xs font-semibold text-red-800">Rejection Reason:</p>
+              </div>
+              <p className="text-sm text-red-700 p-1.5 bg-white bg-opacity-50 rounded" title={visit.rejectionReason}>
+                {formatRejectionReason(visit.rejectionReason, 100)}
+              </p>
             </div>
           )}
         </div>
@@ -627,6 +640,13 @@ function VisitHistory() {
         </div>
       </div>
     );
+  };
+
+  // Helper to truncate rejection reasons
+  const formatRejectionReason = (reason, maxLength = 60) => {
+    if (!reason) return "No reason provided";
+    if (reason.length <= maxLength) return reason;
+    return `${reason.substring(0, maxLength)}...`;
   };
 
   const renderTableView = () => {
@@ -681,7 +701,7 @@ function VisitHistory() {
                         Status <SortIcon field="status" />
                       </div>
                     </th>
-                    <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider w-[15%] hidden lg:table-cell">
+                    <th className="px-2 sm:px-4 py-3 text-left text-xs font-medium uppercase tracking-wider w-[15%] hidden md:table-cell lg:table-cell">
                       Reason
                     </th>
                     <th className="px-2 sm:px-4 py-3 text-center text-xs font-medium uppercase tracking-wider w-[10%]">
@@ -712,6 +732,13 @@ function VisitHistory() {
                           <div className="text-sm text-gray-900 font-medium group-hover:text-blue-700 transition-colors duration-150">
                             {inmateName}
                           </div>
+                          {/* Show rejection reason for mobile view */}
+                          {schedule.status?.toLowerCase() === 'rejected' && schedule.rejectionReason && (
+                            <div className="md:hidden mt-1.5 text-xs text-red-600 font-medium rounded bg-red-50 border-l-2 border-red-400 p-1.5 max-w-[200px]" title={schedule.rejectionReason}>
+                              <FaTimesCircle className="inline mr-1 text-red-500" size={10} /> 
+                              {formatRejectionReason(schedule.rejectionReason, 40)}
+                            </div>
+                          )}
                         </td>
                         <td className="px-2 sm:px-4 py-3 sm:py-4 group-hover:bg-blue-100 transition-colors duration-150 hidden sm:table-cell">
                           <div className="text-sm text-gray-900">
@@ -733,13 +760,14 @@ function VisitHistory() {
                             {schedule.status?.charAt(0).toUpperCase() + schedule.status?.slice(1)}
                           </span>
                         </td>
-                        <td className="px-2 sm:px-4 py-3 sm:py-4 group-hover:bg-blue-100 transition-colors duration-150 hidden lg:table-cell">
+                        <td className="px-2 sm:px-4 py-3 sm:py-4 group-hover:bg-blue-100 transition-colors duration-150 hidden md:table-cell lg:table-cell">
                           {schedule.status?.toLowerCase() === 'rejected' && schedule.rejectionReason ? (
                             <div 
-                              className="text-sm text-red-600 max-w-xs truncate"
+                              className="text-sm text-red-600 max-w-xs truncate font-medium px-2 py-1 bg-red-50 rounded-md border-l-2 border-red-400"
                               title={schedule.rejectionReason}
                             >
-                              {schedule.rejectionReason}
+                              <FaTimesCircle className="inline mr-1.5 text-red-500" size={10} />
+                              {formatRejectionReason(schedule.rejectionReason, 50)}
                             </div>
                           ) : (
                             <div className="text-sm text-gray-500">
@@ -1008,7 +1036,18 @@ function VisitHistory() {
             schedule={selectedSchedule}
             onCancel={openCancelModal}
           >
-            {/* Rejection reason is now handled in the notes field for better integration with the modal */}
+            {/* Add Rejection Reason Banner */}
+            {selectedSchedule.status?.toLowerCase() === 'rejected' && selectedSchedule.rejectionReason && (
+              <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-500 rounded-md shadow-sm">
+                <h3 className="text-lg text-red-800 font-semibold mb-2 flex items-center">
+                  <FaTimesCircle className="mr-2" /> Visit Rejected
+                </h3>
+                <p className="text-red-700 text-sm font-medium">Reason:</p>
+                <p className="text-red-800 whitespace-pre-wrap p-2 bg-white bg-opacity-50 rounded mt-1">
+                  {selectedSchedule.rejectionReason}
+                </p>
+              </div>
+            )}
           </ScheduleDetailModal>
         )}
 
