@@ -127,7 +127,6 @@ const InspectorSidebar = () => {
           </NavLink>
           
           <NavLink
-            to="/inspector-dashboard/homepage-settings"
             className={({ isActive }) =>
               `flex items-center p-2 rounded-lg hover:bg-teal-600 transition-colors ${
                 isActive ? "bg-teal-600" : ""

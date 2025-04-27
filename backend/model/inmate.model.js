@@ -14,14 +14,14 @@ const InmateSchema = new mongoose.Schema(
     // Birth Place
     birthRegion: { type: String },
     birthZone: { type: String },
-    birthWereda: { type: String },
-    birthKebele: { type: String },
+    birthWereda: { type: String },  // Can contain both text and numbers
+    birthKebele: { type: String },  // Can contain both text and numbers
 
     // Current Living Place
     currentRegion: { type: String },
     currentZone: { type: String },
-    currentWereda: { type: String },
-    currentKebele: { type: String },
+    currentWereda: { type: String },  // Can contain both text and numbers
+    currentKebele: { type: String },  // Can contain both text and numbers
 
     // Personal Details
     degreeLevel: { type: String },
@@ -49,8 +49,8 @@ const InmateSchema = new mongoose.Schema(
     contactName: { type: String },
     contactRegion: { type: String },
     contactZone: { type: String },
-    contactWereda: { type: String },
-    contactKebele: { type: String },
+    contactWereda: { type: String },  // Can contain both text and numbers
+    contactKebele: { type: String },  // Can contain both text and numbers
     phoneNumber: { type: String },
 
     // Case Details
@@ -58,13 +58,30 @@ const InmateSchema = new mongoose.Schema(
     startDate: { type: Date },
     sentenceReason: { type: String },
     releasedDate: { type: Date },
-    sentenceYear: { type: Number },
+    sentenceYear: { 
+      type: mongoose.Schema.Types.Mixed, // Can be a Number or "Life" string
+      get: function(v) {
+        return typeof v === 'number' ? v : v;
+      },
+      set: function(v) {
+        return v === 'Life' ? v : typeof v === 'string' ? parseFloat(v) : v;
+      }
+    },
+    lifeImprisonment: { type: Boolean, default: false },
     paroleDate: { type: Date },
     durationToParole: { type: String },
     durationFromParoleToEnd: { type: String },
+    paroleEligibility: { 
+      type: String,
+      enum: ["eligible", "not_eligible"]
+    },
+    guiltyStatus: {
+      type: String,
+      enum: ["guilty", "not_guilty"]
+    },
     status: {
       type: String,
-      enum: ["pending","active","paroled"],
+      enum: ["pending", "active", "paroled", "released"],
       default: "pending",
       required: true,
     },

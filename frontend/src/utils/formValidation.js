@@ -43,16 +43,20 @@ export const validateUserForm = (userData) => {
   export const validateInmateForm = (formData) => {
     const errors = {};
     
-    // Required fields validation
+    // Required fields validation - note: sentenceYear is conditionally required based on guilty status
     const requiredFields = [
       'firstName', 
       'lastName', 
       'gender', 
       'birthDate',
       'caseType',
-      'startDate',
-      'sentenceYear'
+      'startDate'
     ];
+    
+    // Only make sentenceYear required if the inmate is guilty
+    if (formData.guiltyStatus !== 'not_guilty') {
+      requiredFields.push('sentenceYear');
+    }
     
     requiredFields.forEach(field => {
       if (!formData[field]) {
@@ -65,7 +69,7 @@ export const validateUserForm = (userData) => {
       // Skip fields already marked as errors
       if (errors[name]) return;
       
-      const error = validateInmateField(name, value);
+      const error = validateInmateField(name, value, formData);
       if (error) {
         errors[name] = error;
       }
@@ -222,6 +226,18 @@ export const validateUserForm = (userData) => {
   };
 
   /**
+   * Validates mixed content fields to ensure they contain only alphanumeric characters, spaces, hyphens and slashes
+   * Useful for fields like Woreda and Kebele that may contain both text and numbers
+   * @param {string} value - The text to validate
+   * @returns {boolean} - True if valid, false otherwise
+   */
+  export const validateMixedContent = (value) => {
+    if (!value) return true; // Allow empty values (if the field isn't required)
+    const regex = /^[A-Za-z0-9À-ÖØ-öø-ÿ\s\-\/]+$/;
+    return regex.test(value);
+  };
+
+  /**
    * Validates Ethiopian phone numbers
    * Valid formats: +251912345678, 251912345678, 0912345678, 912345678
    * @param {string} value - The phone number to validate
@@ -244,23 +260,86 @@ export const validateUserForm = (userData) => {
    * @param {string} value - The value of the field
    * @returns {string|null} - Error message or null if valid
    */
-  export const validateInmateField = (name, value) => {
+  export const validateInmateField = (name, value, formData = {}) => {
     // Skip validation for empty optional fields
     if (!value && name !== 'firstName' && name !== 'lastName' && name !== 'gender') {
       return null;
+    }
+    
+    switch (name) {
+      // Name validations
+      case 'firstName':
+      case 'middleName':
+      case 'lastName':
+        if (!value) {
+          return `${name.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} is required.`;
+        }
+        if (value.length < 2) {
+          return `${name.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} must be at least 2 characters.`;
+        }
+        if (!validateTextOnly(value)) {
+          return `${name.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} should contain only letters.`;
+        }
+        return null;
+        
+      // ... other cases ...
+      
+      case 'sentenceYear':
+        // If guiltyStatus is not_guilty, sentenceYear should be 0
+        if (formData.guiltyStatus === 'not_guilty') {
+          if (value !== '0' && value !== 0) {
+            return 'Sentence year must be 0 for not guilty inmates.';
+          }
+          return null;
+        }
+        
+        // If life imprisonment is checked, sentenceYear should be "Life"
+        if (formData.lifeImprisonment) {
+          if (value !== 'Life') {
+            return 'Sentence year should be "Life" when life imprisonment is selected.';
+          }
+          return null;
+        }
+        
+        // Normal validation for guilty inmates
+        if (value) {
+          // Allow "Life" as a special value
+          if (value === 'Life') {
+            return null;
+          }
+          
+          const sentenceYear = parseFloat(value);
+          if (isNaN(sentenceYear) || sentenceYear <= 0 || sentenceYear > 100) {
+            return 'Sentence year must be a number between 0 and 100.';
+          }
+        } else if (formData.guiltyStatus === 'guilty') {
+          return 'Sentence year is required for guilty inmates.';
+        }
+        return null;
     }
 
     // Fields that should only contain text
     const textOnlyFields = [
       'firstName', 'middleName', 'lastName', 'motherName',
-      'birthRegion', 'birthZone', 'birthWereda', 'birthKebele',
-      'currentRegion', 'currentZone', 'currentWereda', 'currentKebele',
-      'contactName', 'contactRegion', 'contactZone', 'contactWereda', 'contactKebele',
+      'birthRegion', 'birthZone', 'currentRegion', 'currentZone',
+      'contactName', 'contactRegion', 'contactZone',
       'religion', 'registrarWorkerName'
+    ];
+
+    // Fields that can contain both text and numbers (like "Kebele 01" or "Woreda 12")
+    const mixedContentFields = [
+      'birthWereda', 'birthKebele',
+      'currentWereda', 'currentKebele',
+      'contactWereda', 'contactKebele'
     ];
 
     if (textOnlyFields.includes(name) && !validateTextOnly(value)) {
       return `${name.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} should only contain letters, spaces, or hyphens.`;
+    }
+
+    // Validate mixed content fields
+    if (mixedContentFields.includes(name) && !validateMixedContent(value)) {
+      return `${name.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} should only contain letters, numbers, spaces, or hyphens.`;
     }
 
     // Phone number validation for Ethiopian numbers
