@@ -1,5 +1,9 @@
 import mongoose from "mongoose";
-const userSchema=new mongoose.Schema({
+import bcrypt from "bcrypt";
+
+const Schema = mongoose.Schema;
+
+const userSchema = new Schema({
     firstName:{
         type:String ,
         required:true
@@ -34,12 +38,11 @@ const userSchema=new mongoose.Schema({
     },
     prison:{
         type:String ,
-        required:true,
-        ref:"Prison",
+        default:null,
     },
     photo:{
         type:String ,
-        default:"",
+        default:"default-avatar.png",
     },
     password:{
         type:String ,
@@ -58,5 +61,19 @@ const userSchema=new mongoose.Schema({
         default: false
     }
 },{timestamps:true});
+
+userSchema.pre("save", async function (next) {
+  if (!this.isModified("password")) {
+    return next();
+  }
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
 export const User=mongoose.model('User',userSchema);
 

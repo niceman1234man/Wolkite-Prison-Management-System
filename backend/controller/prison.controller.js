@@ -1,4 +1,5 @@
 import Prison from "../model/prison.model.js";
+import { archiveItem } from '../controllers/archive.controller.js';
 
 // Function to create test prison if none exist
 const createTestPrison = async () => {
@@ -346,6 +347,15 @@ export const deletePrison = async (req, res) => {
         error: "Cannot delete prison with existing inmates. Transfer all inmates to another prison first.",
         currentPopulation
       });
+    }
+
+    // Archive the prison before deletion
+    try {
+      await archiveItem('prison', prison._id, req.user.id, 'Prison deleted by inspector');
+      console.log(`Prison ${prison.prison_name} archived successfully`);
+    } catch (archiveError) {
+      console.error("Error archiving prison:", archiveError);
+      // Continue with deletion even if archiving fails
     }
 
     console.log(`Deleting prison ${prison.prison_name}`);

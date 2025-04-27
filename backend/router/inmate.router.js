@@ -4,6 +4,7 @@ import { addnewInmate, deleteInmate, getAllInmates, getInmate, updateInmate } fr
 import { upload } from '../fileMiddleware.js';
 import path from 'path';
 import fs from 'fs';
+import { archiveMiddleware } from '../utils/archiveHelper.js';
 
 // Create inmates upload directory if it doesn't exist
 const createInmateUploadDir = () => {
@@ -23,7 +24,7 @@ inmateRouter.get('/allInmates', authenticateToken, getAllInmates);
 inmateRouter.get('/get-inmate/:id', authenticateToken, getInmate);
 inmateRouter.get('/inmate/:id', authenticateToken, getInmate);
 inmateRouter.put('/update-inmate/:id', authenticateToken, updateInmate);
-inmateRouter.delete('/delete-inmate/:id', authenticateToken, deleteInmate);
+inmateRouter.delete('/delete-inmate/:id', authenticateToken, archiveMiddleware('inmate'), deleteInmate);
 
 // Add a simple test endpoint that doesn't require authentication
 inmateRouter.get('/test', (req, res) => {

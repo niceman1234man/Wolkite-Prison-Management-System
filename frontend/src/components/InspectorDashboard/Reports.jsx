@@ -48,6 +48,66 @@ import html2canvas from 'html2canvas';
 
 const COLORS = ["#4F46E5", "#10B981", "#F59E0B", "#EF4444"];
 
+// Custom styles for DataTable component - matching PrisonsList styling
+const customStyles = {
+  headCells: {
+    style: {
+      backgroundColor: "#1e3a8a", // Darker blue
+      color: "white",
+      fontWeight: "bold",
+      fontSize: "14px",
+      textTransform: "uppercase",
+      paddingLeft: "16px",
+      paddingRight: "16px"
+    },
+  },
+  rows: {
+    style: {
+      fontSize: "14px",
+      fontWeight: "400",
+      color: "rgb(55, 65, 81)",
+      minHeight: "60px",
+      "&:hover": {
+        backgroundColor: "#f0f9ff", // Light blue on hover
+        cursor: "pointer",
+        transition: "background-color 0.2s ease-in-out",
+      },
+      "&:nth-of-type(odd)": {
+        backgroundColor: "#f9fafb", // Light gray for odd rows
+      },
+    },
+  },
+  cells: {
+    style: {
+      paddingLeft: "16px",
+      paddingRight: "16px",
+      paddingTop: "12px",
+      paddingBottom: "12px",
+    },
+  },
+  table: {
+    style: {
+      width: '100%', // Ensure table takes up full width
+      tableLayout: 'fixed', // Fixed table layout for better column distribution
+    },
+  },
+  pagination: {
+    style: {
+      borderTopStyle: "solid",
+      borderTopWidth: "1px",
+      borderTopColor: "#e5e7eb",
+      backgroundColor: "#f9fafb",
+      padding: "16px",
+    },
+    pageButtonsStyle: {
+      borderRadius: "0.375rem",
+      height: "32px",
+      minWidth: "32px",
+      margin: "0 4px",
+    },
+  },
+};
+
 const Reports = () => {
   const reportRef = useRef(null);
   const [loading, setLoading] = useState(true);
@@ -187,9 +247,16 @@ const Reports = () => {
       } else {
         endDate = new Date();
         startDate = new Date();
-        startDate.setDate(endDate.getDate() - dateRanges[timeRange].days);
-        formattedStartDate = formatDateForAPI(startDate);
-        formattedEndDate = formatDateForAPI(endDate);
+        if (timeRange === 'custom' && filters.startDate && filters.endDate) {
+          startDate = new Date(filters.startDate);
+          endDate = new Date(filters.endDate);
+          formattedStartDate = filters.startDate;
+          formattedEndDate = filters.endDate;
+        } else {
+          startDate.setDate(endDate.getDate() - dateRanges[timeRange].days);
+          formattedStartDate = formatDateForAPI(startDate);
+          formattedEndDate = formatDateForAPI(endDate);
+        }
       }
 
       // Prepare query parameters
@@ -197,37 +264,73 @@ const Reports = () => {
       queryParams.append('startDate', formattedStartDate);
       queryParams.append('endDate', formattedEndDate);
       
-      if (customFilters) {
-        if (customFilters.prisonId) queryParams.append('prisonId', customFilters.prisonId);
-        if (customFilters.noticeType) queryParams.append('noticeType', customFilters.noticeType);
+      const activeFilters = customFilters || filters;
+      
+      if (activeFilters.prisonId) {
+        queryParams.append('prisonId', activeFilters.prisonId);
       }
+
+      if (activeFilters.noticeType && activeFilters.noticeType !== '') {
+        queryParams.append('noticeType', activeFilters.noticeType);
+      }
+
+      // Console log for debugging
+      console.log("Applied filters:", {
+        startDate: formattedStartDate,
+        endDate: formattedEndDate,
+        prisonId: activeFilters.prisonId || 'All',
+        noticeType: activeFilters.noticeType || 'All',
+        queryString: queryParams.toString()
+      });
 
       // Fetch prison statistics
       const prisonsResponse = await axiosInstance.get("/prison/getall-prisons");
       const prisons = prisonsResponse.data?.prisons || [];
 
+      // Filter prisons based on prison filter if applicable
+      const filteredPrisons = activeFilters.prisonId 
+        ? prisons.filter(prison => prison._id === activeFilters.prisonId)
+        : prisons;
+
       // Calculate prison statistics
-      const totalPrisons = prisons.length;
-      const activePrisons = prisons.filter(p => p.status === "active").length;
-      const totalCapacity = prisons.reduce((sum, p) => sum + (Number(p.capacity) || 0), 0);
-      const currentPopulation = prisons.reduce((sum, p) => sum + (Number(p.current_population) || 0), 0);
+      const totalPrisons = filteredPrisons.length;
+      const activePrisons = filteredPrisons.filter(p => p.status === "active").length;
+      const totalCapacity = filteredPrisons.reduce((sum, p) => sum + (Number(p.capacity) || 0), 0);
+      const currentPopulation = filteredPrisons.reduce((sum, p) => sum + (Number(p.current_population) || 0), 0);
       const occupancyRate = totalCapacity > 0 ? (currentPopulation / totalCapacity) * 100 : 0;
 
-      // Fetch notices data - get all notices to ensure we catch newly published ones
-      const noticesResponse = await axiosInstance.get("/notice/getAllNotices");
-      
-      // Standardize the data structure
-      const allNotices = noticesResponse.data?.data || noticesResponse.data?.notices || [];
+      // Fetch notices data with filters
+      const noticesApiUrl = "/notice/getAllNotices";
+      if (queryParams.toString()) {
+        const noticesResponse = await axiosInstance.get(`${noticesApiUrl}?${queryParams.toString()}`);
+        var allNotices = noticesResponse.data?.data || noticesResponse.data?.notices || [];
+      } else {
+        const noticesResponse = await axiosInstance.get(noticesApiUrl);
+        var allNotices = noticesResponse.data?.data || noticesResponse.data?.notices || [];
+      }
 
       console.log("Total notices fetched:", allNotices.length);
 
-      // Filter for published notices only, and then by audience
+      // Apply audience filter if any
+      if (activeFilters.noticeType && activeFilters.noticeType !== '' && activeFilters.noticeType !== 'all') {
+        allNotices = allNotices.filter(notice => {
+          const targetAudience = (notice.targetAudience || "all").toLowerCase();
+          return targetAudience === activeFilters.noticeType.toLowerCase();
+        });
+        console.log(`Filtered by audience ${activeFilters.noticeType}:`, allNotices.length);
+      }
+
+      // Filter for published notices only
       const relevantNotices = allNotices.filter(notice => {
         // Make sure notice exists and is valid
         if (!notice || !notice._id) return false;
         
         // Only include published notices
         if (notice.isPosted !== true) return false;
+        
+        // Filter based on date range
+        const noticeDate = new Date(notice.date);
+        if (noticeDate < startDate || noticeDate > endDate) return false;
         
         // Filter based on target audience
         const targetAudience = (notice.targetAudience || "all").toLowerCase();
@@ -316,14 +419,17 @@ const Reports = () => {
         }
       });
 
-      // Calculate prison distribution data
+      // Calculate prison distribution data - always include all prisons for context
+      // but highlight the selected one if filtered
       const prisonDistribution = prisons.map(prison => ({
         name: prison.prison_name,
         population: Number(prison.current_population) || 0,
         capacity: Number(prison.capacity) || 0,
         occupancyRate: prison.capacity > 0 
           ? ((prison.current_population / prison.capacity) * 100).toFixed(1)
-          : 0
+          : 0,
+        isSelected: activeFilters.prisonId === prison._id,
+        location: prison.location || prison.address || 'Not specified'
       }));
 
       // Update report data
@@ -347,10 +453,18 @@ const Reports = () => {
           today: todayNotices
         },
         prisonTrends: [],
-        noticeTrends: []
+        noticeTrends: [],
+        appliedFilters: {
+          timeRange,
+          startDate: formattedStartDate,
+          endDate: formattedEndDate,
+          prisonId: activeFilters.prisonId || '',
+          noticeType: activeFilters.noticeType || ''
+        }
       });
 
       setLastUpdated(new Date());
+      toast.success("Report data updated successfully");
       setLoading(false);
     } catch (error) {
       console.error("Error fetching report data:", error);
@@ -545,6 +659,30 @@ const Reports = () => {
     }
   };
 
+  // Modified BarChart Component to highlight selected prison
+  const CustomBarChart = ({ data, selectedPrisonId }) => {
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data}>
+          <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+          <YAxis />
+          <Tooltip />
+          <Legend />
+          <Bar dataKey="population" name="Current Population" fill="#4F46E5">
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.isSelected ? '#10B981' : '#4F46E5'} />
+            ))}
+          </Bar>
+          <Bar dataKey="capacity" name="Capacity" fill="#10B981">
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.isSelected ? '#F59E0B' : '#10B981'} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    );
+  };
+
   return (
     <div className="flex">
       {/* Sidebar Spacing Fix */}
@@ -565,6 +703,39 @@ const Reports = () => {
               } 
               <span className="text-xs ml-2">Last updated: {lastUpdated.toLocaleTimeString()}</span>
             </p>
+            {/* Show applied filters */}
+            {(filters.prisonId || filters.noticeType) && (
+              <div className="text-xs text-blue-600 mt-1">
+                Filters: 
+                {filters.prisonId && (
+                  <span className="ml-1 bg-blue-100 px-2 py-0.5 rounded-full">
+                    Prison: {availablePrisons.find(p => p._id === filters.prisonId)?.prison_name || 'Unknown'}
+                  </span>
+                )}
+                {filters.noticeType && (
+                  <span className="ml-1 bg-blue-100 px-2 py-0.5 rounded-full">
+                    Type: {filters.noticeType.charAt(0).toUpperCase() + filters.noticeType.slice(1)}
+                  </span>
+                )}
+                <button 
+                  onClick={() => {
+                    setFilters({
+                      startDate: '',
+                      endDate: '',
+                      prisonId: '',
+                      noticeType: '',
+                    });
+                    if (timeRange === 'custom') {
+                      setTimeRange('week');
+                    }
+                    fetchReportData();
+                  }}
+                  className="ml-2 text-red-500 hover:text-red-700"
+                >
+                  Clear all
+                </button>
+              </div>
+            )}
           </div>
           
           <div className="flex items-center gap-2 mt-3 sm:mt-0">
@@ -579,7 +750,7 @@ const Reports = () => {
                 <option value="month">Last Month</option>
                 <option value="quarter">Last Quarter</option>
                 <option value="year">Last Year</option>
-                {/* <option value="custom">Custom Range</option> */}
+                <option value="custom">Custom Range</option>
               </select>
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
                 <FaChevronDown className="h-3 w-3" />
@@ -652,8 +823,8 @@ const Reports = () => {
                               max={formatDateForAPI(new Date())}
                             />
                           </div>
-          </div>
-        </div>
+                        </div>
+                      </div>
                     )}
                     
                     <div>
@@ -682,7 +853,7 @@ const Reports = () => {
                         <option value="">All Types</option>
                         {noticeTypes.map(type => (
                           <option key={type} value={type}>
-                            {type}
+                            {type.charAt(0).toUpperCase() + type.slice(1)}
                           </option>
                         ))}
                       </select>
@@ -701,6 +872,7 @@ const Reports = () => {
                             setTimeRange('week');
                           }
                           setFilterOpen(false);
+                          fetchReportData();
                         }}
                         className="flex-1 px-3 py-1.5 text-gray-600 bg-gray-100 rounded-md text-sm hover:bg-gray-200 transition-colors"
                       >
@@ -869,24 +1041,32 @@ const Reports = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                   {/* Prison Population Distribution */}
                   <div className="bg-white rounded-xl shadow-md p-6">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Prison Population Distribution</h3>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                      Prison Population Distribution
+                      {filters.prisonId && (
+                        <span className="text-sm text-blue-600 ml-2">
+                          (Filtered by prison)
+                        </span>
+                      )}
+                    </h3>
                     <div className="h-[400px]">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={reportData.prisonDistribution}>
-                          <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
-                          <YAxis />
-                          <Tooltip />
-                          <Legend />
-                          <Bar dataKey="population" name="Current Population" fill="#4F46E5" />
-                          <Bar dataKey="capacity" name="Capacity" fill="#10B981" />
-                        </BarChart>
-                      </ResponsiveContainer>
+                      <CustomBarChart 
+                        data={reportData.prisonDistribution} 
+                        selectedPrisonId={filters.prisonId}
+                      />
                     </div>
                   </div>
 
                   {/* Notice Priority Distribution */}
                   <div className="bg-white rounded-xl shadow-md p-6">
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4">Notice Priority Distribution</h3>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                      Notice Priority Distribution
+                      {filters.noticeType && (
+                        <span className="text-sm text-blue-600 ml-2">
+                          (Filtered by type: {filters.noticeType})
+                        </span>
+                      )}
+                    </h3>
                     <div className="h-[300px]">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
@@ -947,32 +1127,110 @@ const Reports = () => {
               
                 {/* Prison Details Table */}
                 <div className="bg-white rounded-xl shadow-md p-6 mt-6">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Prison Details</h3>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prison Name</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacity</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Current Population</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Occupancy Rate</th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {reportData.prisonDistribution.map((prison, index) => (
-                          <tr key={index} className="hover:bg-gray-50">
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{prison.name}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">Location</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{prison.capacity}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{prison.population}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{prison.occupancyRate}%</td>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">
+                    Prison Details
+                    {filters.prisonId && (
+                      <span className="text-sm text-blue-600 ml-2">
+                        (Filtered)
+                      </span>
+                    )}
+                  </h3>
+                  {loading ? (
+                    <div className="flex justify-center items-center p-6">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-700"></div>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      {/* Debug output */}
+                      <div className="text-xs text-gray-500 mb-2">
+                        Prisons found: {reportData.prisonDistribution?.length || 0}
+                      </div>
+                      
+                      <table className="min-w-full divide-y divide-gray-200 shadow-lg rounded-lg overflow-hidden">
+                        <thead className="bg-[#1e3a8a] text-white">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">#</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Prison Name</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Location</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Capacity</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Current Population</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Occupancy Rate</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-              </div>
-            </div>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {reportData.prisonDistribution && reportData.prisonDistribution.length > 0 ? (
+                            reportData.prisonDistribution.map((prison, index) => {
+                              // Calculate occupancy rate metrics for color coding
+                              const population = Number(prison.population) || 0;
+                              const capacity = Number(prison.capacity) || 0;
+                              const occupancyRate = parseFloat(prison.occupancyRate) || 0;
+                              
+                              let textColor = "text-green-600";
+                              if (occupancyRate >= 90) {
+                                textColor = "text-red-600";
+                              } else if (occupancyRate >= 75) {
+                                textColor = "text-orange-600";
+                              } else if (occupancyRate >= 50) {
+                                textColor = "text-blue-600";
+                              }
+                              
+                              return (
+                                <tr key={index} className={prison.isSelected ? "bg-blue-50 hover:bg-blue-100" : index % 2 === 0 ? "bg-white hover:bg-gray-50" : "bg-gray-50 hover:bg-gray-100"}>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="bg-gray-100 h-8 w-8 rounded-full flex items-center justify-center font-medium text-gray-700">
+                                      {index + 1}
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{prison.name}</td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{prison.location}</td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{prison.capacity}</td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="flex flex-col w-full">
+                                      <div className="flex justify-between items-center">
+                                        <span className={`font-medium ${textColor}`}>
+                                          {population}
+                                        </span>
+                                        <span className="text-xs text-gray-500 ml-2">
+                                          {capacity > 0 ? `of ${capacity}` : ""}
+                                        </span>
+                                      </div>
+                                      
+                                      {/* Progress bar for occupancy visualization */}
+                                      {(occupancyRate > 0 || population > 0) && (
+                                        <div className="mt-1 w-full">
+                                          <div className="w-full bg-gray-200 rounded-full h-2">
+                                            <div 
+                                              className={`${textColor.replace('text-', 'bg-')} h-2 rounded-full`} 
+                                              style={{ width: `${Math.min(occupancyRate, 100)}%` }}
+                                            />
+                                          </div>
+                                          <span className="text-xs text-gray-500 mt-1">
+                                            {population > 0 ? `${occupancyRate}% occupied` : "No inmates"}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <span className={`font-medium ${textColor}`}>
+                                      {prison.occupancyRate}%
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          ) : (
+                            <tr>
+                              <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
+                                No prison records found
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
               </>
           )}
           </div>

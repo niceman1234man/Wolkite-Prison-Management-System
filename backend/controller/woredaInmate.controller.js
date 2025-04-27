@@ -1,6 +1,8 @@
 import { WoredaInmate } from "../model/woredaInmate.model.js";
 import { uploadToCloudinary } from "../utils/cloudinary.js";
 import fs from "fs";
+import mongoose from "mongoose";
+import { archiveItem } from "../controllers/archive.controller.js";
 
 // Register new inmate
 export const registerWoredaInmate = async (req, res) => {
@@ -197,14 +199,49 @@ export const updateWoredaInmate = async (req, res) => {
 // Delete inmate
 export const deleteWoredaInmate = async (req, res) => {
   try {
-    const inmate = await WoredaInmate.findByIdAndDelete(req.params.id);
+    console.log("Starting woreda inmate deletion process...");
+    console.log("Request user:", req.user);
+    console.log("Inmate ID:", req.params.id);
+    console.log("Was archived flag:", req.archived ? "Yes" : "No");
+    
+    // First check if the inmate exists
+    const inmate = await WoredaInmate.findById(req.params.id);
 
     if (!inmate) {
+      console.log("Inmate not found with ID:", req.params.id);
       return res.status(404).json({
         success: false,
         error: "Inmate not found",
       });
     }
+
+    console.log(`Found inmate: ${inmate.firstName} ${inmate.lastName}`);
+
+    // Archive the inmate before deletion if not already done by middleware
+    if (!req.archived) {
+      try {
+        console.log("Attempting to archive inmate manually since middleware didn't do it");
+        const userId = req.user?.id;
+        if (userId) {
+          console.log(`Archiving with user ID: ${userId}`);
+          const archive = await archiveItem('woredaInmate', inmate._id, userId, 'Inmate deleted by Woreda user');
+          console.log("Archive result:", archive);
+          console.log(`Inmate ${inmate.firstName} ${inmate.lastName} archived successfully`);
+        } else {
+          console.log("No user ID found in request, cannot archive");
+        }
+      } catch (archiveError) {
+        console.error("Error archiving inmate:", archiveError);
+        // Continue with deletion even if archiving fails
+      }
+    } else {
+      console.log("Inmate was already archived by middleware");
+    }
+
+    // Now delete the inmate
+    console.log("Proceeding with inmate deletion");
+    await inmate.deleteOne();
+    console.log("Inmate deleted successfully");
 
     res.status(200).json({
       success: true,

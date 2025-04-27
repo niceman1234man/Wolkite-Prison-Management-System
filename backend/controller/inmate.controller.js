@@ -1,4 +1,6 @@
 import { Inmate } from "../model/inmate.model.js";
+import { archiveItem } from '../controllers/archive.controller.js';
+
 export const addnewInmate = async (req, res) => {
     try {
       // Handle FormData
@@ -331,15 +333,32 @@ export const getAllInmates = async (req, res) => {
   export const deleteInmate = async (req, res) => {
     try {
       const { id } = req.params;
-      const deletedInmate = await Inmate.findByIdAndDelete(id);
+      
+      // Find the inmate to check if it exists
+      const inmate = await Inmate.findById(id);
   
-      if (!deletedInmate) {
+      if (!inmate) {
         return res.status(404).json({ message: "Inmate not found" });
       }
+      
+      // Archive the inmate before deletion, if it hasn't been archived by middleware
+      // The archiveMiddleware in the route should set req.archived to true
+      if (!req.archived) {
+        try {
+          await archiveItem('inmate', inmate._id, req.user.id, 'Inmate deleted from system');
+          console.log(`Inmate ${inmate.firstName} ${inmate.lastName} archived successfully`);
+        } catch (archiveError) {
+          console.error("Error archiving inmate:", archiveError);
+          // Continue with deletion even if archiving fails
+        }
+      }
+      
+      // Now delete the inmate
+      await inmate.deleteOne();
   
       res.status(200).json({ message: "Inmate deleted successfully" });
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: "Internal Server Error" });
+      console.error("Error in deleteInmate:", error);
+      res.status(500).json({ message: "Internal Server Error", error: error.message });
     }
   };

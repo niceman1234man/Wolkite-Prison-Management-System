@@ -1,0 +1,62 @@
+[
+  {
+    "_id": "6800cf16a9d46b13adab002a",
+    "prison_name": "dasd43",
+    "location": "wolkite town",
+    "description": "erredfddfbn",
+    "capacity": 4537,
+    "current_population": 0,
+    "status": "active",
+    "createdAt": "2025-04-17T09:51:18.550Z",
+    "updatedAt": "2025-04-21T10:44:01.689Z",
+    "__v": 0
+  },
+  {
+    "_id": "6805d889d803a4e8fcfad43d",
+    "prison_name": "gasorena prison",
+    "location": "Gasorena kebelee",
+    "description": "found in wolkite gasorena",
+    "capacity": 23,
+    "current_population": 0,
+    "status": "active",
+    "createdAt": "2025-04-21T05:32:57.020Z",
+    "updatedAt": "2025-04-22T13:49:21.160Z",
+    "__v": 0
+  },
+  {
+    "_id": "680600954be47c2bbad4f650",
+    "prison_name": "Wolkite Main Prison",
+    "location": "Wolkite Town, Central Ethiopia",
+    "description": "dfdsffwefdsfs",
+    "capacity": 30,
+    "current_population": 3,
+    "status": "active",
+    "createdAt": "2025-04-21T08:23:49.782Z",
+    "updatedAt": "2025-04-22T17:37:47.146Z",
+    "__v": 0
+  },
+  {
+    "_id": "68078144326fab998066d3ed",
+    "prison_name": "kaliti",
+    "location": "Addis ababa",
+    "description": "it is found at Addis Ababa",
+    "capacity": 22,
+    "current_population": 8,
+    "status": "active",
+    "createdAt": "2025-04-22T11:45:08.420Z",
+    "updatedAt": "2025-04-22T13:49:44.793Z",
+    "__v": 0
+  },
+  {
+    "_id": "680798aec063334719771cde",
+    "prison_name": "woreda 2",
+    "location": "wolkite",
+    "description": "found in wolkite town",
+    "capacity": 10,
+    "current_population": 0,
+    "status": "active",
+    "createdAt": "2025-04-22T13:25:02.586Z",
+    "updatedAt": "2025-04-22T13:25:02.586Z",
+    "__v": 0
+  }
+]

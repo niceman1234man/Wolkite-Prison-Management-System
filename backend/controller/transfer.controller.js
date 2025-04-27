@@ -1,4 +1,5 @@
 import { Transfer } from '../model/transfer.model.js'
+import { archiveItem } from '../controllers/archive.controller.js';
 
 // Create Transfer Request
 export const addNewTransfer = async (req, res) => {
@@ -112,7 +113,7 @@ export const updateTransfer = async (req, res) => {
 export const deleteTransfer = async (req, res) => {
     try {
         const { id } = req.params;
-        const transfer = await Transfer.findByIdAndDelete(id);
+        const transfer = await Transfer.findById(id);
 
         if (!transfer) {
             return res.status(404).json({
@@ -120,6 +121,17 @@ export const deleteTransfer = async (req, res) => {
                 message: "Transfer not found"
             });
         }
+
+        // Archive the transfer before deletion
+        try {
+            await archiveItem('transfer', transfer._id, req.user.id, 'Transfer deleted by police officer');
+            console.log(`Transfer archived successfully`);
+        } catch (archiveError) {
+            console.error("Error archiving transfer:", archiveError);
+            // Continue with deletion even if archiving fails
+        }
+
+        await transfer.deleteOne();
 
         return res.status(200).json({
             success: true,
