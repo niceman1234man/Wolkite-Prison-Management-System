@@ -44,18 +44,18 @@ const ViewIncident = ({setView, id}) => {
         console.log("Archive created successfully:", archiveResponse.data);
         
         // Now proceed with deletion
-        const response = await axiosInstance.delete(`/incidents/delete-incident/${id}`);
-        console.log("Delete response:", response.data);
-        
-        if (response.data && response.status === 200) {
+      const response = await axiosInstance.delete(`/incidents/delete-incident/${id}`);
+      console.log("Delete response:", response.data);
+      
+      if (response.data && response.status === 200) {
           toast.success("Incident deleted and archived successfully!");
-          setOpenDelete(false);
-          navigate("/policeOfficer-dashboard/incident");
-        } else {
-          const errorMsg = response.data?.message || "Failed to delete incident. Please try again.";
-          console.error("Delete failed:", errorMsg);
-          setError(errorMsg);
-          toast.error(errorMsg);
+        setOpenDelete(false);
+        navigate("/policeOfficer-dashboard/incident");
+      } else {
+        const errorMsg = response.data?.message || "Failed to delete incident. Please try again.";
+        console.error("Delete failed:", errorMsg);
+        setError(errorMsg);
+        toast.error(errorMsg);
         }
       } catch (archiveError) {
         console.error("Error archiving incident:", archiveError);

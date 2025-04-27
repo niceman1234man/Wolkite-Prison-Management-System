@@ -471,9 +471,9 @@ const PoliceVisitorManagement = () => {
               console.warn('Archive status:', archiveMessage);
             }
             
-            fetchVisitors();
+          fetchVisitors();
             setVisitorToDelete(null);
-          } else {
+        } else {
             console.error('Delete API returned success:false', deleteResponse.data);
             toast.error(deleteResponse.data.message || 'Failed to delete visitor schedule');
           }
@@ -488,8 +488,8 @@ const PoliceVisitorManagement = () => {
         }
       } else {
         toast.error('Visitor data not found. Cannot delete.');
-      }
-    } catch (error) {
+        }
+      } catch (error) {
       console.error('Error in delete process:', error);
       toast.error('An unexpected error occurred during the delete process');
     }
@@ -505,7 +505,7 @@ const PoliceVisitorManagement = () => {
   const handleConfirmDelete = () => {
     if (visitorToDelete) {
       handleDelete(visitorToDelete);
-    }
+      }
     setShowConfirmModal(false);
   };
   

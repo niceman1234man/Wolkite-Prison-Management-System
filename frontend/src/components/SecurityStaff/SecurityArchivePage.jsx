@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import ArchiveList from '../Archive/ArchiveList';
 import { useSelector } from 'react-redux';
-import { FaDatabase, FaUserSecret, FaBug, FaUserShield, FaUsers, FaExchangeAlt, FaFileAlt } from 'react-icons/fa';
+import { FaDatabase, FaUserSecret, FaBug, FaUserShield, FaUsers, FaExchangeAlt, FaFileAlt, FaArchive } from 'react-icons/fa';
 import axiosInstance from '../../utils/axiosInstance';
+import useWindowSize from '../../hooks/useWindowSize';
 
 const SecurityArchivePage = () => {
   // Check user auth from localStorage
   const user = JSON.parse(localStorage.getItem('user'));
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
+  const { width } = useWindowSize();
   
   // Entity types for security staff
   const entityOptions = [
@@ -37,15 +39,18 @@ const SecurityArchivePage = () => {
   // Add key to force ArchiveList remounting when entity changes
   const [archiveKey, setArchiveKey] = useState(Date.now());
 
-  // Effect to update filters when entity type changes
+  // Effect to handle entity type changes
   useEffect(() => {
     console.log("Entity type changed to:", selectedEntity);
+    
+    // Update initialFilters
     setInitialFilters(prev => ({
       ...prev,
       entityType: selectedEntity,
       // Clear any previous filter restrictions
       deletedBy: ''
     }));
+    
     // Force remount of ArchiveList component
     setArchiveKey(Date.now());
   }, [selectedEntity]);
@@ -72,7 +77,7 @@ const SecurityArchivePage = () => {
     console.log("Changing entity type from", selectedEntity, "to", value);
     setSelectedEntity(value);
   };
-
+  
   // Debug function to directly check the archive API
   const checkArchiveAPI = async () => {
     try {
@@ -112,31 +117,36 @@ const SecurityArchivePage = () => {
   }
   
   return (
-    <div className="flex flex-col">
-      {/* Sidebar Spacing Fix */}
-      <div className={`transition-all duration-300 ${isCollapsed ? "w-16" : "w-64"}`} />
-
-      {/* Main Content */}
-      <div className="flex-1 relative">
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      {/* Main Content with Sidebar-Aware Spacing */}
+      <div 
+        className={`transition-all duration-300 flex-1 ${
+          isCollapsed 
+            ? "ml-16" 
+            : "ml-64"
+        }`}
+      >
         {/* Fixed Header */}
         <div
-          className={`bg-white shadow-md p-4 fixed top-12 z-20 flex justify-between items-center transition-all duration-300 ml-2 ${
-            isCollapsed ? "left-16 w-[calc(100%-5rem)]" : "left-64 w-[calc(100%-17rem)]"
-          }`}
-          style={{ zIndex: 20 }}
+          className="bg-white shadow-md fixed top-0 right-0 left-0 z-20 p-4 mt-12 flex justify-between items-center"
+          style={{ 
+            left: isCollapsed ? "64px" : "256px" 
+          }}
         >
           <div className="flex items-center">
-            <FaDatabase className="text-blue-600 text-2xl mr-3" />
-            <h3 className="text-2xl font-bold text-gray-800">
-              Security Staff Archive System
+            <FaArchive className="text-blue-600 text-2xl mr-3" />
+            <h3 className={`font-bold text-gray-800 ${width < 640 ? "text-lg" : "text-2xl"}`}>
+              {width < 500 ? "Archives" : "Security Staff Archive System"}
             </h3>
           </div>
           
           <div className="flex items-center gap-2">
-            <div className="bg-blue-100 text-blue-800 py-1 px-3 rounded-full text-sm font-medium flex items-center">
-              <FaUserSecret className="mr-1" />
-              {selectedEntity ? `${selectedEntity.charAt(0).toUpperCase() + selectedEntity.slice(1)} Archives` : 'All Archives'}
-            </div>
+            {width >= 640 && (
+              <div className="bg-blue-100 text-blue-800 py-1 px-3 rounded-full text-sm font-medium flex items-center">
+                <FaUserSecret className="mr-1" />
+                {selectedEntity ? `${selectedEntity.charAt(0).toUpperCase() + selectedEntity.slice(1)} Archives` : 'All Archives'}
+              </div>
+            )}
             
             <button
               onClick={() => {
@@ -218,16 +228,17 @@ const SecurityArchivePage = () => {
           </div>
         )}
 
-        {/* Push content down to prevent overlap */}
-        <div className="p-6 mt-20">
+        {/* Main Content Area - with proper spacing for fixed header */}
+        <div className="p-4 md:p-6 mt-20" style={{ marginTop: "76px" }}>
+          {/* Entity type filters */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
             <h2 className="text-lg font-semibold text-blue-800 mb-2">Archive Management</h2>
-            <p className="text-sm text-blue-600">
+            <p className="text-sm text-blue-600 mb-3">
               This page displays all archived records that have been deleted from the system. 
               Security staff can view, restore, or permanently delete these records.
             </p>
             
-            <div className="flex flex-wrap gap-2 mt-3">
+            <div className="flex flex-wrap gap-2">
               {entityOptions.map(option => (
                 <button
                   key={option.value}
@@ -243,28 +254,29 @@ const SecurityArchivePage = () => {
                 </button>
               ))}
             </div>
-            
-            {/* Help message */}
-            {selectedEntity === 'inmate' && debugInfo && debugInfo.items?.length === 0 && (
-              <div className="mt-4 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                <h3 className="text-sm font-semibold text-yellow-800">No inmate archives found</h3>
-                <p className="text-xs text-yellow-700 mt-1">
-                  Inmate records will appear here only after they are deleted with proper archiving.
-                  To create an archive:
-                </p>
-                <ol className="list-decimal text-xs text-yellow-700 ml-5 mt-1">
-                  <li>When deleting an inmate, make sure to use the delete button from the inmate list</li>
-                  <li>The system will automatically create an archive entry before deletion</li>
-                  <li>You can then view, restore, or permanently delete the archived record here</li>
-                </ol>
-              </div>
-            )}
           </div>
+
+          {/* Help message when no items found */}
+          {selectedEntity === 'inmate' && debugInfo && debugInfo.items?.length === 0 && (
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-6">
+              <h3 className="text-sm font-semibold text-yellow-800">No inmate archives found</h3>
+              <p className="text-xs text-yellow-700 mt-1">
+                Inmate records will appear here only after they are deleted with proper archiving.
+                To create an archive:
+              </p>
+              <ol className="list-decimal text-xs text-yellow-700 ml-5 mt-1">
+                <li>When deleting an inmate, make sure to use the delete button from the inmate list</li>
+                <li>The system will automatically create an archive entry before deletion</li>
+                <li>You can then view, restore, or permanently delete the archived record here</li>
+              </ol>
+            </div>
+          )}
           
+          {/* Archive List */}
           <ArchiveList 
             standalone={false}
             initialFilters={initialFilters}
-            key={archiveKey} // Force re-render when entity type changes using a timestamp key
+            key={archiveKey} // Force re-render when entity type changes
           />
         </div>
       </div>

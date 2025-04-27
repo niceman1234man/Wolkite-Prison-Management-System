@@ -391,22 +391,22 @@ export const permanentlyDeleteArchivedItem = async (req, res) => {
       }
       // Check if the user is the one who deleted it
       else {
-        const isOwner = archivedItem.deletedBy.toString() === userId;
-        
-        // Inspectors should be able to delete any prison or notice they have archived
-        // Other roles can only delete items they archived if they have permission for that entity type
-        if (userRole === 'inspector' && ['prison', 'notice'].includes(archivedItem.entityType)) {
-          if (!isOwner) {
-            return res.status(403).json({
-              success: false,
-              message: 'You can only delete items that you archived'
-            });
-          }
-        } else if (!canAccessEntityType || !isOwner) {
+      const isOwner = archivedItem.deletedBy.toString() === userId;
+      
+      // Inspectors should be able to delete any prison or notice they have archived
+      // Other roles can only delete items they archived if they have permission for that entity type
+      if (userRole === 'inspector' && ['prison', 'notice'].includes(archivedItem.entityType)) {
+        if (!isOwner) {
           return res.status(403).json({
             success: false,
-            message: 'You do not have permission to delete this item'
+            message: 'You can only delete items that you archived'
           });
+        }
+      } else if (!canAccessEntityType || !isOwner) {
+        return res.status(403).json({
+          success: false,
+          message: 'You do not have permission to delete this item'
+        });
         }
       }
     }

@@ -902,7 +902,7 @@ const ViewInmate = ({ _id, setOpen, onEdit }) => {
               <div className="mb-2 text-sm text-gray-600">
                 Tab {tabs.findIndex(tab => tab.id === activeTab) + 1} of {tabs.length}
               </div>
-              
+
               {/* Tab dots navigation */}
               <div className="flex justify-center mb-4 space-x-2">
                 {tabs.map((tab, index) => (

@@ -138,21 +138,21 @@ const InmateActionButtons = ({ inmate, onDelete, isCardView = false }) => {
         }
         
         // Now proceed with deletion
-        const response = await axiosInstance.delete(`/inmates/delete-inmate/${inmate._id}`);
-        if (response.data) {
-          // Log activity for successful deletion
-          try {
-            await logActivity(
-              ACTIONS.DELETE,
-              `Deleted inmate record for ${inmate.inmate_name}`,
-              RESOURCES.INMATE,
-              inmate._id,
-              STATUS.SUCCESS
-            );
-          } catch (logError) {
-            console.error('Failed to log delete activity:', logError);
-          }
-          
+      const response = await axiosInstance.delete(`/inmates/delete-inmate/${inmate._id}`);
+      if (response.data) {
+        // Log activity for successful deletion
+        try {
+          await logActivity(
+            ACTIONS.DELETE,
+            `Deleted inmate record for ${inmate.inmate_name}`,
+            RESOURCES.INMATE,
+            inmate._id,
+            STATUS.SUCCESS
+          );
+        } catch (logError) {
+          console.error('Failed to log delete activity:', logError);
+        }
+        
           toast.success("Inmate deleted and archived successfully");
           if (onDelete) onDelete();
         }
@@ -165,7 +165,7 @@ const InmateActionButtons = ({ inmate, onDelete, isCardView = false }) => {
           const response = await axiosInstance.delete(`/inmates/delete-inmate/${inmate._id}`);
           if (response.data) {
             toast.success("Inmate deleted (without archiving)!");
-            if (onDelete) onDelete();
+        if (onDelete) onDelete();
             
             // Log activity for successful deletion without archiving
             try {

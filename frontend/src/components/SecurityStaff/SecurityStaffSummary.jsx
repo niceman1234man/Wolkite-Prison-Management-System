@@ -158,26 +158,26 @@ const SecurityStaffSummary = () => {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-                <SummaryCard 
-                  icon={<FaShieldAlt size={28} />} 
-                  text="Total Inmates" 
-                  number={summaryData.totalInmates} 
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+              <SummaryCard 
+                icon={<FaShieldAlt size={28} />} 
+                text="Total Inmates" 
+                number={summaryData.totalInmates} 
                   color="bg-gradient-to-r from-blue-800 to-blue-600" 
-                />
-                <SummaryCard 
-                  icon={<FaExclamationTriangle size={28} />} 
-                  text="Parole Requests" 
-                  number={summaryData.paroleRequests} 
+              />
+              <SummaryCard 
+                icon={<FaExclamationTriangle size={28} />} 
+                text="Parole Requests" 
+                number={summaryData.paroleRequests} 
                   color="bg-gradient-to-r from-orange-700 to-orange-500" 
-                />
-                <SummaryCard 
-                  icon={<FaUsers size={28} />} 
-                  text="Guilty Inmates" 
-                  number={summaryData.guiltyInmates} 
+              />
+              <SummaryCard 
+                icon={<FaUsers size={28} />} 
+                text="Guilty Inmates" 
+                number={summaryData.guiltyInmates} 
                   color="bg-gradient-to-r from-green-800 to-green-600" 
-                />
-              </div>
+              />
+            </div>
             </>
           )}
         </div>

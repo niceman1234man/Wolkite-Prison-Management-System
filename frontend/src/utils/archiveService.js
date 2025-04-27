@@ -91,7 +91,7 @@ export const restoreArchivedItem = async (id) => {
       console.log('Trying standard archive restoration endpoint...');
       const response = await axiosInstance.post(`/archive/${id}/restore`, payload);
       console.log('Standard restore successful:', response.data);
-      return response.data;
+    return response.data;
     } catch (standardError) {
       console.warn('Standard archive restoration failed:', standardError.message);
       console.log('Status:', standardError.response?.status);
@@ -127,9 +127,9 @@ export const permanentlyDeleteArchivedItem = async (id) => {
     
     try {
       // First try the standard archive endpoint
-      const response = await axiosInstance.delete(`/archive/${id}`);
+    const response = await axiosInstance.delete(`/archive/${id}`);
       console.log('Archive item permanently deleted successfully via standard endpoint', response.data);
-      return response.data;
+    return response.data;
     } catch (standardError) {
       console.warn('Standard archive delete failed, trying manual archive endpoint', standardError.message);
       
