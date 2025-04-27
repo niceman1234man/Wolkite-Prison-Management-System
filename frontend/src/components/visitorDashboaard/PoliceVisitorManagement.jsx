@@ -23,13 +23,16 @@ import {
   FaTrash,
   FaClock,
   FaChevronLeft,
-  FaChevronRight
+  FaChevronRight,
+  FaArchive
 } from "react-icons/fa";
 import { toast } from "react-hot-toast";
 import axiosInstance from "../../utils/axiosInstance";
+import ConfirmModal from "../Modals/ConfirmModal";
 import '../../styles/table.css';
 import '../../styles/responsive.css';
 import { format, parseISO, isAfter, isPast, differenceInDays } from 'date-fns';
+import { useSelector } from "react-redux";
 
 const PoliceVisitorManagement = () => {
   // State management
@@ -53,6 +56,13 @@ const PoliceVisitorManagement = () => {
   const [openDropdownId, setOpenDropdownId] = useState(null);
   const [currentSlide, setCurrentSlide] = useState(0);
   const totalSlides = 3; // Total number of slides
+  
+  // Get current user from Redux
+  const currentUser = useSelector(state => state.auth?.user || null);
+  
+  // Confirm Modal state
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [visitorToDelete, setVisitorToDelete] = useState(null);
 
   // Fetch visitors data
   const fetchVisitors = useCallback(async () => {
@@ -363,21 +373,146 @@ const PoliceVisitorManagement = () => {
     printWindow.print();
   };
 
-  const handleDelete = async (visitorId) => {
-    if (window.confirm('Are you sure you want to delete this visitor schedule?')) {
+  // Helper function for direct manual archiving
+  const manuallyArchiveVisitor = async (visitor) => {
+    try {
+      console.log('Manually archiving visitor before deletion:', visitor);
+      
+      // We need to get the user ID from localStorage
+      let userId = null;
       try {
-        const response = await axiosInstance.delete(`/visitor/schedule/${visitorId}`);
-        if (response.data.success) {
-          toast.success('Visitor schedule deleted successfully');
-          fetchVisitors();
-        } else {
-          toast.error(response.data.message || 'Failed to delete visitor schedule');
+        const userString = localStorage.getItem('user');
+        if (userString) {
+          const userData = JSON.parse(userString);
+          userId = userData.id || userData._id;
+          console.log('Found user ID in localStorage:', userId);
         }
-      } catch (error) {
-        console.error('Error deleting visitor schedule:', error);
-        toast.error(error.response?.data?.message || 'Failed to delete visitor schedule');
+      } catch (e) {
+        console.error('Error getting user data from localStorage:', e);
       }
+      
+      if (!userId) {
+        console.warn('No user ID found for archiving, using fallback ID');
+        // Use a fallback ID if no user ID is found
+        userId = '000000000000000000000000';
+      }
+      
+      // Create the archive object directly using Archive model schema format
+      const archiveData = {
+        entityType: 'visitor',
+        originalId: visitor._id,
+        data: visitor,
+        deletedBy: userId,
+        deletionReason: 'Manually archived before deletion',
+        metadata: {
+          archivedAt: new Date().toISOString(),
+          archivedBy: 'police-officer'
+        }
+      };
+      
+      // Send directly to the manual archive endpoint with the correct API path
+      const response = await axiosInstance.post('/manual-archive', archiveData);
+      
+      console.log('Manual archive response:', response.data);
+      return { 
+        success: true, 
+        message: 'Successfully created archive record'
+      };
+    } catch (error) {
+      console.error('Failed to manually archive visitor:', error);
+      return { 
+        success: false, 
+        message: 'Failed to create archive record',
+        error
+      };
     }
+  };
+
+  const handleDelete = async (visitorId) => {
+    try {
+      // Find the visitor in our local state
+      const visitorToArchive = visitors.find(visitor => visitor._id === visitorId);
+      
+      if (visitorToArchive) {
+        console.log('Found visitor to delete:', visitorToArchive);
+        
+        // Step 1: First manually create an archive
+        let archiveSuccess = false;
+        let archiveMessage = '';
+        
+        try {
+          // Manually create an archive record
+          const archiveResult = await manuallyArchiveVisitor(visitorToArchive);
+          if (archiveResult.success) {
+            archiveSuccess = true;
+            archiveMessage = 'Archive created successfully';
+            console.log('Visitor successfully archived before deletion');
+          } else {
+            archiveMessage = archiveResult.message;
+            console.warn('Failed to archive visitor:', archiveResult.message);
+          }
+        } catch (archiveError) {
+          archiveMessage = 'Archive error: ' + (archiveError.message || 'Unknown error');
+          console.error('Error during archive process:', archiveError);
+        }
+        
+        // Step 2: Then delete the visitor schedule
+        try {
+          console.log('Deleting visitor schedule:', visitorId);
+          const deleteResponse = await axiosInstance.delete(`/visitor/schedule/${visitorId}`);
+          
+          console.log('Delete API response:', deleteResponse.data);
+          
+          if (deleteResponse.data.success) {
+            if (archiveSuccess) {
+              toast.success('Visitor deleted and archived successfully');
+            } else {
+              toast.success('Visitor deleted successfully (archive may not be available)');
+              console.warn('Archive status:', archiveMessage);
+            }
+            
+            fetchVisitors();
+            setVisitorToDelete(null);
+          } else {
+            console.error('Delete API returned success:false', deleteResponse.data);
+            toast.error(deleteResponse.data.message || 'Failed to delete visitor schedule');
+          }
+        } catch (deleteError) {
+          console.error('Error deleting visitor:', deleteError);
+          
+          if (deleteError.response) {
+            toast.error(`Delete error (${deleteError.response.status}): ${deleteError.response.data?.message || deleteError.message}`);
+          } else {
+            toast.error('Delete error: ' + deleteError.message);
+          }
+        }
+      } else {
+        toast.error('Visitor data not found. Cannot delete.');
+      }
+    } catch (error) {
+      console.error('Error in delete process:', error);
+      toast.error('An unexpected error occurred during the delete process');
+    }
+  };
+
+  // New function to handle delete button click
+  const handleDeleteClick = (visitorId) => {
+    setVisitorToDelete(visitorId);
+    setShowConfirmModal(true);
+  };
+  
+  // Function to handle confirmation
+  const handleConfirmDelete = () => {
+    if (visitorToDelete) {
+      handleDelete(visitorToDelete);
+    }
+    setShowConfirmModal(false);
+  };
+  
+  // Function to handle cancellation
+  const handleCancelDelete = () => {
+    setVisitorToDelete(null);
+    setShowConfirmModal(false);
   };
 
   // Add getStatusColor function
@@ -480,6 +615,13 @@ const PoliceVisitorManagement = () => {
             >
               <FaSync className="mr-1" /> Refresh
             </button>
+            <a
+              href="/police-officer/archive"
+              className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1 rounded-md text-sm flex items-center"
+              title="View Archive"
+            >
+              <FaArchive className="mr-1" /> Archives
+            </a>
           </div>
         </div>
 
@@ -609,7 +751,7 @@ const PoliceVisitorManagement = () => {
                     </div>
                   )}
                   <button
-                    onClick={() => handleDelete(visitor._id)}
+                    onClick={() => handleDeleteClick(visitor._id)}
                     className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md text-sm flex items-center"
                     title="Delete Visit"
                   >
@@ -729,7 +871,7 @@ const PoliceVisitorManagement = () => {
                             </div>
                           )}
                           <button
-                            onClick={() => handleDelete(visitor._id)}
+                            onClick={() => handleDeleteClick(visitor._id)}
                             className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-md text-sm flex items-center"
                             title="Delete Visit"
                           >
@@ -1050,6 +1192,14 @@ const PoliceVisitorManagement = () => {
           </div>
         )}
       </div>
+
+      {/* Confirm Delete Modal */}
+      <ConfirmModal
+        open={showConfirmModal}
+        message="Are you sure you want to delete this visitor schedule? This action cannot be undone."
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+      />
     </div>
   );
 };

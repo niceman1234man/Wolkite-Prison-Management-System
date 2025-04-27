@@ -84,7 +84,8 @@ const UpdateInmate = ({setOpen, _id}) => {
     startDate: "",
     sentenceYear: "",
     releaseReason: "",
-    releasedDate: ""
+    releasedDate: "",
+    lifeImprisonment: false
   });
 
   // Add validation state
@@ -173,7 +174,8 @@ const UpdateInmate = ({setOpen, _id}) => {
           // Ensure other potential undefined fields are initialized
           age: inmateData.age || calculateAge(formattedBirthDate) || "",
           motherName: inmateData.motherName || "",
-          phoneNumber: inmateData.phoneNumber || ""
+          phoneNumber: inmateData.phoneNumber || "",
+          lifeImprisonment: inmateData.lifeImprisonment || false
         };
         
         console.log("Updated form data:", updatedFormData);
@@ -465,6 +467,23 @@ const UpdateInmate = ({setOpen, _id}) => {
     return null;
   };
 
+  const validateField = (name, value) => {
+    let error = "";
+
+    if (value === "") {
+      if (name === "firstName" || name === "lastName" || name === "gender" || 
+          name === "dateOfBirth" || name === "nationality" || name === "caseType" || 
+          name === "sentenceYear" || name === "incarcerationDate" || name === "guiltyStatus") {
+        error = "This field is required";
+      }
+    } else {
+      // ... existing code ...
+    }
+
+    setErrors((prevErrors) => ({ ...prevErrors, [name]: error }));
+    return error === "";
+  };
+
   return (
     <div className="max-w-6xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
       {/* Header with title and close button */}
@@ -484,8 +503,22 @@ const UpdateInmate = ({setOpen, _id}) => {
 
       <form onSubmit={handleSubmit} className="p-6">
         {/* Tabs Navigation - Modern Style */}
-        <div className="mb-8 border-b border-gray-200">
-          <nav className="flex flex-wrap -mb-px" aria-label="Tabs">
+        <div className="mb-8">
+          {/* Progress Bar */}
+          <div className="mb-4">
+            <div className="w-full bg-gray-200 rounded-full h-2.5">
+              <div 
+                className="bg-blue-600 h-2.5 rounded-full transition-all duration-300" 
+                style={{ width: `${((tabs.findIndex(tab => tab.id === activeTab) + 1) / tabs.length) * 100}%` }}
+              ></div>
+            </div>
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>Start</span>
+              <span>Complete</span>
+            </div>
+          </div>
+          
+          <nav className="flex flex-wrap -mb-px border-b border-gray-200" aria-label="Tabs">
             {tabs.map(tab => (
               <button
                 key={tab.id}
@@ -768,6 +801,18 @@ const UpdateInmate = ({setOpen, _id}) => {
                   {renderError('work')}
                 </div>
               </div>
+              
+              {/* Tab navigation */}
+              <div className="flex justify-end mt-6">
+                <button
+                  type="button"
+                  onClick={() => navigateTab('next')}
+                  className="px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors flex items-center"
+                >
+                  Next: Location
+                  <FaArrowRight className="ml-2" />
+                </button>
+              </div>
             </div>
           )}
 
@@ -913,6 +958,26 @@ const UpdateInmate = ({setOpen, _id}) => {
                     </div>
                   </div>
                 </div>
+              </div>
+              
+              {/* Tab navigation */}
+              <div className="flex justify-between mt-6">
+                <button
+                  type="button"
+                  onClick={() => navigateTab('prev')}
+                  className="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors flex items-center"
+                >
+                  <FaArrowLeft className="mr-2" />
+                  Previous: Personal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigateTab('next')}
+                  className="px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors flex items-center"
+                >
+                  Next: Physical
+                  <FaArrowRight className="ml-2" />
+                </button>
               </div>
             </div>
           )}
@@ -1110,6 +1175,26 @@ const UpdateInmate = ({setOpen, _id}) => {
                   {renderError('specialSymbol')}
                 </div>
               </div>
+              
+              {/* Tab navigation */}
+              <div className="flex justify-between mt-6">
+                <button
+                  type="button"
+                  onClick={() => navigateTab('prev')}
+                  className="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors flex items-center"
+                >
+                  <FaArrowLeft className="mr-2" />
+                  Previous: Location
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigateTab('next')}
+                  className="px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors flex items-center"
+                >
+                  Next: Contact
+                  <FaArrowRight className="ml-2" />
+                </button>
+              </div>
             </div>
           )}
 
@@ -1221,6 +1306,26 @@ const UpdateInmate = ({setOpen, _id}) => {
                   </div>
                 </div>
               </div>
+              
+              {/* Tab navigation */}
+              <div className="flex justify-between mt-6">
+                <button
+                  type="button"
+                  onClick={() => navigateTab('prev')}
+                  className="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors flex items-center"
+                >
+                  <FaArrowLeft className="mr-2" />
+                  Previous: Physical
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigateTab('next')}
+                  className="px-6 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors flex items-center"
+                >
+                  Next: Case
+                  <FaArrowRight className="ml-2" />
+                </button>
+              </div>
             </div>
           )}
 
@@ -1238,24 +1343,46 @@ const UpdateInmate = ({setOpen, _id}) => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Case Type <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <input
+                    type="text"
                     name="caseType"
                     value={formData.caseType}
+                    placeholder="Enter case type"
                     onChange={handleChange}
                     onBlur={handleBlur}
                     className={`w-full px-4 py-2 border ${errors.caseType ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
                     required
-                  >
-                    <option value="">Select Case Type</option>
-                    <option value="Murder">Murder</option>
-                    <option value="Assault">Assault</option>
-                    <option value="Theft">Theft</option>
-                    <option value="Robbery">Robbery</option>
-                    <option value="Fraud">Fraud</option>
-                    <option value="Drug Offense">Drug Offense</option>
-                    <option value="Other">Other</option>
-                  </select>
+                  />
                   {renderError('caseType')}
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Guilty Status <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="guiltyStatus"
+                    value={formData.guiltyStatus || ""}
+                    onChange={(e) => {
+                      const newValue = e.target.value;
+                      setFormData(prev => ({
+                        ...prev,
+                        guiltyStatus: newValue,
+                        // Reset sentence year if not guilty
+                        sentenceYear: newValue === "not_guilty" ? "0" : prev.sentenceYear,
+                        // Disable life imprisonment if not guilty
+                        lifeImprisonment: newValue === "not_guilty" ? false : prev.lifeImprisonment
+                      }));
+                    }}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.guiltyStatus ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                    required
+                  >
+                    <option value="">Select Guilty Status</option>
+                    <option value="guilty">Guilty</option>
+                    <option value="not_guilty">Not Guilty</option>
+                  </select>
+                  {renderError('guiltyStatus')}
                 </div>
                 
                 <div>
@@ -1278,18 +1405,45 @@ const UpdateInmate = ({setOpen, _id}) => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Sentence (Years) <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="number"
-                    name="sentenceYear"
-                    value={formData.sentenceYear}
-                    placeholder="Enter sentence duration in years"
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    className={`w-full px-4 py-2 border ${errors.sentenceYear ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                    required
-                    step="0.1"
-                  />
+                  <div className="flex items-center">
+                    <input
+                      type={formData.lifeImprisonment ? "text" : "number"}
+                      name="sentenceYear"
+                      value={formData.lifeImprisonment ? "Life" : formData.sentenceYear}
+                      placeholder="Enter sentence duration in years"
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      className={`w-full px-4 py-2 border ${errors.sentenceYear ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${formData.lifeImprisonment ? 'bg-gray-100' : ''}`}
+                      required
+                      step="0.1"
+                      disabled={formData.lifeImprisonment}
+                    />
+                    {!formData.lifeImprisonment && 
+                      <span className="ml-2 text-gray-500">year{formData.sentenceYear === 1 ? '' : 's'}</span>
+                    }
+                  </div>
                   {renderError('sentenceYear')}
+                </div>
+                
+                <div className="flex items-center space-x-2 mt-2">
+                  <input
+                    type="checkbox"
+                    id="lifeImprisonment"
+                    name="lifeImprisonment"
+                    checked={formData.lifeImprisonment}
+                    onChange={(e) => {
+                      const isChecked = e.target.checked;
+                      setFormData(prev => ({
+                        ...prev,
+                        lifeImprisonment: isChecked,
+                        sentenceYear: isChecked ? "Life" : "",
+                      }));
+                    }}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="lifeImprisonment" className="text-sm font-medium text-gray-700">
+                    Life Imprisonment
+                  </label>
                 </div>
                 
                 <div>
@@ -1338,86 +1492,81 @@ const UpdateInmate = ({setOpen, _id}) => {
                   {renderError('sentenceReason')}
                 </div>
               </div>
+              
+              {/* Tab navigation */}
+              <div className="flex justify-between mt-6">
+                <button
+                  type="button"
+                  onClick={() => navigateTab('prev')}
+                  className="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors flex items-center"
+                >
+                  <FaArrowLeft className="mr-2" />
+                  Previous: Contact
+                </button>
+                <button
+                  type="submit"
+                  className="px-8 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-md hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors shadow-md flex items-center"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Updating...
+                    </>
+                  ) : (
+                    <>
+                      <FaSave className="mr-2" />
+                      Update Inmate
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           )}
         </div>
 
-        {/* Signature Upload */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h3 className="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">Signature</h3>
-          <div className="flex items-center space-x-6">
-            <div className="shrink-0">
-              {signature ? (
-                <img className="h-16 w-32 object-contain border border-gray-300 p-1" 
-                     src={URL.createObjectURL(signature)} 
-                     alt="Signature preview" />
-              ) : (
-                formData.signatureUrl ? (
-                  <img className="h-16 w-32 object-contain border border-gray-300 p-1" 
-                       src={formData.signatureUrl} 
-                       alt="Current signature" />
-                ) : (
-                  <div className="h-16 w-32 bg-gray-100 border border-gray-300 p-1 flex items-center justify-center">
-                    <span className="text-gray-400 text-sm">No signature</span>
-                  </div>
-                )
-              )}
-            </div>
-            <label className="block">
-              <span className="sr-only">Choose signature</span>
-              <input 
-                type="file" 
-                name="signature"
-                onChange={handleChange}
-                className="block w-full text-sm text-gray-500
-                  file:mr-4 file:py-2 file:px-4
-                  file:rounded-full file:border-0
-                  file:text-sm file:font-semibold
-                  file:bg-blue-50 file:text-blue-700
-                  hover:file:bg-blue-100"
-              />
-              <p className="mt-1 text-xs text-gray-500">Upload a scanned image of the inmate's signature</p>
-            </label>
-          </div>
-        </div>
-
         {/* Form Actions */}
-        <div className="flex justify-between items-center mt-10 pt-4 border-t border-gray-200">
-          <div className="text-sm text-gray-600">
-            <span className="text-red-500">*</span> Required fields
+        <div className="flex flex-col items-center mt-10 pt-4 border-t border-gray-200">
+          {/* Step progress */}
+          <div className="mb-2 text-sm text-gray-600">
+            Step {tabs.findIndex(tab => tab.id === activeTab) + 1} of {tabs.length}
           </div>
           
-          <div className="flex space-x-4">
-            {setOpen && (
+          {/* Tab dots navigation */}
+          <div className="flex justify-center mb-4 space-x-2">
+            {tabs.map((tab, index) => (
               <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
-              >
-                Cancel
-              </button>
-            )}
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`w-3 h-3 rounded-full transition-all ${
+                  activeTab === tab.id 
+                    ? 'bg-blue-600 transform scale-125' 
+                    : 'bg-gray-300 hover:bg-gray-400'
+                }`}
+                aria-label={`Go to ${tab.label} tab`}
+              />
+            ))}
+          </div>
+          
+          <div className="flex justify-between w-full">
+            <div className="text-sm text-gray-600">
+              <span className="text-red-500">*</span> Required fields
+            </div>
             
-            <button
-              type="submit"
-              className="px-8 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-md hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors shadow-md flex items-center"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <svg className="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Updating...
-                </>
-              ) : (
-                <>
-                  <FaSave className="mr-2" />
-                  Update Inmate
-                </>
+            <div className="flex space-x-4">
+              {setOpen && (
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="px-6 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors"
+                >
+                  Cancel
+                </button>
               )}
-            </button>
+            </div>
           </div>
         </div>
       </form>

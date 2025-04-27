@@ -123,6 +123,7 @@ import SecurityArchivePage from './components/SecurityStaff/SecurityArchivePage'
 import SecurityArchiveDetailPage from './components/SecurityStaff/SecurityArchiveDetailPage';
 import RepeatOffenders from "./components/Incident/RepeatOffenders.jsx";
 import InmateIncidentHistory from "./components/Incident/InmateIncidentHistory.jsx";
+import ParoleCommite from "./components/InspectorDashboard/ParoleCommite.jsx";
 
 function App() {
   return (
@@ -198,6 +199,7 @@ function App() {
                 <Route path="prisons" element={<PrisonsList />} />
                 <Route path="notices" element={<NoticesList />} />
                 <Route path="reports" element={<Reports />} />
+                <Route path="parole-committee" element={<ParoleCommite />} />
                 <Route path="homepage-settings" element={<InspectorHomepageSettings />} />
               </Route>
 

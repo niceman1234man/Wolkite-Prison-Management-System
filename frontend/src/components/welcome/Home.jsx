@@ -2,9 +2,17 @@ import React from 'react';
 import guragePrison from "../../assets/guragePrison.jpg";
 import { ChartBarIcon, UserGroupIcon, CheckCircleIcon, ClockIcon, ShieldCheckIcon, DocumentTextIcon, IdentificationIcon } from '@heroicons/react/24/outline';
 
+// Import the UUID as a constant
+const APP_UUID = '55709720-7916-4f8e-b86f-a30d9f074c89';
+
 function Home({ messages, currentMessageIndex, sideImages, loading, time, messageRef, isVisible, advancedView, statistics, darkMode }) {
+  // Add a function to use the UUID for any necessary operations
+  const getAppIdentifier = () => {
+    return APP_UUID;
+  };
+
   return (
-    <div className="relative z-10">
+    <div data-app-id={APP_UUID} className="relative z-10">
       {/* Hero Section with Parallax Effect */}
       <div className="relative h-screen flex items-center justify-center overflow-hidden mt-16">
         <div 

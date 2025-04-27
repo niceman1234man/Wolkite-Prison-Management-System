@@ -63,7 +63,11 @@ export const addnewInmate = async (req, res) => {
             releasedDate,
             paroleDate,
             durationToParole,
-            durationFromParoleToEnd
+            durationFromParoleToEnd,
+            status,
+            paroleEligibility,
+            guiltyStatus,
+            lifeImprisonment
           } = inmateData;
           if (!firstName || !age || !gender) {
             return res.status(400).json("all fields required");
@@ -114,6 +118,10 @@ export const addnewInmate = async (req, res) => {
             paroleDate,
             durationToParole,
             durationFromParoleToEnd,
+            status,
+            paroleEligibility,
+            guiltyStatus,
+            lifeImprisonment,
             photo: photoUrl
           });
           await newInmate.save();
@@ -207,7 +215,10 @@ export const getAllInmates = async (req, res) => {
         releasedDate,
         paroleDate,
         durationToParole,
-        durationFromParoleToEnd
+        durationFromParoleToEnd,
+        status,
+        paroleEligibility,
+        guiltyStatus
       } = req.body;
   
       // Check required fields with more detailed feedback
@@ -218,7 +229,8 @@ export const getAllInmates = async (req, res) => {
         { field: 'birthDate', value: birthDate },
         { field: 'caseType', value: caseType },
         { field: 'startDate', value: startDate },
-        { field: 'sentenceYear', value: sentenceYear }
+        { field: 'sentenceYear', value: sentenceYear },
+        { field: 'guiltyStatus', value: guiltyStatus }
       ];
       
       const missingFields = requiredFields
@@ -279,7 +291,10 @@ export const getAllInmates = async (req, res) => {
             releasedDate,
             paroleDate,
             durationToParole,
-            durationFromParoleToEnd
+            durationFromParoleToEnd,
+            status,
+            paroleEligibility,
+            guiltyStatus
         },
         { new: true }
       );

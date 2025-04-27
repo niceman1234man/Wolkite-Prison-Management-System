@@ -43,7 +43,7 @@ const formatEntityType = (type) => {
   return type.charAt(0).toUpperCase() + type.slice(1);
 };
 
-const ArchiveList = ({ standalone = true }) => {
+const ArchiveList = ({ standalone = true, initialFilters = null }) => {
   console.log("ArchiveList component rendering");
   const navigate = useNavigate();
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
@@ -92,6 +92,7 @@ const ArchiveList = ({ standalone = true }) => {
       { value: '', label: 'All Types' },
       { value: 'prison', label: 'Prison' },
       { value: 'inmate', label: 'Inmate' },
+      { value: 'woredaInmate', label: 'Woreda Inmate' },
       { value: 'notice', label: 'Notice' },
       { value: 'clearance', label: 'Clearance' },
       { value: 'visitor', label: 'Visitor' },
@@ -182,7 +183,7 @@ const ArchiveList = ({ standalone = true }) => {
 
   // Initial fetch
   useEffect(() => {
-    console.log("ArchiveList useEffect triggered");
+    console.log("ArchiveList useEffect triggered with initialFilters:", initialFilters);
     
     // Get user data and role
     try {
@@ -192,43 +193,69 @@ const ArchiveList = ({ standalone = true }) => {
       console.log("User role:", role);
       setUserRole(role);
       
-      // Set initial entity type filter based on role
-      if (role && role !== 'admin' && roleEntityTypeMap[role]) {
-        const allowedTypes = roleEntityTypeMap[role];
-        if (allowedTypes.length === 1) {
-          // If role can only access one entity type, set it automatically
-          setFilters(prev => ({
-            ...prev,
-            entityType: allowedTypes[0]
-          }));
-        }
-      }
-      
-      // Special handling for security staff with clearance
-      if (role === 'security') {
-        // For security staff, we want to show all clearance items they can manage
-        // without limiting to only ones they deleted
-        const initialFilters = {
-          ...filters,
-          entityType: 'clearance'  // Focus on clearance items for security staff
-        };
-        
-        setFilters(initialFilters);
-        console.log("Set security staff filters:", initialFilters);
-      }
-      // For other non-admin users, add filter to only show items they deleted  
-      else if (role && role !== 'admin') {
+      // Apply initial filters if provided
+      if (initialFilters) {
+        console.log("Applying initial filters:", initialFilters);
+        // Use initialFilters as the source of truth
         setFilters(prev => ({
           ...prev,
-          deletedBy: userData?.id || ''
+          ...initialFilters
         }));
+        
+        // Skip the default filter logic since we're using initialFilters
+        // This ensures we don't override the entityType with security staff default
+      }
+      // Otherwise use default filter logic
+      else {
+        // Set initial entity type filter based on role
+        if (role && role !== 'admin' && roleEntityTypeMap[role]) {
+          const allowedTypes = roleEntityTypeMap[role];
+          if (allowedTypes.length === 1) {
+            // If role can only access one entity type, set it automatically
+            setFilters(prev => ({
+              ...prev,
+              entityType: allowedTypes[0]
+            }));
+          }
+        }
+        
+        // Special handling for security staff with clearance
+        // ONLY APPLY THIS IF initialFilters IS NOT PROVIDED
+        if (role === 'security' && !initialFilters) {
+          // For security staff, we want to show all clearance items they can manage
+          // without limiting to only ones they deleted
+          const securityFilters = {
+            ...filters,
+            entityType: 'clearance'  // Focus on clearance items for security staff
+          };
+          
+          setFilters(securityFilters);
+          console.log("Set security staff filters:", securityFilters);
+        }
+        // For other non-admin users, add filter to only show items they deleted  
+        else if (role && role !== 'admin') {
+          setFilters(prev => ({
+            ...prev,
+            deletedBy: userData?.id || ''
+          }));
+        }
       }
     } catch (e) {
       console.error("Error parsing user data:", e);
     }
     
-    // Fetch archived items directly
-    fetchArchivedItems();
+    // Fetch archived items after a small delay to allow filters to be set
+    setTimeout(() => {
+      fetchArchivedItems();
+    }, 100);
+  }, []);
+
+  // Effect to refetch when pagination changes
+  useEffect(() => {
+    // Only fetch if this isn't the initial render
+    if (!loading || archivedItems.length > 0) {
+      fetchArchivedItems();
+    }
   }, [pagination.page, pagination.limit]);
 
   // Handle filter change
@@ -311,6 +338,16 @@ const ArchiveList = ({ standalone = true }) => {
     setPagination(prev => ({
       ...prev,
       page: newPage
+    }));
+  };
+
+  // Handle items per page change
+  const handleLimitChange = (e) => {
+    const newLimit = parseInt(e.target.value);
+    setPagination(prev => ({
+      ...prev,
+      limit: newLimit,
+      page: 1 // Reset to first page when changing the limit
     }));
   };
 
@@ -431,10 +468,13 @@ const ArchiveList = ({ standalone = true }) => {
     // Admin can manage all items
     if (role === 'admin') return true;
     
-    // Special case for security staff with clearance items
-    if (role === 'security' && item.entityType === 'clearance') {
-      console.log("Security staff can manage clearance item:", item._id);
-      return true; // Security staff can manage all clearance items
+    // Special case for security staff with allowed entity types
+    if (role === 'security') {
+      const securityAllowedTypes = ['clearance', 'inmate', 'visitor', 'transfer', 'report'];
+      if (securityAllowedTypes.includes(item.entityType)) {
+        console.log(`Security staff can manage ${item.entityType} item:`, item._id);
+        return true; // Security staff can manage all clearance, inmate, etc. items
+      }
     }
     
     // Return false if deletedBy is missing
@@ -528,6 +568,7 @@ const ArchiveList = ({ standalone = true }) => {
                 <FaSearch className="absolute left-3 top-2.5 text-gray-500" />
                 <input
                   type="text"
+                  name="searchTerm"
                   placeholder="Search archived items..."
                   className="pl-10 pr-4 py-2 border border-gray-300 rounded-md w-64"
                   value={filters.searchTerm}
@@ -563,7 +604,8 @@ const ArchiveList = ({ standalone = true }) => {
                     <option value="">All Types</option>
                     {userRole === 'admin' && <option value="user">Users</option>}
                     {(userRole === 'admin' || userRole === 'inspector') && <option value="prison">Prisons</option>}
-                    {(userRole === 'admin' || userRole === 'woreda' || userRole === 'security') && <option value="woredaInmate">Inmates</option>}
+                    {(userRole === 'admin' || userRole === 'woreda' || userRole === 'security') && <option value="inmate">Inmates</option>}
+                    {(userRole === 'admin' || userRole === 'woreda') && <option value="woredaInmate">Woreda Inmates</option>}
                     {(userRole === 'admin' || userRole === 'inspector') && <option value="notice">Notices</option>}
                     {(userRole === 'admin' || userRole === 'court' || userRole === 'security') && <option value="clearance">Clearances</option>}
                     {(userRole === 'admin' || userRole === 'police-officer' || userRole === 'security') && <option value="visitor">Visitors</option>}

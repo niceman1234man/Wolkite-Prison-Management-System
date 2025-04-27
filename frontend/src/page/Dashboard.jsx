@@ -10,13 +10,18 @@ import {
   FaBan,
   FaArrowRight,
   FaFileAlt,
-  FaSignOutAlt
+  FaSignOutAlt,
+  FaGlobe
 } from "react-icons/fa";
 import { useSelector } from "react-redux";
 import useNotices from "../hooks/useNotice.jsx";  
 import NoticeButton from "../utils/noticeButtons.jsx";
 import NoticeModal from "../components/Modals/NoticeModal.jsx";
 import { toast } from "react-toastify";
+import LanguageSelectorDropdown from "../components/common/LanguageSelectorDropdown.jsx";
+
+// Import the UUID as a constant
+const APP_UUID = '55709720-7916-4f8e-b86f-a30d9f074c89';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -36,9 +41,20 @@ const Dashboard = () => {
   });
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [language, setLanguage] = useState(() => {
+    return localStorage.getItem(`language_${APP_UUID}`) || 'en';
+  });
 
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
   const { notices, isModalOpen, setIsModalOpen, markNoticeAsRead } = useNotices();
+
+  // Add state for language menu visibility
+  const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
+  
+  // Toggle language menu
+  const toggleLanguageMenu = () => {
+    setIsLanguageMenuOpen(!isLanguageMenuOpen);
+  };
 
   useEffect(() => {
     fetchDashboardData();
@@ -145,6 +161,18 @@ const Dashboard = () => {
     }
   };
 
+  // Add a function to use the UUID for any necessary operations
+  const getAppIdentifier = () => {
+    return APP_UUID;
+  };
+
+  // Handle language change
+  const handleLanguageChange = (lang) => {
+    setLanguage(lang);
+    localStorage.setItem(`language_${APP_UUID}`, lang);
+    setIsLanguageMenuOpen(false);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -170,7 +198,7 @@ const Dashboard = () => {
   );
 
   return (
-    <div className="flex">
+    <div className="flex" data-app-id={APP_UUID}>
       <div className={`transition-all duration-300 ${isCollapsed ? "w-16" : "w-64"}`} />
 
       <div className="flex-1 relative">
@@ -180,7 +208,11 @@ const Dashboard = () => {
           }`}
         >
           <h3 className="text-2xl font-bold text-gray-800">Dashboard Overview</h3>
-          {/* <NoticeButton notices={notices} onClick={() => setIsModalOpen(true)} /> */}
+          
+          {/* Add language selector */}
+          <LanguageSelectorDropdown className="mr-4" />
+          
+          <NoticeButton notices={notices} onClick={() => setIsModalOpen(true)} />
         </div>
 
         <div className="p-6 mt-32">

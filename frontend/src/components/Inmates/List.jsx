@@ -7,6 +7,7 @@ import {
 import DataTable from "react-data-table-component";
 import { columns } from "../../utils/InmateHelper.jsx";
 import axiosInstance from "../../utils/axiosInstance";
+import axios from "axios"; // Import axios directly for fallback requests
 import { useSelector, useDispatch } from "react-redux";
 import { setInmate } from "../../redux/prisonSlice.js";
 import AddInmate from "./Add";
@@ -62,23 +63,126 @@ const InmateActionButtons = ({ inmate, onDelete, isCardView = false }) => {
   
   const handleConfirmDelete = async () => {
     try {
-      const response = await axiosInstance.delete(`/inmates/delete-inmate/${inmate._id}`);
-      if (response.data) {
-        // Log activity for successful deletion
+      // First, archive the inmate record before deletion
+      const userData = JSON.parse(localStorage.getItem('user') || '{}');
+      const userId = userData._id || userData.id;
+      const userRole = userData.role || 'unknown';
+      const token = localStorage.getItem('token');
+      
+      try {
+        // Create archive entry first
+        console.log("Creating archive for inmate before deletion:", inmate);
+        
+        // Create the archive payload
+        const archivePayload = {
+          entityType: "inmate",
+          originalId: inmate._id,
+          data: {
+            ...inmate,
+            _id: inmate._id,
+            inmateName: inmate.inmate_name,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          },
+          deletedBy: userId,
+          deletionReason: "User initiated deletion",
+          metadata: {
+            deletedAt: new Date().toISOString(),
+            deletedByRole: userRole,
+            inmateId: inmate._id,
+            inmateName: inmate.inmate_name
+          }
+        };
+        
+        console.log("Sending archive payload:", JSON.stringify(archivePayload, null, 2));
+        
+        // Try both methods for archiving - direct fetch and axiosInstance
+        let archiveSuccess = false;
+        let archiveId = null;
+        
         try {
-          await logActivity(
-            ACTIONS.DELETE,
-            `Deleted inmate record for ${inmate.inmate_name}`,
-            RESOURCES.INMATE,
-            inmate._id,
-            STATUS.SUCCESS
-          );
-        } catch (logError) {
-          console.error('Failed to log delete activity:', logError);
+          // Method 1: Using fetch with direct URL (most reliable)
+          const response = await fetch('http://localhost:5001/api/manual-archive/no-auth', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(archivePayload)
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            console.log("Archive created successfully via direct fetch:", data);
+            archiveSuccess = true;
+            archiveId = data.archiveId;
+          } else {
+            console.error("Failed to create archive via direct fetch:", await response.text());
+            // Will try the next method
+          }
+        } catch (fetchError) {
+          console.error("Error using direct fetch for archive:", fetchError);
+          // Will try the next method
         }
         
-        toast.success("Inmate deleted successfully");
-        if (onDelete) onDelete();
+        if (!archiveSuccess) {
+          try {
+            // Method 2: Using axios without /api prefix
+            const axiosResponse = await axios.post('http://localhost:5001/manual-archive/no-auth', archivePayload);
+            console.log("Archive created successfully via axios:", axiosResponse.data);
+            archiveSuccess = true;
+            archiveId = axiosResponse.data.archiveId;
+          } catch (axiosError) {
+            console.error("Error using axios for archive:", axiosError);
+            throw new Error("Failed to create archive using both methods");
+          }
+        }
+        
+        // Now proceed with deletion
+        const response = await axiosInstance.delete(`/inmates/delete-inmate/${inmate._id}`);
+        if (response.data) {
+          // Log activity for successful deletion
+          try {
+            await logActivity(
+              ACTIONS.DELETE,
+              `Deleted inmate record for ${inmate.inmate_name}`,
+              RESOURCES.INMATE,
+              inmate._id,
+              STATUS.SUCCESS
+            );
+          } catch (logError) {
+            console.error('Failed to log delete activity:', logError);
+          }
+          
+          toast.success("Inmate deleted and archived successfully");
+          if (onDelete) onDelete();
+        }
+      } catch (archiveError) {
+        console.error("Error archiving inmate:", archiveError);
+        console.error("Archive error details:", archiveError.response?.data || archiveError.message);
+        
+        // If archiving fails, ask user if they want to proceed with deletion anyway
+        if (window.confirm("Could not archive this inmate. Would you like to delete it anyway? (Data will be permanently lost)")) {
+          const response = await axiosInstance.delete(`/inmates/delete-inmate/${inmate._id}`);
+          if (response.data) {
+            toast.success("Inmate deleted (without archiving)!");
+            if (onDelete) onDelete();
+            
+            // Log activity for successful deletion without archiving
+            try {
+              await logActivity(
+                ACTIONS.DELETE,
+                `Deleted inmate record for ${inmate.inmate_name} (without archiving)`,
+                RESOURCES.INMATE,
+                inmate._id,
+                STATUS.SUCCESS
+              );
+            } catch (logError) {
+              console.error('Failed to log delete activity:', logError);
+            }
+          }
+        } else {
+          toast.info("Deletion cancelled");
+        }
       }
     } catch (error) {
       console.error("Error deleting inmate:", error);
@@ -177,8 +281,12 @@ const InmateActionButtons = ({ inmate, onDelete, isCardView = false }) => {
         <ConfirmModal 
           open={confirmOpen} 
           message={`Are you sure you want to delete ${inmate.inmate_name}? This action will archive the inmate record and it can be restored from the archive system if needed.`}
+          title="Delete and Archive Inmate"
+          confirmText="Delete and Archive"
+          cancelText="Cancel"
           onConfirm={handleConfirmDelete}
           onCancel={() => setConfirmOpen(false)}
+          confirmButtonColor="bg-red-600 hover:bg-red-700"
         />
       </>
     );
@@ -241,8 +349,12 @@ const InmateActionButtons = ({ inmate, onDelete, isCardView = false }) => {
       <ConfirmModal 
         open={confirmOpen} 
         message={`Are you sure you want to delete ${inmate.inmate_name}? This action will archive the inmate record and it can be restored from the archive system if needed.`}
+        title="Delete and Archive Inmate"
+        confirmText="Delete and Archive"
+        cancelText="Cancel"
         onConfirm={handleConfirmDelete}
         onCancel={() => setConfirmOpen(false)}
+        confirmButtonColor="bg-red-600 hover:bg-red-700"
       />
     </div>
   );
@@ -434,7 +546,7 @@ const InmatesList = () => {
   const getColumns = () => {
     const baseColumns = [
       {
-        name: "S.No",
+        name: "#",
         selector: row => row.sno,
         sortable: true,
         width: "70px",

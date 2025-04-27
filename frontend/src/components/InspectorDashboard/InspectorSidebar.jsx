@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { toggleSidebar, setSidebarState } from "../../redux/sidebarSlice";
@@ -9,10 +9,6 @@ import {
   FaTachometerAlt, 
   FaUsers, 
   FaChartBar, 
-  FaFileAlt, 
-  FaClipboardList, 
-  FaExchangeAlt, 
-  FaUserShield,
   FaArchive
 } from "react-icons/fa";
 
@@ -105,19 +101,32 @@ const InspectorSidebar = () => {
           </NavLink>
           
           <NavLink
-            to="/archive"
+            to="/inspector-dashboard/parole-committee"
             className={({ isActive }) =>
               `flex items-center p-2 rounded-lg hover:bg-teal-600 transition-colors ${
                 isActive ? "bg-teal-600" : ""
               } ${isCollapsed ? "justify-center" : "justify-start"}`
             }
           >
+            <FaUsers className="h-6 w-6" />
+            {!isCollapsed && <span className="ml-3">Parole Committee</span>}
+            
+          </NavLink>
+          <NavLink
+           
+               to="/archive"
+            className={({ isActive }) =>
+              `flex items-center p-2 rounded-lg hover:bg-teal-600 transition-colors ${
+                isActive ? "bg-teal-600" : ""
+              } ${isCollapsed ? "justify-center" : "justify-start"}`
+            }
+          >
+            <FaUsers className="h-6 w-6" />
             <FaArchive className="h-6 w-6" />
             {!isCollapsed && <span className="ml-3">Archive System</span>}
           </NavLink>
           
           <NavLink
-            to="/inspector-dashboard/homepage-settings"
             className={({ isActive }) =>
               `flex items-center p-2 rounded-lg hover:bg-teal-600 transition-colors ${
                 isActive ? "bg-teal-600" : ""

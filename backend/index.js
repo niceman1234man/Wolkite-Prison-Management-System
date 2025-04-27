@@ -37,7 +37,9 @@ import messageRoutes from "./routes/messageRoutes.js";
 import { EventEmitter } from 'events';
 import backupRouter from "./router/backup.js";
 import activityLogRouter from "./router/activityLog.router.js";
+import paroleCommitteeRouter from "./router/paroleCommittee.router.js";
 import archiveRoutes from "./routes/archiveRoutes.js"; // Import archive routes
+import manualArchiveRoutes from "./routes/manualArchive.routes.js"; // Import manual archive routes
 EventEmitter.defaultMaxListeners = 15; // Increase from default 10
 
 // Load environment variables
@@ -85,6 +87,7 @@ app.use("/api/incidents", incidentRouter);
 app.use("/api/inmates", inmateRouter);
 app.use("/api/prison", prisonRouter);
 app.use("/api/parole-tracking", paroleRouter);
+app.use("/api/parole-committee", paroleCommitteeRouter);
 app.use("/api/notice", noticeRouter);
 app.use("/api/instruction", instructionRouter);
 app.use("/api/transfer", transferRouter);
@@ -101,6 +104,7 @@ app.use("/api/auth", visitorAccountRouter);
 app.use("/api/visitor/schedule", visitorScheduleRouter);
 app.use("/api/messages", messageRoutes);
 app.use("/api/archive", archiveRoutes); // Add archive routes
+app.use("/api/manual-archive", manualArchiveRoutes); // Add manual archive routes
 
 // Socket.io event handlers
 io.on('connection', (socket) => {

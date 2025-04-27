@@ -22,7 +22,7 @@ export const columns = [
     name: "Judge Name",
     selector: (row) => row.judgeName,
     sortable: true,
-    width: "100px",
+    width: "150px",
     center: true,
   },
   
@@ -30,7 +30,7 @@ export const columns = [
     name: "Prison Name",
     selector: (row) => row.prisonName,
     sortable: true,
-    width: "100px",
+    width: "150px",
     center: true,
   },
   {
