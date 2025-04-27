@@ -43,7 +43,7 @@ const formatEntityType = (type) => {
   return type.charAt(0).toUpperCase() + type.slice(1);
 };
 
-const ArchiveList = ({ standalone = true }) => {
+const ArchiveList = ({ standalone = true, initialFilters = null }) => {
   console.log("ArchiveList component rendering");
   const navigate = useNavigate();
   const isCollapsed = useSelector((state) => state.sidebar.isCollapsed);
@@ -92,6 +92,7 @@ const ArchiveList = ({ standalone = true }) => {
       { value: '', label: 'All Types' },
       { value: 'prison', label: 'Prison' },
       { value: 'inmate', label: 'Inmate' },
+      { value: 'woredaInmate', label: 'Woreda Inmate' },
       { value: 'notice', label: 'Notice' },
       { value: 'clearance', label: 'Clearance' },
       { value: 'visitor', label: 'Visitor' },
@@ -182,7 +183,7 @@ const ArchiveList = ({ standalone = true }) => {
 
   // Initial fetch
   useEffect(() => {
-    console.log("ArchiveList useEffect triggered");
+    console.log("ArchiveList useEffect triggered with initialFilters:", initialFilters);
     
     // Get user data and role
     try {
@@ -192,43 +193,69 @@ const ArchiveList = ({ standalone = true }) => {
       console.log("User role:", role);
       setUserRole(role);
       
-      // Set initial entity type filter based on role
-      if (role && role !== 'admin' && roleEntityTypeMap[role]) {
-        const allowedTypes = roleEntityTypeMap[role];
-        if (allowedTypes.length === 1) {
-          // If role can only access one entity type, set it automatically
-          setFilters(prev => ({
-            ...prev,
-            entityType: allowedTypes[0]
-          }));
-        }
-      }
-      
-      // Special handling for security staff with clearance
-      if (role === 'security') {
-        // For security staff, we want to show all clearance items they can manage
-        // without limiting to only ones they deleted
-        const initialFilters = {
-          ...filters,
-          entityType: 'clearance'  // Focus on clearance items for security staff
-        };
-        
-        setFilters(initialFilters);
-        console.log("Set security staff filters:", initialFilters);
-      }
-      // For other non-admin users, add filter to only show items they deleted  
-      else if (role && role !== 'admin') {
+      // Apply initial filters if provided
+      if (initialFilters) {
+        console.log("Applying initial filters:", initialFilters);
+        // Use initialFilters as the source of truth
         setFilters(prev => ({
           ...prev,
-          deletedBy: userData?.id || ''
+          ...initialFilters
         }));
+        
+        // Skip the default filter logic since we're using initialFilters
+        // This ensures we don't override the entityType with security staff default
+      }
+      // Otherwise use default filter logic
+      else {
+        // Set initial entity type filter based on role
+        if (role && role !== 'admin' && roleEntityTypeMap[role]) {
+          const allowedTypes = roleEntityTypeMap[role];
+          if (allowedTypes.length === 1) {
+            // If role can only access one entity type, set it automatically
+            setFilters(prev => ({
+              ...prev,
+              entityType: allowedTypes[0]
+            }));
+          }
+        }
+        
+        // Special handling for security staff with clearance
+        // ONLY APPLY THIS IF initialFilters IS NOT PROVIDED
+        if (role === 'security' && !initialFilters) {
+          // For security staff, we want to show all clearance items they can manage
+          // without limiting to only ones they deleted
+          const securityFilters = {
+            ...filters,
+            entityType: 'clearance'  // Focus on clearance items for security staff
+          };
+          
+          setFilters(securityFilters);
+          console.log("Set security staff filters:", securityFilters);
+        }
+        // For other non-admin users, add filter to only show items they deleted  
+        else if (role && role !== 'admin') {
+          setFilters(prev => ({
+            ...prev,
+            deletedBy: userData?.id || ''
+          }));
+        }
       }
     } catch (e) {
       console.error("Error parsing user data:", e);
     }
     
-    // Fetch archived items directly
-    fetchArchivedItems();
+    // Fetch archived items after a small delay to allow filters to be set
+    setTimeout(() => {
+      fetchArchivedItems();
+    }, 100);
+  }, []);
+
+  // Effect to refetch when pagination changes
+  useEffect(() => {
+    // Only fetch if this isn't the initial render
+    if (!loading || archivedItems.length > 0) {
+      fetchArchivedItems();
+    }
   }, [pagination.page, pagination.limit]);
 
   // Handle filter change
@@ -314,6 +341,16 @@ const ArchiveList = ({ standalone = true }) => {
     }));
   };
 
+  // Handle items per page change
+  const handleLimitChange = (e) => {
+    const newLimit = parseInt(e.target.value);
+    setPagination(prev => ({
+      ...prev,
+      limit: newLimit,
+      page: 1 // Reset to first page when changing the limit
+    }));
+  };
+
   // Confirm deletion
   const confirmDelete = (item) => {
     setItemToDelete(item);
@@ -384,8 +421,33 @@ const ArchiveList = ({ standalone = true }) => {
     if (role === 'police-officer') {
       navigate(`/policeOfficer-dashboard/archive/${item._id}`);
     } else {
-      navigate(`/archive/${item._id}`);
+      navigate(`/policeOfficer-dashboard/archive/${item._id}`);
     }
+    if (role === 'security') {
+      navigate(`/securityStaff-dashboard/archive/${item._id}`);
+    } else {
+      navigate(`/securityStaff-dashboard/archive/${item._id}`);
+    }
+
+    if (role === 'woreda') {
+      navigate(`/woreda-dashboard/archive/${item._id}`);
+    } else {
+      navigate(`/woreda-dashboard/archive/${item._id}`);
+    }
+
+    if (role === 'woreda') {
+      navigate(`/court-dashboard/archive/${item._id}`);
+    } else {
+      navigate(`/court-dashboard/archive/${item._id}`);
+    }
+
+    if (role === 'admin') {
+      navigate(`/admin-dashboard/archive/${item._id}`);
+    } else {
+      navigate(`/admin-dashboard/archive/${item._id}`);
+    }
+
+
   };
 
   // Format date
@@ -406,10 +468,13 @@ const ArchiveList = ({ standalone = true }) => {
     // Admin can manage all items
     if (role === 'admin') return true;
     
-    // Special case for security staff with clearance items
-    if (role === 'security' && item.entityType === 'clearance') {
-      console.log("Security staff can manage clearance item:", item._id);
-      return true; // Security staff can manage all clearance items
+    // Special case for security staff with allowed entity types
+    if (role === 'security') {
+      const securityAllowedTypes = ['clearance', 'inmate', 'visitor', 'transfer', 'report'];
+      if (securityAllowedTypes.includes(item.entityType)) {
+        console.log(`Security staff can manage ${item.entityType} item:`, item._id);
+        return true; // Security staff can manage all clearance, inmate, etc. items
+      }
     }
     
     // Return false if deletedBy is missing
@@ -455,43 +520,43 @@ const ArchiveList = ({ standalone = true }) => {
       <div className={standalone ? "flex-1 relative" : "w-full"}>
         {/* Header (only show if standalone) */}
         {standalone && (
-          <div className={`bg-white shadow-md p-4 fixed top-14 z-20 flex flex-wrap items-center justify-between transition-all duration-300 ${
-            isCollapsed ? "left-16 w-[calc(100%-4rem)]" : "left-64 w-[calc(100%-16rem)]"
-          }`}>
-            <div className="flex items-center">
-              <button
+        <div className={`bg-white shadow-md p-4 fixed top-14 z-20 flex flex-wrap items-center justify-between transition-all duration-300 ${
+          isCollapsed ? "left-16 w-[calc(100%-4rem)]" : "left-64 w-[calc(100%-16rem)]"
+        }`}>
+          <div className="flex items-center">
+            <button
                 className="flex items-center text-white bg-teal-600 hover:bg-teal-700 px-4 py-2 rounded-lg shadow-md transition duration-300 mr-4"
-                onClick={() => navigate(-1)}
-              >
-                <FaArrowLeft className="mr-2 text-lg" /> Back
-              </button>
-              <h1 className="text-2xl font-bold text-gray-800">Archive System</h1>
+              onClick={() => navigate(-1)}
+            >
+              <FaArrowLeft className="mr-2 text-lg" /> Back
+            </button>
+            <h1 className="text-2xl font-bold text-gray-800">Archive System</h1>
+          </div>
+          
+            <div className="flex items-center gap-3 mt-2 sm:mt-0">
+            <div className="relative">
+              <FaSearch className="absolute left-3 top-2.5 text-gray-500" />
+              <input
+                type="text"
+                placeholder="Search archived items..."
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-md w-64"
+                value={filters.searchTerm}
+                onChange={handleSearch}
+              />
             </div>
             
-            <div className="flex items-center gap-3 mt-2 sm:mt-0">
-              <div className="relative">
-                <FaSearch className="absolute left-3 top-2.5 text-gray-500" />
-                <input
-                  type="text"
-                  placeholder="Search archived items..."
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-md w-64"
-                  value={filters.searchTerm}
-                  onChange={handleSearch}
-                />
-              </div>
-              
-              <button
-                onClick={() => setFilterOpen(!filterOpen)}
-                className={`p-2 rounded-md flex items-center gap-2 ${
-                  filterOpen || Object.values(filters).some(v => v !== '') 
+            <button
+              onClick={() => setFilterOpen(!filterOpen)}
+              className={`p-2 rounded-md flex items-center gap-2 ${
+                filterOpen || Object.values(filters).some(v => v !== '') 
                     ? "bg-teal-600 text-white"
-                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
-              >
-                <FaFilter /> Filters
-              </button>
-            </div>
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              <FaFilter /> Filters
+            </button>
           </div>
+        </div>
         )}
         
         {/* Main Content */}
@@ -503,14 +568,15 @@ const ArchiveList = ({ standalone = true }) => {
                 <FaSearch className="absolute left-3 top-2.5 text-gray-500" />
                 <input
                   type="text"
+                  name="searchTerm"
                   placeholder="Search archived items..."
                   className="pl-10 pr-4 py-2 border border-gray-300 rounded-md w-64"
                   value={filters.searchTerm}
                   onChange={handleSearch}
                 />
-              </div>
+                </div>
               
-              <button
+              <button 
                 onClick={() => setFilterOpen(!filterOpen)}
                 className={`p-2 rounded-md flex items-center gap-2 ${
                   filterOpen || Object.values(filters).some(v => v !== '') 
@@ -528,80 +594,81 @@ const ArchiveList = ({ standalone = true }) => {
             <div className="bg-white p-4 mb-6 rounded-lg shadow-md">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {/* Entity Type Filter */}
-                <div>
+                    <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Entity Type</label>
-                  <select
+                      <select
                     className="w-full border-gray-300 rounded-md shadow-sm focus:border-teal-500 focus:ring-teal-500"
-                    value={filters.entityType}
+                        value={filters.entityType}
                     onChange={(e) => handleFilterChange('entityType', e.target.value)}
                   >
                     <option value="">All Types</option>
                     {userRole === 'admin' && <option value="user">Users</option>}
                     {(userRole === 'admin' || userRole === 'inspector') && <option value="prison">Prisons</option>}
-                    {(userRole === 'admin' || userRole === 'woreda' || userRole === 'security') && <option value="woredaInmate">Inmates</option>}
+                    {(userRole === 'admin' || userRole === 'woreda' || userRole === 'security') && <option value="inmate">Inmates</option>}
+                    {(userRole === 'admin' || userRole === 'woreda') && <option value="woredaInmate">Woreda Inmates</option>}
                     {(userRole === 'admin' || userRole === 'inspector') && <option value="notice">Notices</option>}
                     {(userRole === 'admin' || userRole === 'court' || userRole === 'security') && <option value="clearance">Clearances</option>}
                     {(userRole === 'admin' || userRole === 'police-officer' || userRole === 'security') && <option value="visitor">Visitors</option>}
                     {(userRole === 'admin' || userRole === 'security') && <option value="report">Reports</option>}
                     {(userRole === 'admin' || userRole === 'police-officer' || userRole === 'security') && <option value="transfer">Transfers</option>}
                     {(userRole === 'admin' || userRole === 'police-officer') && <option value="incident">Incidents</option>}
-                  </select>
-                </div>
-                
+                      </select>
+                    </div>
+                    
                 {/* Date Range Filters */}
-                <div>
+                    <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-                  <input
-                    type="date"
+                          <input
+                            type="date"
                     className="w-full border-gray-300 rounded-md shadow-sm focus:border-teal-500 focus:ring-teal-500"
-                    value={filters.startDate}
+                            value={filters.startDate}
                     onChange={(e) => handleFilterChange('startDate', e.target.value)}
-                  />
-                </div>
+                          />
+                        </div>
                 
-                <div>
+                        <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-                  <input
-                    type="date"
+                          <input
+                            type="date"
                     className="w-full border-gray-300 rounded-md shadow-sm focus:border-teal-500 focus:ring-teal-500"
-                    value={filters.endDate}
+                            value={filters.endDate}
                     onChange={(e) => handleFilterChange('endDate', e.target.value)}
-                  />
-                </div>
-                
+                          />
+                    </div>
+                    
                 {/* Restoration Status */}
-                <div>
+                    <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                  <select
+                      <select
                     className="w-full border-gray-300 rounded-md shadow-sm focus:border-teal-500 focus:ring-teal-500"
-                    value={filters.isRestored}
+                        value={filters.isRestored}
                     onChange={(e) => handleFilterChange('isRestored', e.target.value)}
                   >
                     <option value="">All</option>
                     <option value="false">Archived Only</option>
                     <option value="true">Restored Only</option>
-                  </select>
-                </div>
-                
+                      </select>
+                    </div>
+                    
                 {/* Filter Actions */}
                 <div className="md:col-span-2 lg:col-span-3 flex justify-end gap-2 mt-2">
-                  <button
-                    onClick={resetFilters}
+                      <button
+                        onClick={resetFilters}
                     className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md"
-                  >
+                      >
                     Clear Filters
-                  </button>
-                  <button
-                    onClick={applyFilters}
+                      </button>
+                      <button
+                        onClick={applyFilters}
                     className="px-4 py-2 text-white bg-teal-600 hover:bg-teal-700 rounded-md"
-                  >
+                      >
                     Apply Filters
-                  </button>
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          )}
-          
+              )}
+              
           {/* Loading and Error States */}
           {loading && (
             <div className="flex justify-center items-center h-64">
@@ -647,76 +714,76 @@ const ArchiveList = ({ standalone = true }) => {
                   <p className="text-gray-600 mb-4">Found {pagination.total} archived item(s)</p>
                   
                   {/* Archive Items Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {archivedItems.map(item => (
-                      <div 
-                        key={item._id} 
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {archivedItems.map(item => (
+                  <div 
+                    key={item._id} 
                         className={`bg-white border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300 cursor-pointer ${
                           item.isRestored ? 'bg-green-50 border-green-200' : ''
-                        }`}
-                        onClick={() => viewDetails(item)}
-                      >
-                        <div className="p-4">
-                          <div className="flex items-center mb-2">
+                    }`}
+                    onClick={() => viewDetails(item)}
+                  >
+                    <div className="p-4">
+                      <div className="flex items-center mb-2">
                             <div className="mr-3 text-teal-600">
                               {entityIcons[item.entityType] || <FaFileAlt className="text-teal-500" />}
-                            </div>
+                        </div>
                             <div className="flex-1">
                               <div className="font-medium">{item.title || item.name || getItemTitle(item)}</div>
-                              <div className="text-xs text-gray-500">{formatEntityType(item.entityType)}</div>
-                            </div>
-                            {item.isRestored && (
-                              <span className="ml-auto bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
-                                Restored
-                              </span>
-                            )}
-                          </div>
-                          
+                          <div className="text-xs text-gray-500">{formatEntityType(item.entityType)}</div>
+                        </div>
+                        {item.isRestored && (
+                          <span className="ml-auto bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
+                            Restored
+                          </span>
+                        )}
+                      </div>
+                      
                           <div className="text-sm text-gray-600 line-clamp-2 mb-3">
                             {getItemDescription(item)}
-                          </div>
-                          
-                          <div className="flex justify-between text-xs text-gray-500">
-                            <div className="flex items-center">
-                              <FaCalendarAlt className="mr-1" />
-                              {formatDate(item.archivedAt || item.createdAt)}
-                            </div>
-                            
-                            <div className="flex space-x-2">
-                              {!item.isRestored && item && canManageItem(item) && (
-                                <>
-                                  <button 
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      confirmRestore(item);
-                                    }}
-                                    className="p-1 text-green-600 hover:text-green-800"
-                                    title="Restore"
-                                  >
-                                    <FaUndo />
-                                  </button>
-                                  
-                                  <button 
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      confirmDelete(item);
-                                    }}
-                                    className="p-1 text-red-600 hover:text-red-800"
-                                    title="Delete Permanently"
-                                  >
-                                    <FaTrash />
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </div>
+                      </div>
+                      
+                      <div className="flex justify-between text-xs text-gray-500">
+                        <div className="flex items-center">
+                          <FaCalendarAlt className="mr-1" />
+                          {formatDate(item.archivedAt || item.createdAt)}
+                        </div>
+                        
+                        <div className="flex space-x-2">
+                          {!item.isRestored && item && canManageItem(item) && (
+                            <>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  confirmRestore(item);
+                                }}
+                                className="p-1 text-green-600 hover:text-green-800"
+                                title="Restore"
+                              >
+                                <FaUndo />
+                              </button>
+                              
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  confirmDelete(item);
+                                }}
+                                className="p-1 text-red-600 hover:text-red-800"
+                                title="Delete Permanently"
+                              >
+                                <FaTrash />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </div>
-                    ))}
+                    </div>
                   </div>
-                  
-                  {/* Pagination */}
-                  {pagination.pages > 1 && (
+                ))}
+              </div>
+              
+              {/* Pagination */}
+              {pagination.pages > 1 && (
                     <div className="flex justify-between items-center mt-6">
                       <div className="text-sm text-gray-600">
                         Showing {((pagination.page - 1) * pagination.limit) + 1} - {Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total} items
@@ -735,59 +802,59 @@ const ArchiveList = ({ standalone = true }) => {
                         </select>
                         
                         <div className="flex gap-1">
-                          <button
-                            onClick={() => handlePageChange(1)}
-                            disabled={pagination.page === 1}
-                            className={`px-3 py-1 rounded ${
-                              pagination.page === 1
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
-                          >
-                            First
-                          </button>
-                          
-                          <button
-                            onClick={() => handlePageChange(pagination.page - 1)}
-                            disabled={pagination.page === 1}
-                            className={`px-3 py-1 rounded ${
-                              pagination.page === 1
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
-                          >
+                    <button
+                      onClick={() => handlePageChange(1)}
+                      disabled={pagination.page === 1}
+                      className={`px-3 py-1 rounded ${
+                        pagination.page === 1
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      First
+                    </button>
+                    
+                    <button
+                      onClick={() => handlePageChange(pagination.page - 1)}
+                      disabled={pagination.page === 1}
+                      className={`px-3 py-1 rounded ${
+                        pagination.page === 1
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
                             Prev
-                          </button>
-                          
+                    </button>
+                    
                           <span className="px-3 py-1 bg-teal-600 text-white rounded">
                             {pagination.page}
-                          </span>
-                          
-                          <button
-                            onClick={() => handlePageChange(pagination.page + 1)}
-                            disabled={pagination.page === pagination.pages}
-                            className={`px-3 py-1 rounded ${
-                              pagination.page === pagination.pages
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
-                          >
-                            Next
-                          </button>
-                          
-                          <button
-                            onClick={() => handlePageChange(pagination.pages)}
-                            disabled={pagination.page === pagination.pages}
-                            className={`px-3 py-1 rounded ${
-                              pagination.page === pagination.pages
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                            }`}
-                          >
-                            Last
-                          </button>
+                    </span>
+                    
+                    <button
+                      onClick={() => handlePageChange(pagination.page + 1)}
+                      disabled={pagination.page === pagination.pages}
+                      className={`px-3 py-1 rounded ${
+                        pagination.page === pagination.pages
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      Next
+                    </button>
+                    
+                    <button
+                      onClick={() => handlePageChange(pagination.pages)}
+                      disabled={pagination.page === pagination.pages}
+                      className={`px-3 py-1 rounded ${
+                        pagination.page === pagination.pages
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                      }`}
+                    >
+                      Last
+                    </button>
                         </div>
-                      </div>
+                  </div>
                     </div>
                   )}
                 </div>

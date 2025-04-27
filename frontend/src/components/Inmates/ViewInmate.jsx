@@ -893,10 +893,71 @@ const ViewInmate = ({ _id, setOpen, onEdit }) => {
                     <p className="mt-1">{inmateData.currentKebele || "Not provided"}</p>
                   </div>
                 </div>
-
               </div>
-
             )}
+
+            {/* Footer Navigation */}
+            <div className="flex flex-col items-center mt-6 pt-4 border-t border-gray-200">
+              {/* Step progress */}
+              <div className="mb-2 text-sm text-gray-600">
+                Tab {tabs.findIndex(tab => tab.id === activeTab) + 1} of {tabs.length}
+              </div>
+              
+              {/* Tab dots navigation */}
+              <div className="flex justify-center mb-4 space-x-2">
+                {tabs.map((tab, index) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`w-3 h-3 rounded-full transition-all ${
+                      activeTab === tab.id 
+                        ? 'bg-blue-600 transform scale-125' 
+                        : 'bg-gray-300 hover:bg-gray-400'
+                    }`}
+                    aria-label={`Go to ${tab.label} tab`}
+                  />
+                ))}
+              </div>
+              
+              <div className="flex justify-between w-full">
+                <div className="flex items-center">
+                  {activeTab !== tabs[0].id && (
+                    <button
+                      type="button"
+                      onClick={() => navigateTab('prev')}
+                      className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 transition-colors flex items-center"
+                    >
+                      <FiArrowLeft className="mr-2" />
+                      Previous
+                    </button>
+                  )}
+                </div>
+                  
+                <div className="flex items-center">
+                  {activeTab !== tabs[tabs.length - 1].id && (
+                    <button
+                      type="button"
+                      onClick={() => navigateTab('next')}
+                      className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors flex items-center"
+                    >
+                      Next
+                      <FiArrowRight className="ml-2" />
+                    </button>
+                  )}
+                  
+                  {activeTab === tabs[tabs.length - 1].id && onEdit && (
+                    <button
+                      type="button"
+                      onClick={() => onEdit(_id)}
+                      className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors flex items-center"
+                    >
+                      Edit Inmate
+                      <FiUserCheck className="ml-2" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </>
       )}

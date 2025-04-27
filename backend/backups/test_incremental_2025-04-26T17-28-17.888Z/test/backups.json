@@ -1,0 +1,57 @@
+[
+  {
+    "_id": "680aa81f8bace4c421c49143",
+    "filename": "test_full_2025-04-24T21-07-43.974Z",
+    "type": "full",
+    "status": "in_progress",
+    "reference": null,
+    "createdAt": "2025-04-24T21:07:43.978Z",
+    "__v": 0
+  },
+  {
+    "_id": "680bb2bcd4deaf59244347e6",
+    "filename": "test_full_2025-04-25T16-05-16.711Z",
+    "type": "full",
+    "status": "completed",
+    "reference": null,
+    "createdAt": "2025-04-25T16:05:16.716Z",
+    "__v": 0,
+    "metadata": {
+      "outputDir": "C:\\Users\\SEMARYA\\Desktop\\PMS\\backend\\backups\\test_full_2025-04-25T16-05-16.711Z",
+      "zipFilename": "C:\\Users\\SEMARYA\\Desktop\\PMS\\backend\\backups\\test_full_2025-04-25T16-05-16.711Z.zip"
+    },
+    "size": 35259
+  },
+  {
+    "_id": "680c22840ec00d9e93afcdf4",
+    "filename": "test_incremental_2025-04-26T00-02-12.935Z",
+    "type": "incremental",
+    "status": "completed",
+    "reference": "680bb2bcd4deaf59244347e6",
+    "createdAt": "2025-04-26T00:02:12.936Z",
+    "__v": 0,
+    "metadata": {
+      "outputDir": "C:\\Users\\SEMARYA\\Desktop\\PMS\\backend\\backups\\test_incremental_2025-04-26T00-02-12.935Z",
+      "zipFilename": "C:\\Users\\SEMARYA\\Desktop\\PMS\\backend\\backups\\test_incremental_2025-04-26T00-02-12.935Z.zip"
+    },
+    "size": 38392
+  },
+  {
+    "_id": "680d179c88ca7e9b568d72d1",
+    "filename": "test_incremental_2025-04-26T17-27-56.193Z",
+    "type": "incremental",
+    "status": "in_progress",
+    "reference": "680c22840ec00d9e93afcdf4",
+    "createdAt": "2025-04-26T17:27:56.194Z",
+    "__v": 0
+  },
+  {
+    "_id": "680d17b13d5bcfbf6242c380",
+    "filename": "test_incremental_2025-04-26T17-28-17.888Z",
+    "type": "incremental",
+    "status": "in_progress",
+    "reference": "680c22840ec00d9e93afcdf4",
+    "createdAt": "2025-04-26T17:28:17.891Z",
+    "__v": 0
+  }
+]

@@ -2,9 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import axiosInstance from "../../utils/axiosInstance";
 import { toast } from "react-hot-toast";
-import { EyeIcon, EyeSlashIcon, XMarkIcon } from '@heroicons/react/24/outline';
-import FaceCapture from "../FaceCapture";
-import SimpleFaceCapture from "../SimpleFaceCapture";
+import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 // Toast configuration with closeOnClick enabled
 const toastConfig = {
@@ -21,58 +19,73 @@ const toastConfig = {
   },
 };
 
-function Register({ formData, handleChange, handleSubmit, setShowLoginModal }) {
+function Register({ setShowLoginModal }) {
+  const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    firstName: '',
+    middleName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    phone: ''
+  });
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const firstNameRef = useRef(null);
-  const [faceData, setFaceData] = useState(null);
-  const [isFaceChecking, setIsFaceChecking] = useState(false);
-  const [faceRegistrationComplete, setFaceRegistrationComplete] = useState(false);
-  const [useFallbackCapture, setUseFallbackCapture] = useState(false);
-  const [capturedPhotos, setCapturedPhotos] = useState([]);
-  const [isFaceCaptureVisible, setIsFaceCaptureVisible] = useState(false);
-  const [faceDescriptor, setFaceDescriptor] = useState(null);
-  const [faceImage, setFaceImage] = useState(null);
-  const [hasRegisteredFace, setHasRegisteredFace] = useState(false);
 
   useEffect(() => {
     firstNameRef.current?.focus();
   }, []);
 
-  // Add useEffect for cleanup and add forceStopCamera function
+  // Validation functions
+  const validateName = (name, fieldName) => {
+    if (!name) return `${fieldName} is required`;
+    if (name.length < 2 || name.length > 30) return `${fieldName} must be between 2 and 30 characters`;
+    if (!/^[a-zA-Z\s]*$/.test(name)) return `${fieldName} must contain only letters`;
+    return "";
+  };
 
-  // Force stop any running camera when component unmounts or registration completes
-  useEffect(() => {
-    // Cleanup on unmount
-    return () => {
-      // Force stop any camera streams that might be active
-      forceStopCamera();
-    };
-  }, []);
+  const validateEmail = (email) => {
+    if (!email) return "Email is required";
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) return "Please enter a valid email address";
+    return "";
+  };
 
-  // Also cleanup when face registration is complete
-  useEffect(() => {
-    if (faceRegistrationComplete) {
-      // If the face registration is complete, force stop any camera 
-      forceStopCamera();
-    }
-  }, [faceRegistrationComplete]);
+  const validatePassword = (password) => {
+    if (!password) return "Password is required";
+    if (password.length < 8) return "Password must be at least 8 characters long";
+    if (!/(?=.*[a-z])/.test(password)) return "Password must include at least one lowercase letter";
+    if (!/(?=.*[A-Z])/.test(password)) return "Password must include at least one uppercase letter";
+    if (!/(?=.*\d)/.test(password)) return "Password must include at least one number";
+    if (!/(?=.*[!@#$%^&*])/.test(password)) return "Password must include at least one special character (!@#$%^&*)";
+    return "";
+  };
 
-  // Function to force stop any camera streams
-  const forceStopCamera = () => {
-    // Get all video streams and stop them
-    navigator.mediaDevices.getUserMedia({ video: true })
-      .then((stream) => {
-        stream.getTracks().forEach((track) => {
-          track.stop();
-        });
-        console.log("All camera streams have been forcibly stopped");
-      })
-      .catch((err) => {
-        console.log("No active camera to stop");
-      });
+  const validateConfirmPassword = (confirmPassword, password) => {
+    if (!confirmPassword) return "Please confirm your password";
+    if (confirmPassword !== password) return "Passwords do not match";
+    return "";
+  };
+
+  const validatePhone = (phone) => {
+    if (!phone) return "Phone number is required";
+    const phoneRegex = /^(\+251|0)(9|7)[0-9]{8}$/;
+    if (!phoneRegex.test(phone)) return "Please enter a valid Ethiopian phone number";
+    return "";
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    validateField(name, value);
   };
 
   const validateField = (name, value) => {
@@ -80,60 +93,34 @@ function Register({ formData, handleChange, handleSubmit, setShowLoginModal }) {
     
     switch (name) {
       case 'firstName':
-        if (!value.trim()) newErrors.firstName = 'First name is required';
-        else delete newErrors.firstName;
+        newErrors.firstName = validateName(value, 'First Name');
         break;
       case 'lastName':
-        if (!value.trim()) newErrors.lastName = 'Last name is required';
-        else delete newErrors.lastName;
+        newErrors.lastName = validateName(value, 'Last Name');
         break;
       case 'email':
-        if (!value.trim()) {
-          newErrors.email = 'Email is required';
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
-          newErrors.email = 'Please enter a valid email';
-        } else {
-          delete newErrors.email;
-        }
+        newErrors.email = validateEmail(value);
         break;
       case 'password':
-        if (!value) {
-          newErrors.password = 'Password is required';
-        } else if (value.length < 8) {
-          newErrors.password = 'Password must be at least 8 characters long';
-        } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(value)) {
-          newErrors.password = 'Password must contain at least one uppercase letter, one lowercase letter, and one number';
-        } else {
-          delete newErrors.password;
-        }
-        // Validate password match if confirmPassword exists
-        if (formData.confirmPassword && value !== formData.confirmPassword) {
-          newErrors.confirmPassword = 'Passwords do not match';
-        } else if (formData.confirmPassword) {
-          delete newErrors.confirmPassword;
+        newErrors.password = validatePassword(value);
+        if (formData.confirmPassword) {
+          newErrors.confirmPassword = validateConfirmPassword(formData.confirmPassword, value);
         }
         break;
       case 'confirmPassword':
-        if (!value) {
-          newErrors.confirmPassword = 'Please confirm your password';
-        } else if (value !== formData.password) {
-          newErrors.confirmPassword = 'Passwords do not match';
-        } else {
-          delete newErrors.confirmPassword;
-        }
+        newErrors.confirmPassword = validateConfirmPassword(value, formData.password);
         break;
       case 'phone':
-        if (!value.trim()) {
-          newErrors.phone = 'Phone number is required';
-        } else if (!/^\d{10,15}$/.test(value)) {
-          newErrors.phone = 'Please enter a valid phone number (10-15 digits)';
-        } else {
-          delete newErrors.phone;
-        }
+        newErrors.phone = validatePhone(value);
         break;
       default:
         break;
     }
+    
+    // Remove empty errors
+    Object.keys(newErrors).forEach(key => {
+      if (!newErrors[key]) delete newErrors[key];
+    });
     
     setErrors(newErrors);
   };
@@ -143,54 +130,7 @@ function Register({ formData, handleChange, handleSubmit, setShowLoginModal }) {
     validateField(name, value);
   };
 
-  // Handle face detection error by switching to fallback capture
-  const handleFaceError = (error) => {
-    console.error("Face detection error:", error);
-    toast.error(`Face detection failed. Using simplified capture instead.`, toastConfig);
-    setUseFallbackCapture(true);
-  };
-
-  // Handle detected face from FaceCapture component
-  const handleFaceDetected = async (faceData) => {
-    console.log("Face detected:", faceData);
-    
-    // Check liveness detection result
-    if (!faceData.isLive) {
-      setError('Liveness check failed. Please ensure you are a real person, not a photo.');
-      toast.error('Liveness check failed. Please ensure you are a real person.');
-      return;
-    }
-    
-    // Close face capture modal
-    setIsFaceCaptureVisible(false);
-    
-    // Store face descriptor
-    setFaceDescriptor(Array.from(faceData.descriptor));
-    setFaceImage(faceData.imageSrc);
-    
-    // Set state to show face has been registered
-    setHasRegisteredFace(true);
-    
-    // Make sure camera is stopped
-    forceStopCamera();
-    
-    // Show success message
-    toast.success('Face registered successfully!');
-  };
-
-  // Handle photos from SimpleFaceCapture (fallback without face recognition)
-  const handlePhotoCapture = (photos) => {
-    if (!photos || photos.length < 3) {
-      toast.error('Failed to capture all required photos', toastConfig);
-      return;
-    }
-    
-    setCapturedPhotos(photos);
-    setFaceRegistrationComplete(true);
-    toast.success('Photos captured successfully!', toastConfig);
-  };
-
-  const onSubmit = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Validate all fields
@@ -206,55 +146,26 @@ function Register({ formData, handleChange, handleSubmit, setShowLoginModal }) {
       return;
     }
 
-    // Check if face data is captured (using either method)
-    if (!useFallbackCapture && !faceData) {
-      toast.error('Please complete face registration before submitting', toastConfig);
-      return;
-    }
-    
-    if (useFallbackCapture && capturedPhotos.length < 3) {
-      toast.error('Please capture all required photos before submitting', toastConfig);
+    // Check if terms are accepted
+    if (!termsAccepted) {
+      setErrors(prev => ({ ...prev, terms: "Please accept the terms and conditions" }));
+      toast.error('Please accept the terms and conditions', toastConfig);
       return;
     }
 
     setIsSubmitting(true);
     try {
-      // Create a new FormData object with face/photo data
-      const formDataWithFace = new FormData();
-      
-      // Add all form fields
-      Object.keys(formData).forEach(key => {
-        formDataWithFace.append(key, formData[key]);
-      });
-      
-      if (useFallbackCapture) {
-        // Add photos from simple capture
-        for (let i = 0; i < capturedPhotos.length; i++) {
-          const base64Response = await fetch(capturedPhotos[i]);
-          const blob = await base64Response.blob();
-          formDataWithFace.append(`facePhoto${i+1}`, blob, `face-photo-${i+1}.jpg`);
-        }
-      } else {
-        // Add face data
-        formDataWithFace.append('faceDescriptor', JSON.stringify(faceData.descriptor));
-        
-        // Convert base64 image to Blob and append
-        if (faceData.image) {
-          const base64Response = await fetch(faceData.image);
-          const blob = await base64Response.blob();
-          formDataWithFace.append('faceImage', blob, 'face-image.jpg');
-        }
-      }
-      
-      // Submit with face data
-      const response = await axiosInstance.post('/user/register', formDataWithFace, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+      const response = await axiosInstance.post('/auth/register', {
+        firstName: formData.firstName,
+        middleName: formData.middleName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+        phone: formData.phone
       });
       
       if (response.data.success) {
-        toast.success('Account created successfully! Please login.', toastConfig);
+        toast.success('Account created successfully! Please check your email for verification.', toastConfig);
         setShowLoginModal();
       } else {
         toast.error(response.data.message || 'Failed to create account', toastConfig);
@@ -275,7 +186,7 @@ function Register({ formData, handleChange, handleSubmit, setShowLoginModal }) {
           <p className="text-gray-600">Join our community and manage your experience</p>
         </div>
         
-        <form onSubmit={onSubmit} className="space-y-8">
+        <form onSubmit={handleSubmit} className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* First Name */}
             <div className="space-y-2">
@@ -367,7 +278,7 @@ function Register({ formData, handleChange, handleSubmit, setShowLoginModal }) {
               </div>
               {errors.password && <p className="text-sm text-red-500">{errors.password}</p>}
               <div className="text-xs text-gray-500 mt-1">
-                Must contain at least 8 characters, including uppercase, lowercase, and numbers
+                Must contain at least 8 characters, including uppercase, lowercase, numbers, and special characters
               </div>
             </div>
 
@@ -419,88 +330,6 @@ function Register({ formData, handleChange, handleSubmit, setShowLoginModal }) {
               />
               {errors.phone && <p className="text-sm text-red-500">{errors.phone}</p>}
             </div>
-            
-            {/* Face Registration */}
-            <div className="col-span-1 md:col-span-2 bg-gray-50 p-6 rounded-xl border border-gray-200 shadow-sm">
-              <div className="flex items-center mb-4">
-                <div className="bg-blue-100 rounded-full p-2 mr-3">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6 text-blue-600">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-semibold text-gray-800">Face Registration <span className="text-red-500">*</span></h3>
-              </div>
-              
-              <p className="mb-5 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg border-l-4 border-blue-400">
-                To ensure each visitor has only one account and enhance security, we need to register your face. This helps with faster authentication in the future.
-              </p>
-              
-              {faceRegistrationComplete ? (
-                <div className="flex items-center justify-center flex-col bg-green-50 p-5 rounded-lg border border-green-200">
-                  <div className="w-32 h-32 rounded-full overflow-hidden mb-3 border-4 border-green-300 shadow-lg">
-                    {useFallbackCapture ? (
-                      capturedPhotos.length > 0 && (
-                        <img 
-                          src={capturedPhotos[0]} 
-                          alt="Registered Face" 
-                          className="w-full h-full object-cover"
-                        />
-                      )
-                    ) : (
-                      faceData?.image && (
-                        <img 
-                          src={faceData.image} 
-                          alt="Registered Face" 
-                          className="w-full h-full object-cover"
-                        />
-                      )
-                    )}
-                  </div>
-                  <div className="flex items-center text-green-700 font-medium mb-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 mr-2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Face successfully registered!
-                  </div>
-                  <button 
-                    type="button"
-                    onClick={() => {
-                      setFaceData(null);
-                      setCapturedPhotos([]);
-                      setFaceRegistrationComplete(false);
-                    }}
-                    className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 mr-1">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
-                    </svg>
-                    Re-capture face
-                  </button>
-                </div>
-              ) : (
-                <div className="border border-gray-200 rounded-lg overflow-hidden">
-                  {useFallbackCapture ? (
-                    <SimpleFaceCapture 
-                      onPhotoCapture={handlePhotoCapture}
-                      onCancel={() => setUseFallbackCapture(false)}
-                    />
-                  ) : (
-                    <FaceCapture 
-                      onFaceDetected={handleFaceDetected}
-                      onError={handleFaceError}
-                    />
-                  )}
-                </div>
-              )}
-              
-              {isFaceChecking && (
-                <div className="mt-3 flex items-center justify-center bg-gray-50 p-2 rounded-lg">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
-                  <span className="ml-2 text-sm text-gray-600">Checking for duplicate faces...</span>
-                </div>
-              )}
-            </div>
           </div>
 
           {/* Terms and Conditions */}
@@ -508,7 +337,8 @@ function Register({ formData, handleChange, handleSubmit, setShowLoginModal }) {
             <input
               type="checkbox"
               id="terms"
-              required
+              checked={termsAccepted}
+              onChange={(e) => setTermsAccepted(e.target.checked)}
               className="mt-1 w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             />
             <div>
@@ -525,9 +355,9 @@ function Register({ formData, handleChange, handleSubmit, setShowLoginModal }) {
           <div className="pt-4">
             <button
               type="submit"
-              disabled={isSubmitting || Object.keys(errors).length > 0 || !faceRegistrationComplete}
+              disabled={isSubmitting || Object.keys(errors).length > 0}
               className={`w-full bg-blue-600 hover:bg-blue-700 text-white py-3.5 px-6 rounded-xl shadow-md transition-all duration-300 font-medium text-base ${
-                isSubmitting || Object.keys(errors).length > 0 || !faceRegistrationComplete
+                isSubmitting || Object.keys(errors).length > 0
                 ? 'opacity-60 cursor-not-allowed' : 'hover:shadow-lg transform hover:-translate-y-0.5'
               }`}
             >
@@ -548,17 +378,6 @@ function Register({ formData, handleChange, handleSubmit, setShowLoginModal }) {
                 </span>
               )}
             </button>
-            
-            {/* Registration button status explanation */}
-            {(Object.keys(errors).length > 0 || !faceRegistrationComplete) && (
-              <div className="mt-2 text-center">
-                <p className="text-xs text-amber-600 bg-amber-50 py-1.5 px-3 rounded-lg inline-block">
-                  {!faceRegistrationComplete 
-                    ? "Please complete face registration to continue" 
-                    : "Please fix form errors to continue"}
-                </p>
-              </div>
-            )}
           </div>
 
           {/* Login Link */}

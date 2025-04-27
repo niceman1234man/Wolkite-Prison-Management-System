@@ -1,14 +1,18 @@
-
 import React from "react";
-import { FaUser } from "react-icons/fa";
 // import { useAuth } from "../../context/authContext";
 
-export const SummaryCard = ({icon,text,number,color}) => {
+export const SummaryCard = ({icon, text, number, color}) => {
   return ( 
-    <div className='rounded flex bg-white'>
-    <div className={`text-3xl flex justify-center items-center ${color} text-white px-4`}> {icon}    </div>
-    <div className='pl-4 py-1'> <p className='text-lg font-semibold'>{text}</p> 
-    <p className='text-xl font-bold '>{number}</p> </div>
+    <div className='rounded-lg shadow-lg overflow-hidden transform transition-all hover:scale-105 duration-300'>
+      <div className={`${color} text-white p-6`}>
+        <div className='flex items-center justify-between'>
+          <div className='text-3xl'>{icon}</div>
+          <div className='text-4xl font-bold'>{number}</div>
+        </div>
+        <div className='mt-4'>
+          <p className='text-lg font-semibold text-white'>{text}</p>
+        </div>
+      </div>
     </div>
   )
 }

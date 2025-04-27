@@ -10,7 +10,7 @@ import { useState } from "react";
 
 export const columns = [
   {
-    name: "S.No",
+    name: "#",
     selector: (row) => row.sno,
     sortable: true,
     width: "60px",

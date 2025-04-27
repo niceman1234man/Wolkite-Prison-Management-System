@@ -130,11 +130,34 @@ export const getArchivedItems = async (req, res) => {
     // Role-based filtering
     const userRole = req.user.role;
     
-    // Special case for security staff - show all clearance items
-    if (userRole === 'security' && (entityType === 'clearance' || !entityType)) {
-      console.log('Security staff requesting clearance archives - showing all clearance items');
-      query.entityType = 'clearance';
-      // Don't restrict by deletedBy - show all clearance items
+    // Special case for security staff - show clearance, inmate, visitor, and transfer items
+    if (userRole === 'security') {
+      console.log('Security staff requesting archives');
+      
+      // Check if a specific entity type was requested
+      if (entityType) {
+        // Allow security staff to view these specific entity types
+        const securityAllowedTypes = ['clearance', 'inmate', 'visitor', 'transfer', 'report'];
+        if (!securityAllowedTypes.includes(entityType)) {
+          console.log(`Security staff not allowed to view ${entityType} archives`);
+          return res.status(403).json({
+            success: false,
+            message: `Security staff cannot access ${entityType} archives`
+          });
+        }
+        
+        // Keep the requested entity type filter
+        console.log(`Security staff requesting ${entityType} archives - allowing access`);
+      }
+      else {
+        // If no entity type specified, limit to allowed types
+        console.log('Security staff requesting all archives - limiting to allowed types');
+        query.entityType = { $in: ['clearance', 'inmate', 'visitor', 'transfer', 'report'] };
+      }
+      
+      // Don't restrict by deletedBy for security staff - they can see all of their allowed entity types
+      // Remove any existing deletedBy filter
+      delete query.deletedBy;
     }
     // Non-admin users can only see specific entity types and their own archives
     else if (userRole && userRole !== 'admin') {
@@ -354,29 +377,37 @@ export const permanentlyDeleteArchivedItem = async (req, res) => {
         'inspector': ['prison', 'notice'],
         'police-officer': ['incident', 'visitor', 'transfer'],
         'court': ['clearance'],
-        'woreda': ['woredaInmate']
+        'woreda': ['woredaInmate'],
+        'security': ['inmate', 'clearance', 'visitor', 'transfer', 'report']
       };
       
       // Check if this user role can access this entity type
       const canAccessEntityType = roleEntityTypeMap[userRole]?.includes(archivedItem.entityType);
       
+      // Special case for security staff - they can delete inmate and clearance archives even if not the owner
+      if (userRole === 'security' && ['inmate', 'clearance'].includes(archivedItem.entityType)) {
+        console.log(`Security staff deleting ${archivedItem.entityType} archive.`);
+        // Allow security staff to delete these types
+      }
       // Check if the user is the one who deleted it
-      const isOwner = archivedItem.deletedBy.toString() === userId;
-      
-      // Inspectors should be able to delete any prison or notice they have archived
-      // Other roles can only delete items they archived if they have permission for that entity type
-      if (userRole === 'inspector' && ['prison', 'notice'].includes(archivedItem.entityType)) {
-        if (!isOwner) {
+      else {
+        const isOwner = archivedItem.deletedBy.toString() === userId;
+        
+        // Inspectors should be able to delete any prison or notice they have archived
+        // Other roles can only delete items they archived if they have permission for that entity type
+        if (userRole === 'inspector' && ['prison', 'notice'].includes(archivedItem.entityType)) {
+          if (!isOwner) {
+            return res.status(403).json({
+              success: false,
+              message: 'You can only delete items that you archived'
+            });
+          }
+        } else if (!canAccessEntityType || !isOwner) {
           return res.status(403).json({
             success: false,
-            message: 'You can only delete items that you archived'
+            message: 'You do not have permission to delete this item'
           });
         }
-      } else if (!canAccessEntityType || !isOwner) {
-        return res.status(403).json({
-          success: false,
-          message: 'You do not have permission to delete this item'
-        });
       }
     }
     
