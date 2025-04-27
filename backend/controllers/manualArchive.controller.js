@@ -1,6 +1,5 @@
 import mongoose from 'mongoose';
 import Archive from '../model/archive.model.js';
-import VisitorSchedule from '../model/visitorSchedule.model.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import fs from 'fs';
