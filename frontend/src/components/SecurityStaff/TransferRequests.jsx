@@ -48,11 +48,11 @@ const TransferRequests = () => {
   const fetchPrisons = async () => {
     try {
       console.log("Fetching prisons...");
-      // Use the backend endpoint that's most likely to work
+      // Try fetching from the /prison/all endpoint, but be prepared to handle errors
       const response = await axiosInstance.get("/prison/all");
       console.log("Prison API response:", response.data);
       
-      if (response.data) {
+      if (response.data && (response.data.success || Array.isArray(response.data) || response.data.data)) {
         let prisonsList = [];
         
         // Handle different API response structures
@@ -85,53 +85,66 @@ const TransferRequests = () => {
         }
       }
       
-      // If we reach here, there was a problem with the response
+      // If we reach here without returning, fall through to the catch block
       throw new Error("Invalid prison data structure");
     } catch (error) {
       console.error("Error fetching prisons:", error);
+      
       // Try fallback method - extract from transfers
+      // Only attempt this if we have transfers loaded
+      if (transfers.length > 0) {
       const uniquePrisons = extractPrisonsFromTransfers();
       if (uniquePrisons.length > 0) {
         console.log("Successfully extracted prisons from transfers:", uniquePrisons);
         setPrisons(uniquePrisons);
-      } else {
-        toast.error("Failed to fetch prisons list - using fallback data");
+          return;
+        }
+      }
+      
+      // If we still don't have prisons, create a minimal fallback
+      toast.info("Using built-in prison data");
         // Create some realistic fallback prison data
         const fallbackPrisons = [
-          { _id: "prison_1", name: "Central Prison" },
-          { _id: "prison_2", name: "North Prison" },
-          { _id: "prison_3", name: "South Prison" },
-          { _id: "prison_4", name: "East Prison" },
-          { _id: "prison_5", name: "West Prison" }
+        { _id: "wolkite_main_prison", name: "Wolkite Main Prison" },
+        { _id: "gubre_police", name: "Gubre Police" },
+        { _id: "wolkite_police", name: "Wolkite Police" }
         ];
         setPrisons(fallbackPrisons);
-      }
     }
   };
   
   // Extract unique prisons from transfer data as a fallback
-  const extractPrisonsFromTransfers = () => {
+  const extractPrisonsFromTransfers = (transfersData = transfers) => {
     const uniquePrisons = new Map();
     
-    transfers.forEach(transfer => {
-      // Handle various formats of fromPrison and toPrison
-      if (transfer.fromPrison) {
-        let prisonId = transfer.fromPrisonId || transfer.fromPrison;
-        let prisonName = typeof transfer.fromPrison === 'string' ? transfer.fromPrison : 'Unknown Prison';
-        
-        uniquePrisons.set(prisonId, {
-          _id: prisonId,
-          name: prisonName
+    transfersData.forEach(transfer => {
+      // Extract from display names first
+      if (transfer.fromPrisonRaw) {
+        uniquePrisons.set(transfer.fromPrisonRaw, {
+          _id: transfer.fromPrisonId || transfer.fromPrisonRaw,
+          name: transfer.fromPrisonRaw
         });
       }
       
-      if (transfer.toPrison) {
-        let prisonId = transfer.toPrisonId || transfer.toPrison;
-        let prisonName = typeof transfer.toPrison === 'string' ? transfer.toPrison : 'Unknown Prison';
-        
-        uniquePrisons.set(prisonId, {
-          _id: prisonId,
-          name: prisonName
+      if (transfer.toPrisonRaw) {
+        uniquePrisons.set(transfer.toPrisonRaw, {
+          _id: transfer.toPrisonId || transfer.toPrisonRaw,
+          name: transfer.toPrisonRaw
+        });
+      }
+      
+      // Then try request details if available
+      if (transfer.requestDetails?.fromPrisonName) {
+        uniquePrisons.set(transfer.requestDetails.fromPrisonName, {
+          _id: transfer.fromPrisonId || transfer.requestDetails.fromPrisonName,
+          name: transfer.requestDetails.fromPrisonName
+        });
+      }
+      
+      if (transfer.requestDetails?.toPrisonName) {
+        uniquePrisons.set(transfer.requestDetails.toPrisonName, {
+          _id: transfer.toPrisonId || transfer.requestDetails.toPrisonName,
+          name: transfer.requestDetails.toPrisonName
         });
       }
     });
@@ -145,34 +158,138 @@ const TransferRequests = () => {
       const response = await axiosInstance.get("/transfer/getall-transfers");
       console.log("Fetched transfers:", response.data);
       
-      // Process the transfers to ensure we have both prison IDs and names
+      // Fetch prisons first to ensure we have the prison data for lookup
+      try {
+        const prisonsResponse = await axiosInstance.get("/prison/getall-prisons");
+        if (prisonsResponse.data?.success && Array.isArray(prisonsResponse.data.prisons)) {
+          // Create a more comprehensive prison map for lookups
+          const prisonMap = {};
+          prisonsResponse.data.prisons.forEach(prison => {
+            prisonMap[prison._id] = prison.prison_name || prison.name;
+          });
+          console.log("Built prison map:", prisonMap);
+          
+          // Process the transfers using the prison map
       const processedTransfers = response.data.data.map(transfer => {
         // Get prison data, handling various possible formats
         const fromPrisonId = transfer.fromPrison || "";
         const toPrisonId = transfer.toPrison || "";
         
-        // Make sure we're properly storing the ID strings
+            // Look up prison names from map, fallback to other sources
+            let fromPrisonName = prisonMap[fromPrisonId] || 
+                                transfer.fromPrisonName || 
+                                transfer.requestDetails?.fromPrisonName || 
+                                "";
+                                
+            let toPrisonName = prisonMap[toPrisonId] || 
+                              transfer.toPrisonName || 
+                              transfer.requestDetails?.toPrisonName || 
+                              "";
+            
+            // If we still don't have names, check if the "prison" might actually be a name
+            if (!fromPrisonName && typeof fromPrisonId === 'string' && !fromPrisonId.match(/^[0-9a-fA-F]{24}$/)) {
+              fromPrisonName = fromPrisonId;
+            }
+            
+            if (!toPrisonName && typeof toPrisonId === 'string' && !toPrisonId.match(/^[0-9a-fA-F]{24}$/)) {
+              toPrisonName = toPrisonId;
+            }
+            
+            // For MongoDB IDs that we couldn't resolve, use fallback prison names
+            if (!fromPrisonName && fromPrisonId.match(/^[0-9a-fA-F]{24}$/)) {
+              fromPrisonName = "Unknown Prison";
+            }
+            
+            if (!toPrisonName && toPrisonId.match(/^[0-9a-fA-F]{24}$/)) {
+              toPrisonName = "Unknown Prison";
+            }
+            
+            console.log(`Processed prison data for transfer ${transfer._id}:`, {
+              fromPrisonId,
+              toPrisonId,
+              fromPrisonName,
+              toPrisonName
+            });
+            
+            return {
+              ...transfer,
+              // Store both the ID and name for reliable filtering
+              fromPrisonId: String(fromPrisonId),
+              toPrisonId: String(toPrisonId),
+              // Store the resolved prison names
+              fromPrison: fromPrisonName,
+              toPrison: toPrisonName,
+              transferDate: transfer.transferDate ? new Date(transfer.transferDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+              createdAt: transfer.createdAt ? new Date(transfer.createdAt).toISOString().split('T')[0] : null,
+              status: String(transfer.status || "pending").toLowerCase()
+            };
+          });
+          
+          console.log("Processed transfers with prison map:", processedTransfers);
+          setTransfers(processedTransfers);
+          
+          // Update prison list from the fetched data
+          const formattedPrisons = prisonsResponse.data.prisons.map(prison => ({
+            _id: prison._id,
+            name: prison.prison_name || prison.name
+          }));
+          setPrisons(formattedPrisons);
+          
+          return;
+        }
+      } catch (prisonError) {
+        console.error("Error fetching prisons for name resolution:", prisonError);
+      }
+      
+      // If we get here, the prison API lookup failed, so fall back to the old method
+      const processedTransfers = response.data.data.map(transfer => {
+        // Get prison data, handling various possible formats
+        const fromPrisonId = transfer.fromPrison || "";
+        const toPrisonId = transfer.toPrison || "";
+        
+        // Extract names from original data
+        let fromPrisonName = transfer.fromPrisonName || transfer.requestDetails?.fromPrisonName || "";
+        let toPrisonName = transfer.toPrisonName || transfer.requestDetails?.toPrisonName || "";
+        
+        // If we have IDs that look like MongoDB ObjectIDs but no names, try to use names from existing prison list
+        if (fromPrisonId.match(/^[0-9a-fA-F]{24}$/) && !fromPrisonName) {
+          const prison = prisons.find(p => p._id === fromPrisonId);
+          if (prison) {
+            fromPrisonName = prison.name;
+          } else {
+            fromPrisonName = "Unknown Prison";
+          }
+        } else if (!fromPrisonName && typeof fromPrisonId === 'string') {
+          // If not a MongoDB ID and no name, use the ID as the name
+          fromPrisonName = fromPrisonId;
+        }
+        
+        if (toPrisonId.match(/^[0-9a-fA-F]{24}$/) && !toPrisonName) {
+          const prison = prisons.find(p => p._id === toPrisonId);
+          if (prison) {
+            toPrisonName = prison.name;
+          } else {
+            toPrisonName = "Unknown Prison";
+          }
+        } else if (!toPrisonName && typeof toPrisonId === 'string') {
+          // If not a MongoDB ID and no name, use the ID as the name
+          toPrisonName = toPrisonId;
+        }
+        
         console.log(`Raw prison data for transfer ${transfer._id}:`, {
           fromPrison: transfer.fromPrison,
           toPrison: transfer.toPrison,
-          fromId: fromPrisonId,
-          toId: toPrisonId
+          fromPrisonName,
+          toPrisonName,
+          requestDetails: transfer.requestDetails
         });
-        
-        // Find prison names from our prisons list or use the ID as fallback
-        const fromPrisonObj = prisons.find(p => p._id === fromPrisonId);
-        const toPrisonObj = prisons.find(p => p._id === toPrisonId);
-        
-        const fromPrisonName = fromPrisonObj?.name || fromPrisonId;
-        const toPrisonName = toPrisonObj?.name || toPrisonId;
-        
-        console.log(`Processing transfer: From ${fromPrisonName} (${fromPrisonId}) to ${toPrisonName} (${toPrisonId})`);
         
         return {
           ...transfer,
           // Store both the ID and name for reliable filtering
-          fromPrisonId: String(fromPrisonId), // Convert to string to ensure consistent comparison
-          toPrisonId: String(toPrisonId),     // Convert to string to ensure consistent comparison
+          fromPrisonId: String(fromPrisonId),
+          toPrisonId: String(toPrisonId),
+          // Store the resolved prison names
           fromPrison: fromPrisonName,
           toPrison: toPrisonName,
           transferDate: transfer.transferDate ? new Date(transfer.transferDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
@@ -181,8 +298,16 @@ const TransferRequests = () => {
         };
       });
       
-      console.log("Processed transfers:", processedTransfers);
+      console.log("Processed transfers (fallback method):", processedTransfers);
       setTransfers(processedTransfers);
+      
+      // After loading transfers, if we have no prisons yet, try to extract them from the transfers
+      if (prisons.length === 0) {
+        const extractedPrisons = extractPrisonsFromTransfers(processedTransfers);
+        if (extractedPrisons.length > 0) {
+          setPrisons(extractedPrisons);
+        }
+      }
     } catch (error) {
       console.error("Error fetching transfers:", error);
       toast.error("Failed to fetch transfer requests");
@@ -273,8 +398,14 @@ const TransferRequests = () => {
 
   // Helper function to get prison name from ID
   const getPrisonName = (prisonId) => {
-    const prison = prisons.find(p => p._id === prisonId);
-    return prison ? prison.prison_name : "Unknown Prison";
+    // If prisonId is already a name (string), return it directly
+    if (typeof prisonId === 'string' && !prisonId.match(/^[0-9a-fA-F]{24}$/)) {
+      return prisonId;
+    }
+    
+    // Otherwise, try to find the prison name from the prisons array
+    const prison = prisons.find(p => String(p._id) === String(prisonId));
+    return prison ? (prison.name || prison.prisonName || "Unknown Prison") : prisonId;
   };
 
   // Sort function for transfer data
@@ -308,35 +439,47 @@ const TransferRequests = () => {
     },
     {
       name: "Inmate Name",
-      selector: (row) => `${row.inmateData?.firstName || ""} ${row.inmateData?.middleName || ""} ${row.inmateData?.lastName || ""}`,
+      selector: (row) => {
+        const firstName = row.inmateData?.firstName || "";
+        const middleName = row.inmateData?.middleName || "";
+        const lastName = row.inmateData?.lastName || "";
+        return `${firstName} ${middleName} ${lastName}`.trim() || "Unknown Inmate";
+      },
       sortable: true,
       grow: 2,
-      cell: (row) => (
+      cell: (row) => {
+        const firstName = row.inmateData?.firstName || "";
+        const middleName = row.inmateData?.middleName || "";
+        const lastName = row.inmateData?.lastName || "";
+        const fullName = `${firstName} ${middleName} ${lastName}`.trim() || "Unknown Inmate";
+        
+        return (
         <div className="text-sm text-gray-900 font-medium">
-          {row.inmateData ? (
-            `${row.inmateData.firstName || ""} ${row.inmateData.middleName || ""} ${row.inmateData.lastName || ""}`
-          ) : (
-            "Unknown Inmate"
-          )}
+            {fullName}
+        </div>
+        );
+      },
+    },
+    {
+      name: "From Prison",
+      selector: (row) => row.fromPrison || "Unknown",
+      sortable: true,
+      grow: 1,
+      cell: (row) => (
+        <div className="text-sm text-gray-900">
+          {row.fromPrison || "Unknown Prison"}
         </div>
       ),
     },
     {
-      name: "From Prison",
-      selector: (row) => row.fromPrison,
-      sortable: true,
-      grow: 1,
-      cell: (row) => (
-        <div className="text-sm text-gray-900">{row.fromPrison}</div>
-      ),
-    },
-    {
       name: "To Prison",
-      selector: (row) => row.toPrison,
+      selector: (row) => row.toPrison || "Unknown",
       sortable: true,
       grow: 1,
       cell: (row) => (
-        <div className="text-sm text-gray-900">{row.toPrison}</div>
+        <div className="text-sm text-gray-900">
+          {row.toPrison || "Unknown Prison"}
+        </div>
       ),
     },
     {
@@ -601,37 +744,79 @@ const TransferRequests = () => {
           <title>Transfer Request Details</title>
           <style>
             body { font-family: Arial, sans-serif; padding: 20px; }
-            .header { text-align: center; margin-bottom: 20px; }
-            .section { margin-bottom: 15px; }
-            .label { font-weight: bold; }
+            .header { text-align: center; margin-bottom: 30px; border-bottom: 2px solid #1e40af; padding-bottom: 10px; }
+            .section { margin-bottom: 25px; background-color: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; }
+            .section-title { font-weight: bold; margin-bottom: 10px; color: #1e40af; border-bottom: 1px solid #ddd; padding-bottom: 5px; }
+            .label { font-weight: bold; color: #4b5563; }
+            .value { margin-bottom: 8px; }
+            .flex-container { display: flex; justify-content: space-between; flex-wrap: wrap; }
+            .col { flex: 1; min-width: 250px; margin-right: 15px; }
+            .status { display: inline-block; padding: 6px 12px; border-radius: 9999px; font-weight: 500; }
+            .status-pending { background-color: #dbeafe; color: #1e40af; }
+            .status-approved { background-color: #dcfce7; color: #166534; }
+            .status-rejected { background-color: #fee2e2; color: #b91c1c; }
+            .status-in_review { background-color: #fef3c7; color: #92400e; }
+            .status-cancelled { background-color: #f3f4f6; color: #4b5563; }
+            .reason-box { background-color: #fff; padding: 10px; border-radius: 5px; border: 1px solid #e5e7eb; }
+            @media print { body { -webkit-print-color-adjust: exact; color-adjust: exact; } }
           </style>
         </head>
         <body>
           <div class="header">
             <h1>Transfer Request Details</h1>
+            <p>Generated on ${new Date().toLocaleString()}</p>
           </div>
+          
+          <div class="flex-container">
+            <div class="col">
           <div class="section">
-            <div class="label">Inmate Information:</div>
-            <div>Name: ${transfer.inmateData?.firstName} ${transfer.inmateData?.middleName} ${transfer.inmateData?.lastName}</div>
-            <div>ID: ${transfer.inmateData?.inmateId}</div>
+                <div class="section-title">Inmate Information</div>
+                <div class="value"><span class="label">Name:</span> ${transfer.inmateData?.firstName || ''} ${transfer.inmateData?.middleName || ''} ${transfer.inmateData?.lastName || ''}</div>
+                <div class="value"><span class="label">ID:</span> ${transfer.inmateData?.inmateId || transfer.inmateData?.id || transfer.inmateData?._id || 'N/A'}</div>
+                <div class="value"><span class="label">Gender:</span> ${transfer.inmateData?.gender || 'N/A'}</div>
+                ${transfer.inmateData?.dateOfBirth ? `<div class="value"><span class="label">Date of Birth:</span> ${new Date(transfer.inmateData.dateOfBirth).toLocaleDateString()}</div>` : ''}
+                ${transfer.inmateData?.age ? `<div class="value"><span class="label">Age:</span> ${transfer.inmateData.age} years</div>` : ''}
+                ${transfer.inmateData?.crimeType ? `<div class="value"><span class="label">Crime Type:</span> ${transfer.inmateData.crimeType || transfer.inmateData.caseType || transfer.inmateData.crime || 'Not specified'}</div>` : ''}
           </div>
+            </div>
+            
+            <div class="col">
           <div class="section">
-            <div class="label">Transfer Details:</div>
-            <div>From: ${transfer.fromPrison}</div>
-            <div>To: ${transfer.toPrison}</div>
-            <div>Date: ${transfer.transferDate ? new Date(transfer.transferDate).toLocaleDateString() : 'Not set'}</div>
-            <div>Status: ${transfer.status}</div>
-            ${transfer.rejectionReason ? `<div>Rejection Reason: ${transfer.rejectionReason}</div>` : ''}
+                <div class="section-title">Transfer Details</div>
+                <div class="value"><span class="label">From Prison:</span> ${transfer.fromPrison || 'N/A'}</div>
+                <div class="value"><span class="label">To Prison:</span> ${transfer.toPrison || 'N/A'}</div>
+                <div class="value"><span class="label">Transfer Date:</span> ${transfer.transferDate ? new Date(transfer.transferDate).toLocaleDateString() : 'Not set'}</div>
+                <div class="value"><span class="label">Request Date:</span> ${transfer.createdAt ? new Date(transfer.createdAt).toLocaleDateString() : 'Not available'}</div>
+                <div class="value">
+                  <span class="label">Status:</span> 
+                  <span class="status status-${transfer.status}">${transfer.status.charAt(0).toUpperCase() + transfer.status.slice(1)}</span>
           </div>
+              </div>
+            </div>
+          </div>
+          
           <div class="section">
-            <div class="label">Reason:</div>
-            <div>${transfer.reason}</div>
+            <div class="section-title">Transfer Reason</div>
+            <div class="reason-box">${transfer.reason || 'No reason provided'}</div>
           </div>
+          
+          ${transfer.rejectionReason ? `
+            <div class="section" style="background-color: #fee2e2; border-color: #fca5a5;">
+              <div class="section-title" style="color: #b91c1c;">Rejection Reason</div>
+              <div class="reason-box" style="border-color: #fca5a5;">${transfer.rejectionReason}</div>
+            </div>
+          ` : ''}
+          
+          <script>
+            // Auto-print when the page loads
+            window.onload = function() {
+              window.print();
+            };
+          </script>
         </body>
       </html>
     `);
     printWindow.document.close();
-    printWindow.print();
   };
 
   const renderStatusButtons = (transfer) => {
@@ -1163,7 +1348,7 @@ const TransferRequests = () => {
                               year: 'numeric',
                               month: 'long',
                               day: 'numeric'
-                            }) : 'Not specified'}
+                            }) : 'Not available'}
                           </p>
                         </div>
                       </div>
@@ -1202,15 +1387,15 @@ const TransferRequests = () => {
                       </div>
                     </div>
                     
-                    {/* Crime and Sentence Information */}
+                    {/* Crime Information */}
                     <div className="bg-white rounded-xl shadow-sm border p-4 md:col-span-2">
                       <h4 className="text-lg font-semibold mb-4 text-gray-800 flex items-center border-b pb-2">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
                           <path fillRule="evenodd" d="M4 2a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2H4zm0 2h12v12H4V4zm2 3a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm0 4a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm0 4a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1z" clipRule="evenodd" />
                         </svg>
-                        Crime and Sentence Information
+                        Crime Information
                       </h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div className="grid grid-cols-1 gap-4 text-sm">
                         <div>
                           <span className="font-medium text-gray-500 block">Crime Type:</span>
                           <p className="text-gray-800 font-semibold">
@@ -1218,32 +1403,6 @@ const TransferRequests = () => {
                              selectedTransfer.inmateData?.caseType || 
                              selectedTransfer.inmateData?.crime ||
                              'Not specified'}
-                          </p>
-                        </div>
-                        <div>
-                          <span className="font-medium text-gray-500 block">Sentence Start Date:</span>
-                          <p className="text-gray-800">
-                            {(() => {
-                              const startDate = selectedTransfer.inmateData?.sentenceStartDate || 
-                                              selectedTransfer.inmateData?.startDate ||
-                                              selectedTransfer.inmateData?.sentenceStart ||
-                                              selectedTransfer.inmateData?.commencementDate;
-                              
-                              if (!startDate) return 'Not specified';
-                              
-                              try {
-                                const date = new Date(startDate);
-                                if (isNaN(date.getTime())) return 'Invalid date format';
-                                
-                                return date.toLocaleDateString('en-US', {
-                                  year: 'numeric',
-                                  month: 'long',
-                                  day: 'numeric'
-                                });
-                              } catch (e) {
-                                return 'Error parsing date';
-                              }
-                            })()}
                           </p>
                         </div>
                       </div>
