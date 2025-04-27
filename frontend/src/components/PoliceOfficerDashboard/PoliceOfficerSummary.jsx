@@ -128,17 +128,35 @@ const PoliceOfficerSummary = () => {
     { name: "Under Investigation", value: summary.caseSummary.underInvestigation || 0, color: COLORS.underInvestigation },
   ];
 
+  // Background style with police-related image
+  const backgroundStyle = {
+    backgroundImage: "url('https://images.unsplash.com/photo-1596394723269-b2cbca4e6463?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80')",
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+    backgroundAttachment: "fixed",
+    position: "relative",
+  };
+
+  // Content overlay style for better readability
+  const overlayStyle = {
+    backgroundColor: "rgba(255, 255, 255, 0.85)",
+    borderRadius: "0.5rem",
+    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+  };
+
   return (
     <div className="flex">
       {/* Sidebar Spacing Fix */}
       <div className={`transition-all duration-300 ${isCollapsed ? "w-16" : "w-64"}`} />
 
-      {/* Main Content */}
-      <div className="flex-1 relative">
+      {/* Main Content with Background */}
+      <div className="flex-1 relative" style={backgroundStyle}>
+        {/* Semi-transparent overlay for entire content area */}
+        <div className="absolute inset-0 bg-white bg-opacity-20"></div>
         
         {/* Fixed Header */}
         <div
-          className={`bg-white shadow-md p-4 fixed top-12 z-20 flex justify-between items-center transition-all duration-300 ml-2 ${isCollapsed ? "left-16 w-[calc(100%-5rem)]" : "left-64 w-[calc(100%-17rem)]"}`}
+          className={`bg-white bg-opacity-90 shadow-md p-4 fixed top-12 z-20 flex justify-between items-center transition-all duration-300 ml-2 ${isCollapsed ? "left-16 w-[calc(100%-5rem)]" : "left-64 w-[calc(100%-17rem)]"}`}
           style={{ zIndex: 20 }}
         >
           <h3 className="text-2xl font-bold text-gray-800 text-center">
@@ -147,9 +165,9 @@ const PoliceOfficerSummary = () => {
         </div>
 
         {/* Push content down to prevent overlap */}
-        <div className="p-6 mt-20"> {/* Adjusted margin top to avoid overlap with the header */}
+        <div className="p-6 mt-20 relative z-10"> {/* Adjusted margin top to avoid overlap with the header */}
           {/* Notice Widget */}
-          <div className="mb-6">
+          <div className="mb-6" style={overlayStyle}>
             <NoticeWidget 
               maxNotices={3}
               variant="card"
@@ -168,7 +186,7 @@ const PoliceOfficerSummary = () => {
           </div>
 
           {/* Pie Chart Summary with Responsive Legend */}
-          <div className="mt-12 p-6 bg-white rounded-lg shadow-md flex flex-col items-center">
+          <div className="mt-12 p-6 bg-white bg-opacity-90 rounded-lg shadow-md flex flex-col items-center" style={overlayStyle}>
             <h4 className="text-xl font-semibold text-gray-800 text-center mb-6">
               Case Status Breakdown
             </h4>
