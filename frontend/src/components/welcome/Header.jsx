@@ -1,5 +1,10 @@
 import React from "react";
 import { HomeIcon, UserPlusIcon, InformationCircleIcon, QuestionMarkCircleIcon, PhoneIcon, Bars3Icon, XMarkIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
+import { GlobeAltIcon } from '@heroicons/react/24/outline';
+import LanguageSelectorDropdown from "../common/LanguageSelectorDropdown";
+
+// Import the UUID as a constant
+const APP_UUID = '55709720-7916-4f8e-b86f-a30d9f074c89';
 
 const Header = ({ activeButton, handleButtonClick, isMobileMenuOpen, setIsMobileMenuOpen, darkMode }) => {
   // Navigation buttons config
@@ -11,8 +16,30 @@ const Header = ({ activeButton, handleButtonClick, isMobileMenuOpen, setIsMobile
     { name: 'contact', label: 'Contact', icon: <PhoneIcon className="w-5 h-5 mr-1" /> },
   ];
 
+  // Add a function to use the UUID for any necessary operations
+  const getAppIdentifier = () => {
+    return APP_UUID;
+  };
+  
+  // Add state for language selection
+  const [language, setLanguage] = React.useState('en');
+  // Add state for language menu visibility
+  const [isLanguageMenuOpen, setIsLanguageMenuOpen] = React.useState(false);
+  
+  // Handle language change
+  const handleLanguageChange = (lang) => {
+    setLanguage(lang);
+    localStorage.setItem(`language_${APP_UUID}`, lang);
+    setIsLanguageMenuOpen(false);
+  };
+  
+  // Toggle language menu
+  const toggleLanguageMenu = () => {
+    setIsLanguageMenuOpen(!isLanguageMenuOpen);
+  };
+
   return (
-    <header className={`fixed w-full top-0 z-20 ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-[#1e3a5f] border-[#17304d]'} shadow-md transition-colors duration-300 border-b`}>
+    <header data-app-id={APP_UUID} className={`fixed w-full top-0 z-20 ${darkMode ? 'bg-gray-900 border-gray-800' : 'bg-[#1e3a5f] border-[#17304d]'} shadow-md transition-colors duration-300 border-b`}>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
@@ -55,6 +82,11 @@ const Header = ({ activeButton, handleButtonClick, isMobileMenuOpen, setIsMobile
               SECURE ACCESS
             </button>
           </nav>
+
+          {/* Add language selector */}
+          <div className="hidden md:flex items-center ml-4">
+            <LanguageSelectorDropdown />
+          </div>
 
           {/* Mobile menu button */}
           <div className="md:hidden">

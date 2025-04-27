@@ -84,7 +84,8 @@ const UpdateInmate = ({setOpen, _id}) => {
     startDate: "",
     sentenceYear: "",
     releaseReason: "",
-    releasedDate: ""
+    releasedDate: "",
+    lifeImprisonment: false
   });
 
   // Add validation state
@@ -173,7 +174,8 @@ const UpdateInmate = ({setOpen, _id}) => {
           // Ensure other potential undefined fields are initialized
           age: inmateData.age || calculateAge(formattedBirthDate) || "",
           motherName: inmateData.motherName || "",
-          phoneNumber: inmateData.phoneNumber || ""
+          phoneNumber: inmateData.phoneNumber || "",
+          lifeImprisonment: inmateData.lifeImprisonment || false
         };
         
         console.log("Updated form data:", updatedFormData);
@@ -463,6 +465,23 @@ const UpdateInmate = ({setOpen, _id}) => {
       );
     }
     return null;
+  };
+
+  const validateField = (name, value) => {
+    let error = "";
+
+    if (value === "") {
+      if (name === "firstName" || name === "lastName" || name === "gender" || 
+          name === "dateOfBirth" || name === "nationality" || name === "caseType" || 
+          name === "sentenceYear" || name === "incarcerationDate" || name === "guiltyStatus") {
+        error = "This field is required";
+      }
+    } else {
+      // ... existing code ...
+    }
+
+    setErrors((prevErrors) => ({ ...prevErrors, [name]: error }));
+    return error === "";
   };
 
   return (
@@ -1260,6 +1279,35 @@ const UpdateInmate = ({setOpen, _id}) => {
                 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Guilty Status <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="guiltyStatus"
+                    value={formData.guiltyStatus || ""}
+                    onChange={(e) => {
+                      const newValue = e.target.value;
+                      setFormData(prev => ({
+                        ...prev,
+                        guiltyStatus: newValue,
+                        // Reset sentence year if not guilty
+                        sentenceYear: newValue === "not_guilty" ? "0" : prev.sentenceYear,
+                        // Disable life imprisonment if not guilty
+                        lifeImprisonment: newValue === "not_guilty" ? false : prev.lifeImprisonment
+                      }));
+                    }}
+                    onBlur={handleBlur}
+                    className={`w-full px-4 py-2 border ${errors.guiltyStatus ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                    required
+                  >
+                    <option value="">Select Guilty Status</option>
+                    <option value="guilty">Guilty</option>
+                    <option value="not_guilty">Not Guilty</option>
+                  </select>
+                  {renderError('guiltyStatus')}
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Start Date <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -1278,18 +1326,42 @@ const UpdateInmate = ({setOpen, _id}) => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Sentence (Years) <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="number"
-                    name="sentenceYear"
-                    value={formData.sentenceYear}
-                    placeholder="Enter sentence duration in years"
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    className={`w-full px-4 py-2 border ${errors.sentenceYear ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                    required
-                    step="0.1"
-                  />
+                  <div className="flex items-center">
+                    <input
+                      type={formData.lifeImprisonment ? "text" : "number"}
+                      name="sentenceYear"
+                      value={formData.lifeImprisonment ? "Life" : formData.sentenceYear}
+                      placeholder="Enter sentence duration in years"
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      className={`w-full px-4 py-2 border ${errors.sentenceYear ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${formData.lifeImprisonment ? 'bg-gray-100' : ''}`}
+                      required
+                      step="0.1"
+                      disabled={formData.lifeImprisonment}
+                    />
+                  </div>
                   {renderError('sentenceYear')}
+                </div>
+                
+                <div className="flex items-center space-x-2 mt-2">
+                  <input
+                    type="checkbox"
+                    id="lifeImprisonment"
+                    name="lifeImprisonment"
+                    checked={formData.lifeImprisonment}
+                    onChange={(e) => {
+                      const isChecked = e.target.checked;
+                      setFormData(prev => ({
+                        ...prev,
+                        lifeImprisonment: isChecked,
+                        sentenceYear: isChecked ? "Life" : "",
+                      }));
+                    }}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="lifeImprisonment" className="text-sm font-medium text-gray-700">
+                    Life Imprisonment
+                  </label>
                 </div>
                 
                 <div>
@@ -1340,45 +1412,6 @@ const UpdateInmate = ({setOpen, _id}) => {
               </div>
             </div>
           )}
-        </div>
-
-        {/* Signature Upload */}
-        <div className="bg-gray-50 p-6 rounded-lg">
-          <h3 className="text-2xl font-semibold mb-6 text-gray-800 border-b pb-2">Signature</h3>
-          <div className="flex items-center space-x-6">
-            <div className="shrink-0">
-              {signature ? (
-                <img className="h-16 w-32 object-contain border border-gray-300 p-1" 
-                     src={URL.createObjectURL(signature)} 
-                     alt="Signature preview" />
-              ) : (
-                formData.signatureUrl ? (
-                  <img className="h-16 w-32 object-contain border border-gray-300 p-1" 
-                       src={formData.signatureUrl} 
-                       alt="Current signature" />
-                ) : (
-                  <div className="h-16 w-32 bg-gray-100 border border-gray-300 p-1 flex items-center justify-center">
-                    <span className="text-gray-400 text-sm">No signature</span>
-                  </div>
-                )
-              )}
-            </div>
-            <label className="block">
-              <span className="sr-only">Choose signature</span>
-              <input 
-                type="file" 
-                name="signature"
-                onChange={handleChange}
-                className="block w-full text-sm text-gray-500
-                  file:mr-4 file:py-2 file:px-4
-                  file:rounded-full file:border-0
-                  file:text-sm file:font-semibold
-                  file:bg-blue-50 file:text-blue-700
-                  hover:file:bg-blue-100"
-              />
-              <p className="mt-1 text-xs text-gray-500">Upload a scanned image of the inmate's signature</p>
-            </label>
-          </div>
         </div>
 
         {/* Form Actions */}

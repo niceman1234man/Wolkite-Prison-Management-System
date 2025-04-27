@@ -104,6 +104,18 @@ const InspectorSidebar = () => {
           </NavLink>
           
           <NavLink
+            to="/inspector-dashboard/parole-committee"
+            className={({ isActive }) =>
+              `flex items-center p-2 rounded-lg hover:bg-teal-600 transition-colors ${
+                isActive ? "bg-teal-600" : ""
+              } ${isCollapsed ? "justify-center" : "justify-start"}`
+            }
+          >
+            <FaUsers className="h-6 w-6" />
+            {!isCollapsed && <span className="ml-3">Parole Committee</span>}
+          </NavLink>
+          
+          <NavLink
             to="/inspector-dashboard/homepage-settings"
             className={({ isActive }) =>
               `flex items-center p-2 rounded-lg hover:bg-teal-600 transition-colors ${

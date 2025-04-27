@@ -70,7 +70,7 @@ const UpdateProfile = () => {
                 />
               ) : user?.photo ? (
                 <img
-                  src={`http://localhost:5000/uploads/${user.photo}`}
+                  src={`http://localhost:5001/uploads/${user.photo}`}
                   alt="Current profile"
                   className="w-full h-full object-cover"
                 />

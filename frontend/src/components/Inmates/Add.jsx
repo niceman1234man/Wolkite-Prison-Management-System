@@ -65,12 +65,16 @@ const AddInmate = ({setOpen}) => {
     registrarWorkerName: initialData.registrarWorkerName || "",
     caseType: initialData.caseType || "",
     startDate: initialData.startDate || "",
-    sentenceYear: initialData.sentenceYear || "",
+    sentenceYear: initialData.sentenceYear || "0",
     sentenceReason: initialData.sentenceReason || "",
     releasedDate: initialData.releasedDate || "",
     paroleDate: initialData.paroleDate || "",
     durationToParole: initialData.durationToParole || "",
-    durationFromParoleToEnd: initialData.durationFromParoleToEnd || ""
+    durationFromParoleToEnd: initialData.durationFromParoleToEnd || "",
+    status: initialData.status || "active",
+    paroleEligibility: initialData.paroleEligibility || "",
+    guiltyStatus: initialData.guiltyStatus || "",
+    lifeImprisonment: initialData.lifeImprisonment || false
   });
 
   const [activeSection, setActiveSection] = useState("personal");
@@ -111,53 +115,94 @@ const AddInmate = ({setOpen}) => {
 
   // Function to calculate parole date
   const calculateParoleDate = (startDate, sentenceYear) => {
-    if (!startDate || !sentenceYear) return null;
+    // Return null for special cases
+    if (!startDate || !sentenceYear || sentenceYear === 'Life') return null;
     
-    const start = new Date(startDate);
-    const twoThirdsYears = (parseFloat(sentenceYear) * 2) / 3;
-    
-    // Split the two-thirds years into full years and months
-    const fullYears = Math.floor(twoThirdsYears);
-    const fractionalYear = twoThirdsYears - fullYears;
-    const months = Math.round(fractionalYear * 12);
-    
-    // Add full years and months to the start date
-    start.setFullYear(start.getFullYear() + fullYears);
-    start.setMonth(start.getMonth() + months);
-    
-    return start.toISOString().split('T')[0];
+    try {
+      const start = new Date(startDate);
+      const twoThirdsYears = (parseFloat(sentenceYear) * 2) / 3;
+      
+      // Check if date calculations are valid
+      if (isNaN(start.getTime()) || isNaN(twoThirdsYears)) {
+        return null;
+      }
+      
+      // Split the two-thirds years into full years and months
+      const fullYears = Math.floor(twoThirdsYears);
+      const fractionalYear = twoThirdsYears - fullYears;
+      const months = Math.round(fractionalYear * 12);
+      
+      // Add full years and months to the start date
+      start.setFullYear(start.getFullYear() + fullYears);
+      start.setMonth(start.getMonth() + months);
+      
+      return start.toISOString().split('T')[0];
+    } catch (error) {
+      console.error("Error calculating parole date:", error);
+      return null;
+    }
   };
 
   // Function to calculate duration between two dates in years and months
   const calculateDuration = (date1, date2) => {
     if (!date1 || !date2) return null;
     
-    const d1 = new Date(date1);
-    const d2 = new Date(date2);
-    
-    // Calculate years
-    let years = d2.getFullYear() - d1.getFullYear();
-    let months = d2.getMonth() - d1.getMonth();
-    
-    // Adjust for negative months
-    if (months < 0) {
-      years--;
-      months += 12;
+    try {
+      const d1 = new Date(date1);
+      const d2 = new Date(date2);
+      
+      // Validate dates
+      if (isNaN(d1.getTime()) || isNaN(d2.getTime())) {
+        return null;
+      }
+      
+      // Calculate years
+      let years = d2.getFullYear() - d1.getFullYear();
+      let months = d2.getMonth() - d1.getMonth();
+      
+      // Adjust for negative months
+      if (months < 0) {
+        years--;
+        months += 12;
+      }
+      
+      // If months is 0, just return years
+      if (years === 0 && months === 0) {
+        return "Less than a month";
+      } else if (months === 0) {
+        return `${years} year${years !== 1 ? 's' : ''}`;
+      }
+      
+      return `${years} year${years !== 1 ? 's' : ''} and ${months} month${months !== 1 ? 's' : ''}`;
+    } catch (error) {
+      console.error("Error calculating duration:", error);
+      return null;
     }
-    
-    // If months is 0, just return years
-    if (months === 0) {
-      return `${years} year${years !== 1 ? 's' : ''}`;
-    }
-    
-    return `${years} year${years !== 1 ? 's' : ''} and ${months} month${months !== 1 ? 's' : ''}`;
   };
 
   // Calculate parole and release dates when start date or sentence year changes
   useEffect(() => {
-    if (formData.startDate && formData.sentenceYear) {
+    // Skip calculations for life imprisonment or no sentence year
+    if (formData.lifeImprisonment || !formData.startDate || !formData.sentenceYear || formData.sentenceYear === 'Life') {
+      return;
+    }
+    
+    try {
       const startDate = new Date(formData.startDate);
+      
+      // Validate the start date
+      if (isNaN(startDate.getTime())) {
+        console.warn("Invalid start date");
+        return;
+      }
+      
       const sentenceYears = parseFloat(formData.sentenceYear);
+      
+      // Validate the sentence year is a number
+      if (isNaN(sentenceYears)) {
+        console.warn("Invalid sentence year value");
+        return;
+      }
 
       // Calculate parole date (2/3 of sentence)
       const paroleDate = calculateParoleDate(formData.startDate, formData.sentenceYear);
@@ -166,23 +211,72 @@ const AddInmate = ({setOpen}) => {
       const fullYears = Math.floor(sentenceYears);
       const fractionalYear = sentenceYears - fullYears;
       const months = Math.round(fractionalYear * 12);
-      startDate.setFullYear(startDate.getFullYear() + fullYears);
-      startDate.setMonth(startDate.getMonth() + months);
-      const releaseDate = startDate.toISOString().split('T')[0];
-
-      // Calculate durations
-      const durationToParole = calculateDuration(formData.startDate, paroleDate);
-      const durationFromParoleToEnd = calculateDuration(paroleDate, releaseDate);
+      
+      const releaseDate = new Date(startDate);
+      releaseDate.setFullYear(releaseDate.getFullYear() + fullYears);
+      releaseDate.setMonth(releaseDate.getMonth() + months);
+      
+      // Calculate durations only if paroleDate is valid
+      let durationToParole = null;
+      let durationFromParoleToEnd = null;
+      
+      if (paroleDate) {
+        durationToParole = calculateDuration(formData.startDate, paroleDate);
+        durationFromParoleToEnd = calculateDuration(paroleDate, releaseDate.toISOString().split('T')[0]);
+      }
 
       setFormData(prevData => ({
         ...prevData,
-        releasedDate: releaseDate,
+        releasedDate: releaseDate.toISOString().split('T')[0],
         paroleDate: paroleDate,
         durationToParole: durationToParole,
         durationFromParoleToEnd: durationFromParoleToEnd
       }));
+    } catch (error) {
+      console.error("Error calculating dates:", error);
     }
   }, [formData.startDate, formData.sentenceYear]);
+
+  // Handle conditional field behavior based on guilty status and parole eligibility
+  useEffect(() => {
+    // If guilty status is not_guilty, set sentence year to 0 and clear released date
+    if (formData.guiltyStatus === 'not_guilty') {
+      setFormData(prevData => ({
+        ...prevData,
+        sentenceYear: '0',
+        releasedDate: ''
+      }));
+    }
+
+    // If life imprisonment is selected, set release date to empty and disable it
+    if (formData.lifeImprisonment) {
+      setFormData(prevData => ({
+        ...prevData,
+        sentenceYear: 'Life',
+        releasedDate: '',
+        paroleEligibility: 'not_eligible',
+        paroleDate: '',
+        durationToParole: '',
+        durationFromParoleToEnd: ''
+      }));
+    } else if (formData.sentenceYear === 'Life' && !formData.lifeImprisonment) {
+      // If life imprisonment is unchecked but sentenceYear is still 'Life', reset it
+      setFormData(prevData => ({
+        ...prevData,
+        sentenceYear: '0'
+      }));
+    }
+
+    // If parole eligibility is not_eligible, clear parole-related fields
+    if (formData.paroleEligibility === 'not_eligible') {
+      setFormData(prevData => ({
+        ...prevData,
+        paroleDate: '',
+        durationToParole: '',
+        durationFromParoleToEnd: ''
+      }));
+    }
+  }, [formData.guiltyStatus, formData.paroleEligibility, formData.lifeImprisonment]);
 
   // Handle form input changes with validation
   const handleChange = (e) => {
@@ -192,13 +286,16 @@ const AddInmate = ({setOpen}) => {
     } else if (name === "inmatePhoto") {
       setInmatePhoto(files[0]);
     } else {
-      setFormData((prevData) => ({
-        ...prevData,
+      // Update form data first
+      const updatedFormData = {
+        ...formData,
         [name]: value,
-      }));
+      };
       
-      // Validate the field as user types
-      const error = validateInmateField(name, value);
+      setFormData(updatedFormData);
+      
+      // Validate the field using the updated form data
+      const error = validateInmateField(name, value, updatedFormData);
       setErrors(prev => ({
         ...prev,
         [name]: error
@@ -224,8 +321,8 @@ const AddInmate = ({setOpen}) => {
       [name]: true
     }));
     
-    // Validate the field
-    const error = validateInmateField(name, value);
+    // Validate the field with the current form data
+    const error = validateInmateField(name, value, formData);
     setErrors(prev => ({
       ...prev,
       [name]: error
@@ -249,6 +346,7 @@ const AddInmate = ({setOpen}) => {
     
     // If there are errors, prevent submission
     if (Object.keys(formErrors).length > 0) {
+      console.log("Form errors:", formErrors);
       toast.error("Please fix the errors in the form");
       
       // Navigate to the section with the first error
@@ -269,7 +367,8 @@ const AddInmate = ({setOpen}) => {
         contactWereda: "contact", contactKebele: "contact", phoneNumber: "contact",
         
         caseType: "case", startDate: "case", sentenceYear: "case", sentenceReason: "case",
-        releasedDate: "case", paroleDate: "case"
+        releasedDate: "case", paroleDate: "case", guiltyStatus: "case", paroleEligibility: "case",
+        status: "case"
       };
       
       // Switch to the section containing the error
@@ -332,12 +431,16 @@ const AddInmate = ({setOpen}) => {
         phoneNumber: formData.phoneNumber || "",
         caseType: formData.caseType || "",
         startDate: formData.startDate || "",
-        sentenceYear: formData.sentenceYear ? parseFloat(formData.sentenceYear) : 0,
+        sentenceYear: formData.lifeImprisonment ? "Life" : (formData.sentenceYear ? parseFloat(formData.sentenceYear) : 0),
         sentenceReason: formData.sentenceReason || "",
         releasedDate: formData.releasedDate || "",
         paroleDate: formData.paroleDate || "",
         durationToParole: formData.durationToParole || "",
-        durationFromParoleToEnd: formData.durationFromParoleToEnd || ""
+        durationFromParoleToEnd: formData.durationFromParoleToEnd || "",
+        status: formData.status || "active",
+        paroleEligibility: formData.paroleEligibility || "",
+        guiltyStatus: formData.guiltyStatus || "",
+        lifeImprisonment: formData.lifeImprisonment || false
       };
       
       console.log("Submitting inmate data:", inmateData);
@@ -646,28 +749,36 @@ const AddInmate = ({setOpen}) => {
                 </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Nationality</label>
-                <input
-                  type="text"
+                <select
                   name="nationality"
                   value={formData.nationality}
-                  placeholder="Enter nationality"
                   onChange={handleChange}
                   onBlur={handleBlur}
                   className={`w-full px-4 py-2 border ${errors.nationality ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                />
+                >
+                  <option value="">Select nationality</option>
+                  <option value="Ethiopian">Ethiopian</option>
+                  <option value="Other">Other</option>
+                </select>
                 {renderError('nationality')}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Religion</label>
-                <input
-                  type="text"
+                <select
                   name="religion"
                   value={formData.religion}
-                  placeholder="Enter religion"
                   onChange={handleChange}
                   onBlur={handleBlur}
                   className={`w-full px-4 py-2 border ${errors.religion ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                />
+                >
+                  <option value="">Select religion</option>
+                  <option value="Orthodox">Orthodox</option>
+                  <option value="Muslim">Muslim</option>
+                  <option value="Protestant">Protestant</option>
+                  <option value="Catholic">Catholic</option>
+                  <option value="Wakefeta">Wakefeta</option>
+                  <option value="Other">Other</option>
+                </select>
                 {renderError('religion')}
               </div>
               <div>
@@ -900,6 +1011,8 @@ const AddInmate = ({setOpen}) => {
                   placeholder="Enter height"
                   onChange={handleChange}
                   onBlur={handleBlur}
+                  min="0"
+                  step="0.1"
                   className={`w-full px-4 py-2 border ${errors.height ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
                 />
                 {renderError('height')}
@@ -1007,6 +1120,35 @@ const AddInmate = ({setOpen}) => {
                 {renderError('eyeColor')}
               </div>
             </div>
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Special Marks/Symbols</label>
+              <textarea
+                name="specialSymbol"
+                value={formData.specialSymbol}
+                placeholder="Enter any distinguishing marks, scars, tattoos or other identifying features"
+                onChange={handleChange}
+                onBlur={handleBlur}
+                rows="3"
+                className={`w-full px-4 py-2 border ${errors.specialSymbol ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+              />
+              {renderError('specialSymbol')}
+            </div>
+            <div className="flex justify-between mt-6">
+              <button 
+                type="button" 
+                onClick={() => setActiveSection("location")}
+                className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors flex items-center"
+              >
+                <FaMapMarkerAlt className="mr-2" /> Previous
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setActiveSection("contact")}
+                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors flex items-center"
+              >
+                Next <FaPhone className="ml-2" />
+              </button>
+            </div>
           </div>
         )}
 
@@ -1097,6 +1239,22 @@ const AddInmate = ({setOpen}) => {
                 {renderError('phoneNumber')}
               </div>
             </div>
+            <div className="flex justify-between mt-6">
+              <button 
+                type="button" 
+                onClick={() => setActiveSection("physical")}
+                className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors flex items-center"
+              >
+                <FaIdCard className="mr-2" /> Previous
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setActiveSection("case")}
+                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors flex items-center"
+              >
+                Next <FaGavel className="ml-2" />
+              </button>
+            </div>
           </div>
         )}
 
@@ -1110,30 +1268,66 @@ const AddInmate = ({setOpen}) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Case Type</label>
-                <select
+                <input
+                  type="text"
                   name="caseType"
                   value={formData.caseType}
+                  placeholder="Enter case type"
                   onChange={handleChange}
                   onBlur={handleBlur}
                   className={`w-full px-4 py-2 border ${errors.caseType ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
-                >
-                  <option value="">Select case type</option>
-                  <option value="Criminal">Criminal</option>
-                  <option value="Civil">Civil</option>
-                  <option value="Administrative">Administrative</option>
-                </select>
+                />
                 {renderError('caseType')}
               </div>
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Guilty Status</label>
+                <select
+                  name="guiltyStatus"
+                  value={formData.guiltyStatus}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  className={`w-full px-4 py-2 border ${errors.guiltyStatus ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                >
+                  <option value="">Select guilty status</option>
+                  <option value="guilty">Guilty</option>
+                  <option value="not_guilty">Not Guilty</option>
+                </select>
+                {renderError('guiltyStatus')}
+              </div>
+
+              <div className="flex items-center mb-4">
+                <input
+                  type="checkbox"
+                  id="lifeImprisonment"
+                  name="lifeImprisonment"
+                  checked={formData.lifeImprisonment}
+                  onChange={(e) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      lifeImprisonment: e.target.checked
+                    }));
+                  }}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                  disabled={formData.guiltyStatus === 'not_guilty'}
+                />
+                <label htmlFor="lifeImprisonment" className="ml-2 text-sm font-medium text-gray-700">
+                  Life Imprisonment
+                </label>
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Sentence Year</label>
                 <input
-                  type="number"
+                  type="text"
                   name="sentenceYear"
                   value={formData.sentenceYear}
                   placeholder="Enter sentence year"
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  className={`w-full px-4 py-2 border ${errors.sentenceYear ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  min="0"
+                  step="0.1"
+                  className={`w-full px-4 py-2 border ${errors.sentenceYear ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${(formData.guiltyStatus === 'not_guilty' || formData.lifeImprisonment) ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                  disabled={formData.guiltyStatus === 'not_guilty' || formData.lifeImprisonment}
                 />
                 {renderError('sentenceYear')}
               </div>
@@ -1170,9 +1364,25 @@ const AddInmate = ({setOpen}) => {
                   value={formData.releasedDate}
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  className={`w-full px-4 py-2 border ${errors.releasedDate ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  className={`w-full px-4 py-2 border ${errors.releasedDate ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${formData.guiltyStatus === 'not_guilty' || formData.lifeImprisonment ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                  disabled={formData.guiltyStatus === 'not_guilty' || formData.lifeImprisonment}
                 />
                 {renderError('releasedDate')}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Parole Eligibility</label>
+                <select
+                  name="paroleEligibility"
+                  value={formData.paroleEligibility}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  className={`w-full px-4 py-2 border ${errors.paroleEligibility ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                >
+                  <option value="">Select eligibility</option>
+                  <option value="eligible">Eligible</option>
+                  <option value="not_eligible">Not Eligible</option>
+                </select>
+                {renderError('paroleEligibility')}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Parole Date</label>
@@ -1182,7 +1392,8 @@ const AddInmate = ({setOpen}) => {
                   value={formData.paroleDate}
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  className={`w-full px-4 py-2 border ${errors.paroleDate ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  className={`w-full px-4 py-2 border ${errors.paroleDate ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${formData.paroleEligibility === 'not_eligible' ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                  disabled={formData.paroleEligibility === 'not_eligible'}
                 />
                 {renderError('paroleDate')}
               </div>
@@ -1195,7 +1406,8 @@ const AddInmate = ({setOpen}) => {
                   placeholder="Enter duration to parole"
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  className={`w-full px-4 py-2 border ${errors.durationToParole ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  className={`w-full px-4 py-2 border ${errors.durationToParole ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${formData.paroleEligibility === 'not_eligible' ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                  disabled={formData.paroleEligibility === 'not_eligible'}
                 />
                 {renderError('durationToParole')}
               </div>
@@ -1208,10 +1420,35 @@ const AddInmate = ({setOpen}) => {
                   placeholder="Enter duration from parole to end"
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  className={`w-full px-4 py-2 border ${errors.durationFromParoleToEnd ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                  className={`w-full px-4 py-2 border ${errors.durationFromParoleToEnd ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${formData.paroleEligibility === 'not_eligible' ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                  disabled={formData.paroleEligibility === 'not_eligible'}
                 />
                 {renderError('durationFromParoleToEnd')}
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  className={`w-full px-4 py-2 border ${errors.status ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors`}
+                >
+                  <option value="">Select status</option>
+                  <option value="active">Active</option>
+                  <option value="released">Released</option>
+                </select>
+                {renderError('status')}
+              </div>
+            </div>
+            <div className="flex justify-between mt-6">
+              <button 
+                type="button" 
+                onClick={() => setActiveSection("contact")}
+                className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors flex items-center"
+              >
+                <FaPhone className="mr-2" /> Previous
+              </button>
             </div>
           </div>
         )}
