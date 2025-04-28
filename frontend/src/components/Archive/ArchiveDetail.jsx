@@ -309,6 +309,8 @@ const ArchiveDetail = () => {
     
     if (role === 'police-officer') {
       navigate('/policeOfficer-dashboard/archive');
+    }  else if (role === 'admin') {
+      navigate('/admin-dashboard/archive');
     } else {
       navigate('/archive');
     }

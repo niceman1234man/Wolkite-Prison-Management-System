@@ -50,7 +50,7 @@ const ArchivePage = () => {
         </div>
 
         {/* Content Area with top padding to account for header */}
-        <div className="pt-24 px-6 pb-6 overflow-auto flex-1">
+        <div className="pt-24 px-6 pb-6 overflow-auto flex-1 mt-10">
           {selectedArchiveId ? (
             <ArchiveDetail 
               archiveId={selectedArchiveId} 
