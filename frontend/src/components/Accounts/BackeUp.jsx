@@ -22,8 +22,6 @@ const BackeUp = () => {
     time: '02:00',
     keepBackups: 7
   });
-
-  // Fetch backup history from backend
   useEffect(() => {
     fetchBackupHistory();
   }, []);
@@ -60,7 +58,6 @@ const BackeUp = () => {
       
       if (response.data.success) {
         toast.success(`${backupMode === 'full' ? 'Full' : 'Incremental'} backup completed successfully!`);
-        // Refresh the backup history
         fetchBackupHistory();
       } else {
         throw new Error(response.data.message || "Unknown error occurred");
@@ -100,16 +97,12 @@ const BackeUp = () => {
 
   const handleDownload = async (backupId) => {
     try {
-      // Create a link to download the backup file
       const response = await axiosInstance.get(`/backup/download/${backupId}`, {
         responseType: 'blob'
       });
-      
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      
-      // Get backup info for naming
       const backup = backupHistory.find(b => b._id === backupId);
       const fileName = backup ? 
         `prison_backup_${backup.type}_${new Date(backup.createdAt).toISOString().split('T')[0]}.zip` : 
