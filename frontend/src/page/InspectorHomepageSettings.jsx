@@ -21,17 +21,31 @@ const InspectorHomepageSettings = () => {
     try {
       setIsLoading(true);
       const response = await axiosInstance.get("/managemessages/get-messages");
-      if (response.data && response.data.messages) {
-        const messagesWithFullUrls = response.data.messages.map(msg => ({
-          ...msg,
-          image: msg.image ? `${import.meta.env.VITE_API_URL}${msg.image}` : null
-        }));
+      if (response.data && Array.isArray(response.data.messages)) {
+        const messagesWithFullUrls = response.data.messages
+          .filter(msg => msg) // Filter out any null messages
+          .map(msg => ({
+            ...msg,
+            image: msg.image ? 
+              (msg.image.startsWith('http') ? 
+                msg.image : 
+                `http://localhost:5001${msg.image.startsWith('/') ? '' : '/'}${msg.image}`) 
+              : null,
+            text: msg.text || "" // Ensure text is never undefined
+          }));
+        console.log("Messages with corrected URLs:", messagesWithFullUrls);
         setMessages(messagesWithFullUrls);
         setFilteredMessages(messagesWithFullUrls);
+      } else {
+        console.warn("No messages found or invalid response format:", response.data);
+        setMessages([]);
+        setFilteredMessages([]);
       }
     } catch (error) {
       console.error("Error fetching messages:", error);
       toast.error("Failed to fetch messages");
+      setMessages([]);
+      setFilteredMessages([]);
     } finally {
       setIsLoading(false);
     }
@@ -43,7 +57,9 @@ const InspectorHomepageSettings = () => {
 
   useEffect(() => {
     const filtered = messages.filter((msg) =>
-      msg.text.toLowerCase().includes(searchQuery.toLowerCase())
+      msg && msg.text && typeof msg.text === 'string' 
+        ? msg.text.toLowerCase().includes(searchQuery.toLowerCase())
+        : false
     );
     setFilteredMessages(filtered);
   }, [searchQuery, messages]);
@@ -94,27 +110,41 @@ const InspectorHomepageSettings = () => {
         console.log(pair[0] + ': ' + pair[1]);
       }
 
-      // Log the API URL
-      console.log("API URL:", import.meta.env.VITE_API_URL);
-
       const response = await axiosInstance.post("/managemessages/add-messages", formData, {
         headers: {
           "Content-Type": "multipart/form-data",
         },
-        withCredentials: true, // Include credentials if needed
       });
 
       console.log("Server response:", response.data);
 
       if (response.data) {
         toast.success("Message added successfully");
+        
+        // Get the new message from the response
+        const newMsg = response.data.message || response.data;
+        
+        // Format the image URL correctly
+        const formattedMsg = {
+          ...newMsg,
+          image: newMsg.image ? 
+            (newMsg.image.startsWith('http') ? 
+              newMsg.image : 
+              `http://localhost:5001${newMsg.image.startsWith('/') ? '' : '/'}${newMsg.image}`) 
+            : null
+        };
+        
+        console.log("New message with formatted URL:", formattedMsg);
+        
+        // Update local state without refetching
+        setMessages(prevMessages => [formattedMsg, ...prevMessages]);
+        setFilteredMessages(prevFiltered => [formattedMsg, ...prevFiltered]);
+        
         // Reset form
         setNewMessage("");
         setSelectedImage(null);
         setPreviewImage(null);
         setIsAddModalOpen(false);
-        // Refresh messages
-        await fetchMessages();
       } else {
         throw new Error("No response data received");
       }
@@ -146,14 +176,30 @@ const InspectorHomepageSettings = () => {
 
     try {
       setIsLoading(true);
+      console.log("Deleting message with ID:", id);
+      
       const response = await axiosInstance.delete(`/managemessages/delete-messages/${id}`);
+      console.log("Delete response:", response);
+      
       if (response.data) {
         toast.success("Message deleted successfully");
-        fetchMessages();
+        // Update local state to immediately reflect the deletion
+        setMessages(prevMessages => prevMessages.filter(msg => msg._id !== id));
+        setFilteredMessages(prevFiltered => prevFiltered.filter(msg => msg._id !== id));
       }
     } catch (error) {
       console.error("Error deleting message:", error);
-      toast.error(error.response?.data?.message || "Failed to delete message");
+      if (error.response) {
+        console.error("Error response:", error.response.data);
+        console.error("Error status:", error.response.status);
+        toast.error(error.response.data.message || "Failed to delete message");
+      } else if (error.request) {
+        console.error("No response received:", error.request);
+        toast.error("No response from server. Please try again.");
+      } else {
+        console.error("Error:", error.message);
+        toast.error("Error: " + error.message);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -188,17 +234,51 @@ const InspectorHomepageSettings = () => {
         },
       });
 
+      console.log("Update response:", response.data);
+
       if (response.data) {
         toast.success("Message updated successfully");
+        
+        // Get updated message data
+        const updatedMsg = response.data.message || response.data;
+        const updatedImage = updatedMsg.image ? 
+          (updatedMsg.image.startsWith('http') ? 
+            updatedMsg.image : 
+            `http://localhost:5001${updatedMsg.image.startsWith('/') ? '' : '/'}${updatedMsg.image}`) 
+          : null;
+        
+        // Update local state without refetching
+        setMessages(prevMessages => 
+          prevMessages.map(msg => 
+            msg._id === id ? { ...msg, text: editingText, image: updatedImage } : msg
+          )
+        );
+        
+        setFilteredMessages(prevFiltered => 
+          prevFiltered.map(msg => 
+            msg._id === id ? { ...msg, text: editingText, image: updatedImage } : msg
+          )
+        );
+        
+        // Reset editing state
         setEditingMessageId(null);
         setEditingText("");
         setSelectedImage(null);
         setPreviewImage(null);
-        fetchMessages();
       }
     } catch (error) {
       console.error("Error updating message:", error);
-      toast.error(error.response?.data?.message || "Failed to update message");
+      if (error.response) {
+        console.error("Error response:", error.response.data);
+        console.error("Error status:", error.response.status);
+        toast.error(error.response.data.message || "Failed to update message");
+      } else if (error.request) {
+        console.error("No response received:", error.request);
+        toast.error("No response from server. Please try again.");
+      } else {
+        console.error("Error:", error.message);
+        toast.error("Error: " + error.message);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -263,91 +343,99 @@ const InspectorHomepageSettings = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredMessages.map((msg) => (
-              <div key={msg._id} className="bg-white rounded-lg shadow-md overflow-hidden">
-                {msg.image && (
-                  <div className="relative">
-                    <img
-                      src={msg.image}
-                      alt="Message"
-                      className="w-full h-48 object-cover"
-                      onError={(e) => {
-                        e.target.src = "https://via.placeholder.com/400x200?text=Image+Not+Found";
-                      }}
-                    />
-                  </div>
-                )}
-                <div className="p-4">
-                  {editingMessageId === msg._id ? (
-                    <div className="space-y-4">
-                      <textarea
-                        value={editingText}
-                        onChange={(e) => setEditingText(e.target.value)}
-                        className="w-full p-2 border border-gray-300 rounded"
-                        rows="3"
-                      />
-                      <div className="space-y-2">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleImageChange}
-                          className="w-full p-2 border border-gray-300 rounded"
+            {filteredMessages && filteredMessages.length > 0 ? (
+              filteredMessages.map((msg) => {
+                return msg && msg._id ? (
+                  <div key={msg._id} className="bg-white rounded-lg shadow-md overflow-hidden">
+                    {msg.image && (
+                      <div className="relative">
+                        <img
+                          src={msg.image}
+                          alt="Message"
+                          className="w-full h-48 object-cover"
+                          onError={(e) => {
+                            e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200' viewBox='0 0 400 200'%3E%3Crect width='400' height='200' fill='%23f0f0f0'/%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='16' text-anchor='middle' dominant-baseline='middle' fill='%23a0a0a0'%3EImage Not Found%3C/text%3E%3C/svg%3E";
+                          }}
                         />
-                        {previewImage && (
-                          <div className="relative">
-                            <img
-                              src={previewImage}
-                              alt="Preview"
-                              className="w-full h-32 object-cover rounded"
+                      </div>
+                    )}
+                    <div className="p-4">
+                      {editingMessageId === msg._id ? (
+                        <div className="space-y-4">
+                          <textarea
+                            value={editingText}
+                            onChange={(e) => setEditingText(e.target.value)}
+                            className="w-full p-2 border border-gray-300 rounded"
+                            rows="3"
+                          />
+                          <div className="space-y-2">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageChange}
+                              className="w-full p-2 border border-gray-300 rounded"
                             />
+                            {previewImage && (
+                              <div className="relative">
+                                <img
+                                  src={previewImage}
+                                  alt="Preview"
+                                  className="w-full h-32 object-cover rounded"
+                                />
+                                <button
+                                  onClick={removeImage}
+                                  className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                                >
+                                  <FaTimes />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex gap-2">
                             <button
-                              onClick={removeImage}
-                              className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                              onClick={() => updateMessage(msg._id)}
+                              className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
+                              disabled={isLoading}
                             >
-                              <FaTimes />
+                              {isLoading ? "Saving..." : "Save"}
+                            </button>
+                            <button
+                              onClick={cancelEditing}
+                              className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
+                              disabled={isLoading}
+                            >
+                              Cancel
                             </button>
                           </div>
-                        )}
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => updateMessage(msg._id)}
-                          className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-                          disabled={isLoading}
-                        >
-                          {isLoading ? "Saving..." : "Save"}
-                        </button>
-                        <button
-                          onClick={cancelEditing}
-                          className="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600"
-                          disabled={isLoading}
-                        >
-                          Cancel
-                        </button>
-                      </div>
+                        </div>
+                      ) : (
+                        <>
+                          <p className="text-gray-800 mb-4">{msg.text || ""}</p>
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => startEditing(msg._id, msg.text || "", msg.image)}
+                              className="text-blue-600 hover:text-blue-800"
+                            >
+                              <FaEdit className="text-xl" />
+                            </button>
+                            <button
+                              onClick={() => deleteMessage(msg._id)}
+                              className="text-red-600 hover:text-red-800"
+                            >
+                              <FaTrash className="text-xl" />
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
-                  ) : (
-                    <>
-                      <p className="text-gray-800 mb-4">{msg.text}</p>
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => startEditing(msg._id, msg.text, msg.image)}
-                          className="text-blue-600 hover:text-blue-800"
-                        >
-                          <FaEdit className="text-xl" />
-                        </button>
-                        <button
-                          onClick={() => deleteMessage(msg._id)}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          <FaTrash className="text-xl" />
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
+                  </div>
+                ) : null;
+              })
+            ) : (
+              <div className="col-span-3 text-center py-8 text-gray-500">
+                No messages found. Add a new message to get started.
               </div>
-            ))}
+            )}
           </div>
         )}
       </div>

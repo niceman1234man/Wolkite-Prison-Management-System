@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useSelector } from 'react-redux';
-import { FaArrowLeft, FaUndo, FaTrash, FaTimes, FaFileAlt, FaCalendarAlt, FaUser, FaTag, FaLock } from 'react-icons/fa';
+import { FaArrowLeft, FaUndo, FaTrash, FaTimes, FaLock } from 'react-icons/fa';
 import { getArchivedItemDetails, restoreArchivedItem, permanentlyDeleteArchivedItem } from '../../utils/archiveService';
 
 // Format entity types for display
@@ -13,12 +13,12 @@ const formatEntityType = (type) => {
 
 // Role-based entity type mapping
 const roleEntityTypeMap = {
-  'ademin': ['user', 'prison', 'inmate', 'notice', 'clearance', 'visitor', 'report', 'transfer', 'incident'],
-  'inspctor': ['prison', 'notice'],
+  'admin': ['user', 'prison', 'inmate', 'woredaInmate', 'notice', 'clearance', 'visitor', 'report', 'transfer', 'incident'],
+  'inspector': ['prison', 'notice'],
   'police-officer': ['incident', 'visitor', 'transfer'],
-  'court': ['virdict'],
-  'woreda': ['woredaInmate'],
-  'security':['clearance','inmate','transfer']
+  'court': ['clearance', 'verdict'],
+  'woreda': ['woredaInmate', 'inmate', 'transfer'],
+  'security': ['clearance', 'inmate', 'visitor', 'transfer', 'report']
 };
 
 const ArchiveDetail = () => {
@@ -57,6 +57,24 @@ const ArchiveDetail = () => {
       return true;
     }
     
+    // Special case for security staff with allowed entity types
+    if (userRole === 'security') {
+      const securityAllowedTypes = ['clearance', 'inmate', 'visitor', 'transfer', 'report'];
+      if (securityAllowedTypes.includes(item.entityType)) {
+        console.log(`Security staff can manage ${item.entityType} item`);
+        return true; // Security staff can manage all these item types
+      }
+    }
+    
+    // Special case for police officers with allowed entity types
+    if (userRole === 'police-officer') {
+      const policeAllowedTypes = ['incident', 'visitor', 'transfer'];
+      if (policeAllowedTypes.includes(item.entityType)) {
+        console.log(`Police officer can view ${item.entityType} item`);
+        return true;
+      }
+    }
+    
     // Special case for inspector with ID 67ba63a1d53b256a864fa434
     if (userRole === 'inspector' && 
         userId === '67ba63a1d53b256a864fa434' && 
@@ -86,9 +104,21 @@ const ArchiveDetail = () => {
     
     // Inspectors have special permissions for prisons and notices
     if (userRole === 'inspector' && ['prison', 'notice'].includes(item.entityType)) {
-      const result = isOwner;
+      const result = isOwner || userRole === 'inspector'; // All inspectors can view these
       console.log(`Inspector permission for ${item.entityType}: ${result}`);
-      return result; // Inspector can manage prisons and notices if they deleted them
+      return result;
+    }
+    
+    // Woreda staff can manage their inmates and transfers
+    if (userRole === 'woreda' && ['woredaInmate', 'inmate', 'transfer'].includes(item.entityType)) {
+      console.log(`Woreda permission for ${item.entityType}`);
+      return true;
+    }
+    
+    // Court staff can manage clearances and verdicts
+    if (userRole === 'court' && ['clearance', 'verdict'].includes(item.entityType)) {
+      console.log(`Court permission for ${item.entityType}`);
+      return true;
     }
     
     // Other roles need both entity type permission and ownership
@@ -182,6 +212,16 @@ const ArchiveDetail = () => {
         
         if (role === 'police-officer') {
           navigate('/policeOfficer-dashboard/archive');
+        } else if (role === 'admin') {
+          navigate('/admin-dashboard/archive');
+        } else if (role === 'security') {
+          navigate('/securityStaff-dashboard/archive');
+        } else if (role === 'inspector') {
+          navigate('/inspector-dashboard/archive');
+        } else if (role === 'woreda') {
+          navigate('/woreda-dashboard/archive');
+        } else if (role === 'court') {
+          navigate('/court-dashboard/archive');
         } else {
           navigate('/archive');
         }
@@ -212,6 +252,16 @@ const ArchiveDetail = () => {
         
         if (role === 'police-officer') {
           navigate('/policeOfficer-dashboard/archive');
+        } else if (role === 'admin') {
+          navigate('/admin-dashboard/archive');
+        } else if (role === 'security') {
+          navigate('/securityStaff-dashboard/archive');
+        } else if (role === 'inspector') {
+          navigate('/inspector-dashboard/archive');
+        } else if (role === 'woreda') {
+          navigate('/woreda-dashboard/archive');
+        } else if (role === 'court') {
+          navigate('/court-dashboard/archive');
         } else {
           navigate('/archive');
         }
@@ -309,8 +359,16 @@ const ArchiveDetail = () => {
     
     if (role === 'police-officer') {
       navigate('/policeOfficer-dashboard/archive');
-    }  else if (role === 'admin') {
+    } else if (role === 'admin') {
       navigate('/admin-dashboard/archive');
+    } else if (role === 'security') {
+      navigate('/securityStaff-dashboard/archive');
+    } else if (role === 'inspector') {
+      navigate('/inspector-dashboard/archive');
+    } else if (role === 'woreda') {
+      navigate('/woreda-dashboard/archive');
+    } else if (role === 'court') {
+      navigate('/court-dashboard/archive');
     } else {
       navigate('/archive');
     }

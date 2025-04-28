@@ -33,63 +33,10 @@ const upload = multer({
     }
     cb(null, true);
   }
-});
-
-// Create new visit schedule
-// export const createVisitSchedule = async (req, res) => {
-//   try {
-//     const {
-//       inmateId,
-//       visitDate,
-//       visitTime,
-//       purpose,
-//       relationship,
-//       visitDuration,
-//       notes,
-//       idType,
-//       idNumber,
-//       idExpiryDate,
-//     } = req.body;
-
-//     // Handle file upload
-//     let visitorPhoto = null;
-//     if (req.file) {
-//       visitorPhoto = `/uploads/visitor-photos/${req.file.filename}`;
-//     }
-
-//     // Create new schedule
-//     const schedule = new VisitorSchedule({
-//       visitorId: req.user.id,
-//       inmateId,
-//       visitDate,
-//       visitTime,
-//       purpose,
-//       relationship,
-//       visitDuration,
-//       notes,
-//       // Add visitor identification fields
-//       idType,
-//       idNumber,
-//       idExpiryDate,
-//       visitorPhoto,
-//     });
-
-//     await schedule.save();
-
-//     res.status(201).json({
-//       success: true,
-//       message: "Visit scheduled successfully",
-//       data: schedule,
-//     });
-//   } catch (error) {
-//     console.error("Error in createVisitSchedule:", error);
-//     res.status(500).json({
-//       success: false,
-//       message: "Error scheduling visit",
-//       error: error.message,
-//     });
-//   }
-// };
+}).fields([
+  { name: 'visitorPhoto', maxCount: 1 },
+  { name: 'idPhoto', maxCount: 1 }
+]);
 
 export const createSchedule = async (req, res) => {
   try {
@@ -156,17 +103,39 @@ export const createSchedule = async (req, res) => {
       });
     }
     
-    // Process uploaded files
-    const visitorPhoto = req.files?.visitorPhoto ? `/uploads/visitor-photos/${req.files.visitorPhoto[0].filename}` : null;
-    const idPhoto = req.files?.idPhoto ? `/uploads/visitor-photos/${req.files.idPhoto[0].filename}` : null;
+    // Process uploaded files with better error handling and logging
+    let visitorPhoto = null;
+    let idPhoto = null;
+
+    if (req.files) {
+      console.log("Processing uploaded files:", Object.keys(req.files));
+      
+      if (req.files.visitorPhoto && req.files.visitorPhoto[0]) {
+        visitorPhoto = `/uploads/visitor-photos/${req.files.visitorPhoto[0].filename}`;
+        console.log("Visitor photo processed:", visitorPhoto);
+      }
+      
+      if (req.files.idPhoto && req.files.idPhoto[0]) {
+        idPhoto = `/uploads/visitor-photos/${req.files.idPhoto[0].filename}`;
+        console.log("ID photo processed:", idPhoto);
+      }
+    }
+    
+    // Validate required photos for new schedules
+    if (!visitorPhoto || !idPhoto) {
+      return res.status(400).json({
+        success: false,
+        message: "Both visitor photo and ID photo are required"
+      });
+    }
     
     // Handle inmateId - could be empty string, null, or valid ObjectId
     let inmateId = null;
     if (formData.inmateId && formData.inmateId.trim() !== '') {
       if (mongoose.Types.ObjectId.isValid(formData.inmateId)) {
         inmateId = formData.inmateId;
+        console.log("Valid inmateId found:", inmateId);
       } else if (formData.inmateId === 'default-inmate') {
-        // Handle the demo inmate case - set to null for database storage
         console.log("Using demo inmate - setting inmateId to null");
         inmateId = null;
       } else {
@@ -174,48 +143,63 @@ export const createSchedule = async (req, res) => {
       }
     }
     
-    // Create a new schedule, using default values for any missing required fields
+    // Create schedule data object with all required fields
     const scheduleData = {
-      userId,  // This is now guaranteed to be a valid userId
-      firstName: formData.firstName || "Visitor",
-      middleName: formData.middleName || "",
-      lastName: formData.lastName || "Unknown",
-      phone: formData.phone || "+251000000000", // Default phone
-      idType: formData.idType || "other",
-      idNumber: formData.idNumber || "DEFAULT12345",
-      idExpiryDate: formData.idExpiryDate ? new Date(formData.idExpiryDate) : null,
-      purpose: formData.purpose || "Visit",
-      relationship: formData.relationship || "other",
+      userId: userId,
       inmateId: inmateId,
-      visitDate: formData.visitDate ? new Date(formData.visitDate) : new Date(),
-      visitTime: formData.visitTime || "10:00 AM",
+      firstName: formData.firstName,
+      middleName: formData.middleName || "",
+      lastName: formData.lastName,
+      phone: formData.phone,
+      visitDate: selectedDate,
+      visitTime: formData.visitTime,
+      purpose: formData.purpose,
+      relationship: formData.relationship,
+      status: "Pending",
       visitDuration: formData.visitDuration || 30,
       notes: formData.notes || "",
-      visitorPhoto,
-      idPhoto,
-      status: "Pending"
+      idType: formData.idType,
+      idNumber: formData.idNumber,
+      idExpiryDate: formData.idExpiryDate || null,
+      idPhoto: idPhoto,
+      visitorPhoto: visitorPhoto,
+      isActive: true
     };
-    
-    console.log("Creating schedule with data:", scheduleData);
-    
-    // Create using findOneAndUpdate with upsert to avoid validation errors
-    const newSchedule = await VisitorSchedule.create(scheduleData);
 
-    res.status(201).json({
+    // Create and save the new schedule
+    const newSchedule = new VisitorSchedule(scheduleData);
+    console.log("Attempting to save schedule:", newSchedule);
+    
+    const savedSchedule = await newSchedule.save();
+    console.log("Schedule saved successfully:", savedSchedule);
+
+    return res.status(201).json({
       success: true,
-      message: "Visit scheduled successfully",
-      schedule: newSchedule
+      message: "Visit schedule created successfully",
+      schedule: savedSchedule
     });
+
   } catch (error) {
     console.error("Error creating schedule:", error);
-    res.status(500).json({
+    
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: "Validation error",
+        errors: validationErrors
+      });
+    }
+    
+    // Handle other errors
+    return res.status(500).json({
       success: false,
-      message: "Failed to create schedule",
+      message: "Error creating visit schedule",
       error: error.message
     });
   }
 };
-
 
 // Get visitor's scheduled visits
 export const getVisitorSchedules = async (req, res) => {

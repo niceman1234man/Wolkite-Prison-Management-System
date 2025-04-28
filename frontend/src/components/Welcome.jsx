@@ -110,10 +110,18 @@ function Welcome() {
       try {
         const messagesResponse = await axiosInstance.get("/managemessages/get-messages");
         if (messagesResponse.data?.messages) {
-          const messagesWithFullUrls = messagesResponse.data.messages.map(msg => ({
-            ...msg,
-            image: msg.image ? `${import.meta.env.VITE_API_URL}${msg.image}` : null
-          }));
+          const messagesWithFullUrls = messagesResponse.data.messages
+            .filter(msg => msg) // Filter out any null messages
+            .map(msg => ({
+              ...msg,
+              image: msg.image ? 
+                (msg.image.startsWith('http') ? 
+                  msg.image : 
+                  `http://localhost:5001${msg.image.startsWith('/') ? '' : '/'}${msg.image}`) 
+                : null,
+              text: msg.text || "" // Ensure text is never undefined
+            }));
+          console.log("Messages with corrected URLs:", messagesWithFullUrls);
           setMessages(messagesWithFullUrls);
         } else {
           toast.error("No messages found.", toastConfig);
@@ -300,6 +308,7 @@ function Welcome() {
         return <Home 
           messages={messages}
           currentMessageIndex={currentMessageIndex}
+          setCurrentMessageIndex={setCurrentMessageIndex}
           sideImages={sideImages}
           loading={loading}
           time={time}
@@ -348,6 +357,7 @@ function Welcome() {
         return <Home 
           messages={messages}
           currentMessageIndex={currentMessageIndex}
+          setCurrentMessageIndex={setCurrentMessageIndex}
           sideImages={sideImages}
           loading={loading}
           time={time}

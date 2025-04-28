@@ -1,131 +1,222 @@
-import React from 'react';
-import guragePrison from "../../assets/guragePrison.jpg";
-import { ChartBarIcon, UserGroupIcon, CheckCircleIcon, ClockIcon, ShieldCheckIcon, DocumentTextIcon, IdentificationIcon } from '@heroicons/react/24/outline';
+import React, { useEffect, useState } from 'react';
+import { ChartBarIcon, UserGroupIcon, CheckCircleIcon, ClockIcon, ShieldCheckIcon, DocumentTextIcon, IdentificationIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 
 // Import the UUID as a constant
 const APP_UUID = '55709720-7916-4f8e-b86f-a30d9f074c89';
 
-function Home({ messages, currentMessageIndex, sideImages, loading, time, messageRef, isVisible, advancedView, statistics, darkMode }) {
+function Home({ messages, currentMessageIndex, sideImages, loading, time, messageRef, isVisible, advancedView, statistics, darkMode, setCurrentMessageIndex }) {
+  const [isTransitioning, setIsTransitioning] = useState(false);
+
   // Add a function to use the UUID for any necessary operations
   const getAppIdentifier = () => {
     return APP_UUID;
   };
 
+  // Log messages for debugging when they change
+  useEffect(() => {
+    if (messages && messages.length > 0) {
+      console.log("Messages in Home component:", messages);
+      console.log("Current message:", messages[currentMessageIndex]);
+    }
+  }, [messages, currentMessageIndex]);
+
+  // Handle manual navigation through slides
+  const goToNextSlide = () => {
+    if (messages && messages.length > 0) {
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setCurrentMessageIndex((prevIndex) => (prevIndex + 1) % messages.length);
+        setIsTransitioning(false);
+      }, 300);
+    }
+  };
+
+  const goToPrevSlide = () => {
+    if (messages && messages.length > 0) {
+      setIsTransitioning(true);
+      setTimeout(() => {
+        setCurrentMessageIndex((prevIndex) => (prevIndex === 0 ? messages.length - 1 : prevIndex - 1));
+        setIsTransitioning(false);
+      }, 300);
+    }
+  };
+
+  // Add a handler for image loading errors
+  const handleImageError = (e, fallbackUrl) => {
+    console.error("Image failed to load:", e.target.src);
+    e.target.src = fallbackUrl || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200' viewBox='0 0 400 200'%3E%3Crect width='400' height='200' fill='%23f0f0f0'/%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='16' text-anchor='middle' dominant-baseline='middle' fill='%23a0a0a0'%3EImage Not Found%3C/text%3E%3C/svg%3E";
+  };
+
+  // Create a placeholder image for slides without images
+  const placeholderImage = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1920' height='1080' viewBox='0 0 1920 1080'%3E%3Crect width='1920' height='1080' fill='%23374151'/%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='48' text-anchor='middle' dominant-baseline='middle' fill='%236B7280'%3ECorrecional Facility%3C/text%3E%3C/svg%3E";
+
   return (
     <div data-app-id={APP_UUID} className="relative z-10">
-      {/* Hero Section with Parallax Effect */}
-      <div className="relative h-screen flex items-center justify-center overflow-hidden mt-16">
-        <div 
-          className="absolute inset-0 bg-cover bg-center bg-fixed"
-          style={{ backgroundImage: `url(${guragePrison})` }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/50 to-black/60"></div>
-        </div>
-        <div className="relative z-10 text-center px-4 w-full">
-          <div className="mb-6">
-            <span className="px-3 py-1 bg-white/10 backdrop-blur-sm text-white text-sm rounded-full border border-white/20">
-              {advancedView ? "Federal Correctional Authority" : "Official Portal"}
-            </span>
-          </div>
-          <h1 className="text-5xl md:text-6xl font-bold text-white drop-shadow-lg mb-6">
-            {advancedView ? "Gurage Zone Correctional Facility" : "Gurage Zone Correctional Facility"}
-          </h1>
-          <p className="text-xl text-white/90 mb-12 max-w-3xl mx-auto drop-shadow-lg">
-            {advancedView 
-              ? "Integrated Correctional Management System for Enhanced Security, Rehabilitation and Administration" 
-              : "Maintaining Public Safety Through Professional Correctional Management"}
-          </p>
-          
-          {/* Statistics Dashboard in Advanced View */}
-          {advancedView && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl mx-auto mt-8 mb-12">
-              <div className="bg-white/10 backdrop-blur-md p-4 rounded-lg border border-white/20 text-white">
-                <div className="flex items-center mb-2">
-                  <UserGroupIcon className="w-5 h-5 mr-2 text-blue-300" />
-                  <h3 className="font-semibold">Registered Visitors</h3>
-                </div>
-                <p className="text-3xl font-bold text-blue-300">{statistics.totalVisitors}</p>
-                <p className="text-xs mt-2 text-blue-100">Active in database</p>
-              </div>
-              
-              <div className="bg-white/10 backdrop-blur-md p-4 rounded-lg border border-white/20 text-white">
-                <div className="flex items-center mb-2">
-                  <ChartBarIcon className="w-5 h-5 mr-2 text-green-300" />
-                  <h3 className="font-semibold">Current Inmates</h3>
-                </div>
-                <p className="text-3xl font-bold text-green-300">{statistics.totalInmates}</p>
-                <p className="text-xs mt-2 text-green-100">In correctional custody</p>
-              </div>
-              
-              <div className="bg-white/10 backdrop-blur-md p-4 rounded-lg border border-white/20 text-white">
-                <div className="flex items-center mb-2">
-                  <CheckCircleIcon className="w-5 h-5 mr-2 text-purple-300" />
-                  <h3 className="font-semibold">Authorized Visits</h3>
-                </div>
-                <p className="text-3xl font-bold text-purple-300">{statistics.totalApprovedVisits}</p>
-                <p className="text-xs mt-2 text-purple-100">Completed procedures</p>
-              </div>
-              
-              <div className="bg-white/10 backdrop-blur-md p-4 rounded-lg border border-white/20 text-white">
-                <div className="flex items-center mb-2">
-                  <ClockIcon className="w-5 h-5 mr-2 text-yellow-300" />
-                  <h3 className="font-semibold">Pending Visitations</h3>
-                </div>
-                <p className="text-3xl font-bold text-yellow-300">{statistics.pendingVisits}</p>
-                <p className="text-xs mt-2 text-yellow-100">Awaiting authorization</p>
-              </div>
+      {/* Full-width Hero Slider Section */}
+      <div className="relative h-screen overflow-hidden">
+        {/* Image Slider */}
+        {messages && messages.length > 0 ? (
+          <div className="absolute inset-0 w-full h-full">
+            {/* Background Image */}
+            <div 
+              className={`absolute inset-0 bg-cover bg-center transition-opacity duration-700 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}
+              style={{ 
+                backgroundImage: `url(${messages[currentMessageIndex]?.image || placeholderImage})`,
+                backgroundPosition: 'center',
+                backgroundSize: 'cover'
+              }}
+            >
+              {/* Gradient Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/40 to-black/70"></div>
             </div>
-          )}
-          
-          {messages.length > 0 && (
-            <div className="relative w-full max-w-5xl mx-auto">
-              <div className={`${darkMode ? 'bg-gray-800/90' : 'bg-white/95'} rounded-lg overflow-hidden shadow-xl transform transition-all duration-500 backdrop-blur-sm`}>
-                {messages[currentMessageIndex].image && (
-                  <div className="relative h-[400px] overflow-hidden">
-                    <img
-                      src={messages[currentMessageIndex].image}
-                      alt="Official Announcement"
-                      className="w-full h-full object-cover transform transition-transform duration-500"
-                      onError={(e) => handleImageError && handleImageError(e, "https://via.placeholder.com/800x400?text=Image+Not+Found")}
-                    />
-                    <div className="absolute top-0 left-0 bg-black/60 text-white px-4 py-2 text-xs">
-                      OFFICIAL COMMUNICATION
+            
+            {/* Content Container */}
+            <div className="relative z-10 h-full flex flex-col justify-center items-center px-4 text-center">
+              <div className={`w-full max-w-6xl mx-auto transition-transform duration-500 ${isTransitioning ? 'translate-y-8 opacity-0' : 'translate-y-0 opacity-100'}`}>
+                <div className="mb-6">
+                  <span className="px-4 py-1.5 bg-white/10 backdrop-blur-sm text-white text-sm tracking-widest uppercase font-light rounded-full border border-white/20">
+                    {advancedView ? "Federal Correctional Authority" : "Official Portal"}
+                  </span>
+                </div>
+                <h1 className="text-5xl md:text-6xl font-light text-white drop-shadow-lg mb-6 tracking-wide">
+                  {advancedView ? "Gurage Zone Correctional Facility" : "Gurage Zone Correctional Facility"}
+                </h1>
+                <p className="text-xl text-white/90 mb-12 max-w-3xl mx-auto drop-shadow-lg font-light tracking-wide">
+                  {advancedView 
+                    ? "Integrated Correctional Management System for Enhanced Security, Rehabilitation and Administration" 
+                    : "Maintaining Public Safety Through Professional Correctional Management"}
+                </p>
+                
+                {/* Statistics Dashboard in Advanced View */}
+                {advancedView && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl mx-auto mt-8 mb-12">
+                    <div className="bg-white/5 backdrop-blur-md p-4 rounded-lg border border-white/10 text-white hover:bg-white/10 transition-all">
+                      <div className="flex items-center mb-2">
+                        <UserGroupIcon className="w-5 h-5 mr-2 text-blue-300" />
+                        <h3 className="font-light tracking-wider uppercase text-sm">Visitors</h3>
+                      </div>
+                      <p className="text-3xl font-light text-blue-300">{statistics.totalVisitors}</p>
+                      <p className="text-xs mt-2 text-blue-100 opacity-80">Active in database</p>
+                    </div>
+                    
+                    <div className="bg-white/5 backdrop-blur-md p-4 rounded-lg border border-white/10 text-white hover:bg-white/10 transition-all">
+                      <div className="flex items-center mb-2">
+                        <ChartBarIcon className="w-5 h-5 mr-2 text-green-300" />
+                        <h3 className="font-light tracking-wider uppercase text-sm">Inmates</h3>
+                      </div>
+                      <p className="text-3xl font-light text-green-300">{statistics.totalInmates}</p>
+                      <p className="text-xs mt-2 text-green-100 opacity-80">In correctional custody</p>
+                    </div>
+                    
+                    <div className="bg-white/5 backdrop-blur-md p-4 rounded-lg border border-white/10 text-white hover:bg-white/10 transition-all">
+                      <div className="flex items-center mb-2">
+                        <CheckCircleIcon className="w-5 h-5 mr-2 text-purple-300" />
+                        <h3 className="font-light tracking-wider uppercase text-sm">Visits</h3>
+                      </div>
+                      <p className="text-3xl font-light text-purple-300">{statistics.totalApprovedVisits}</p>
+                      <p className="text-xs mt-2 text-purple-100 opacity-80">Approved procedures</p>
+                    </div>
+                    
+                    <div className="bg-white/5 backdrop-blur-md p-4 rounded-lg border border-white/10 text-white hover:bg-white/10 transition-all">
+                      <div className="flex items-center mb-2">
+                        <ClockIcon className="w-5 h-5 mr-2 text-yellow-300" />
+                        <h3 className="font-light tracking-wider uppercase text-sm">Pending</h3>
+                      </div>
+                      <p className="text-3xl font-light text-yellow-300">{statistics.pendingVisits}</p>
+                      <p className="text-xs mt-2 text-yellow-100 opacity-80">Awaiting authorization</p>
                     </div>
                   </div>
                 )}
-                <div className="p-8 md:p-12">
-                  <h3 className={`${darkMode ? 'text-blue-300' : 'text-blue-800'} text-lg font-semibold mb-4`}>
-                    {advancedView ? "ADMINISTRATIVE BULLETIN" : "ANNOUNCEMENT"}
-                  </h3>
-                  <p className={`${darkMode ? 'text-white' : 'text-gray-800'} text-xl leading-relaxed`}>
-                    {messages[currentMessageIndex].text}
-                  </p>
-                  {advancedView && messages[currentMessageIndex].date && (
-                    <div className="mt-6 text-sm text-gray-500 flex items-center">
-                      <ClockIcon className="w-4 h-4 mr-1" />
-                      <span>Published: {new Date(messages[currentMessageIndex].date).toLocaleDateString()}</span>
-                      <span className="ml-4 px-2 py-0.5 bg-blue-900/20 text-blue-200 rounded text-xs">Ref: {messages[currentMessageIndex]._id?.substring(0, 8) || "DOC-" + Math.floor(Math.random() * 10000)}</span>
+                
+                {/* Announcement Box */}
+                {messages[currentMessageIndex] && (
+                  <div className="w-full max-w-5xl mx-auto relative mt-8">
+                    <div className={`backdrop-blur-[2px] border-l-4 ${darkMode ? 'border-l-blue-400/70' : 'border-l-blue-300/70'} px-8 py-10`}>
+                      <div className="relative">
+                        <span className="absolute -left-6 top-0 text-5xl text-white/30 font-serif">"</span>
+                        <h3 className={`font-serif text-base uppercase tracking-[0.2em] mb-6 ${darkMode ? 'text-blue-200/90' : 'text-blue-100/90'} opacity-90`}>
+                          {advancedView ? "Administrative Bulletin" : "Announcement"}
+                        </h3>
+                        <p className={`font-light text-2xl md:text-3xl leading-relaxed mb-6 ${darkMode ? 'text-white' : 'text-white'} drop-shadow-sm`}>
+                          {messages[currentMessageIndex].text}
+                        </p>
+                        <span className="absolute -right-1 bottom-0 text-5xl text-white/30 font-serif">"</span>
+                        
+                        {advancedView && messages[currentMessageIndex] && messages[currentMessageIndex].date && (
+                          <div className="mt-8 text-sm text-white/60 flex items-center border-t border-white/10 pt-4">
+                            <ClockIcon className="w-4 h-4 mr-1" />
+                            <span className="font-light">Published: {new Date(messages[currentMessageIndex].date).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric'
+                            })}</span>
+                            <span className="ml-4 px-3 py-0.5 bg-blue-500/10 text-blue-100/90 rounded-full text-xs tracking-wider backdrop-blur-sm">
+                              Ref: {messages[currentMessageIndex]._id?.substring(0, 8) || "DOC-" + Math.floor(Math.random() * 10000)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  )}
-                </div>
-              </div>
-              <div className="flex justify-center space-x-3 mt-6">
-                {messages.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setCurrentMessageIndex && setCurrentMessageIndex(index)}
-                    className={`h-2 rounded-full transition-all duration-300 ${
-                      currentMessageIndex === index
-                        ? 'bg-blue-600 w-8'
-                        : 'bg-gray-300 hover:bg-gray-400 w-2'
-                    }`}
-                    aria-label={`Go to slide ${index + 1}`}
-                  />
-                ))}
+                  </div>
+                )}
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          // Loading state or no messages
+          <div className="absolute inset-0 bg-gray-800 flex items-center justify-center">
+            {loading ? (
+              <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-white"></div>
+            ) : (
+              <p className="text-white text-xl">No announcements available</p>
+            )}
+          </div>
+        )}
+        
+        {/* Slide Navigation Controls */}
+        {messages && messages.length > 1 && (
+          <>
+            {/* Previous button */}
+            <button 
+              onClick={goToPrevSlide}
+              className="absolute left-6 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-black/20 hover:bg-black/40 text-white/80 hover:text-white transition-all duration-200 backdrop-blur-sm border border-white/10"
+              aria-label="Previous slide"
+            >
+              <ChevronLeftIcon className="h-6 w-6" />
+            </button>
+            
+            {/* Next button */}
+            <button 
+              onClick={goToNextSlide}
+              className="absolute right-6 top-1/2 -translate-y-1/2 z-20 p-3 rounded-full bg-black/20 hover:bg-black/40 text-white/80 hover:text-white transition-all duration-200 backdrop-blur-sm border border-white/10"
+              aria-label="Next slide"
+            >
+              <ChevronRightIcon className="h-6 w-6" />
+            </button>
+            
+            {/* Dots navigation */}
+            <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 flex justify-center space-x-3">
+              {messages.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => {
+                    setIsTransitioning(true);
+                    setTimeout(() => {
+                      setCurrentMessageIndex(index);
+                      setIsTransitioning(false);
+                    }, 300);
+                  }}
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    currentMessageIndex === index
+                      ? 'bg-white w-10'
+                      : 'bg-white/30 hover:bg-white/50 w-2'
+                  }`}
+                  aria-label={`Go to slide ${index + 1}`}
+                />
+              ))}
+            </div>
+          </>
+        )}
       </div>
 
       {/* Features Section */}
@@ -226,18 +317,21 @@ function Home({ messages, currentMessageIndex, sideImages, loading, time, messag
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {messages.slice(0, 3).map((message) => (
+              {messages && messages.length > 0 && messages.slice(0, 3).map((message) => (
                 <div
-                  key={message._id}
+                  key={message?._id || Math.random().toString()}
                   className={`${darkMode ? 'bg-gray-800/90 border-gray-700' : 'bg-white border-gray-200'} rounded-lg overflow-hidden shadow-lg transition-all duration-300 border`}
                 >
-                  {message.image && (
+                  {message && message.image && (
                     <div className="relative h-48 overflow-hidden">
                       <img
                         src={message.image}
                         alt="Official Communication"
                         className="w-full h-full object-cover transform transition-transform duration-500"
-                        onError={(e) => handleImageError && handleImageError(e, "https://via.placeholder.com/800x400?text=Image+Not+Found")}
+                        onError={(e) => {
+                          console.error("Failed to load image:", e.target.src);
+                          e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='200' viewBox='0 0 400 200'%3E%3Crect width='400' height='200' fill='%23f0f0f0'/%3E%3Ctext x='50%25' y='50%25' font-family='Arial' font-size='16' text-anchor='middle' dominant-baseline='middle' fill='%23a0a0a0'%3ENo Image Available%3C/text%3E%3C/svg%3E";
+                        }}
                       />
                       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent h-16"></div>
                     </div>
@@ -247,10 +341,10 @@ function Home({ messages, currentMessageIndex, sideImages, loading, time, messag
                       {advancedView ? "BULLETIN" : "NOTICE"}
                     </div>
                     <p className={`${darkMode ? 'text-white' : 'text-gray-800'} text-lg font-medium leading-relaxed mb-3`}>
-                      {message.text.length > 120 ? message.text.substring(0, 120) + "..." : message.text}
+                      {message && message.text && message.text.length > 120 ? message.text.substring(0, 120) + "..." : (message?.text || "")}
                     </p>
                     <div className="flex justify-between items-center">
-                      {advancedView && message.date && (
+                      {advancedView && message && message.date && (
                         <div className="text-xs text-gray-500 flex items-center">
                           <ClockIcon className="w-3 h-3 mr-1" />
                           <span>{new Date(message.date).toLocaleDateString()}</span>

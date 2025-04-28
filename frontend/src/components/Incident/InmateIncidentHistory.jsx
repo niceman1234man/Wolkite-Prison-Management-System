@@ -160,7 +160,7 @@ const InmateIncidentHistory = () => {
             setIncidents([]);
           } else {
             // For other errors, show the error message
-            setError(`Server error: ${error.response.status} - ${error.response.data?.message || 'Unknown error'}`);
+          setError(`Server error: ${error.response.status} - ${error.response.data?.message || 'Unknown error'}`);
           }
         } else if (error.request) {
           console.error("Error request:", error.request);
@@ -174,8 +174,8 @@ const InmateIncidentHistory = () => {
         // Only try alternative fetch if it's not a simple "no incidents found" 404
         if (!error.response || error.response.status !== 404 || 
             !error.response.data?.message?.toLowerCase().includes("no incidents found")) {
-          const fallbackSuccess = await tryAlternativeFetch();
-          if (!fallbackSuccess) {
+        const fallbackSuccess = await tryAlternativeFetch();
+        if (!fallbackSuccess) {
             console.log("Alternative fetch also failed to find incidents");
           }
         }

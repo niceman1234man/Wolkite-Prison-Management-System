@@ -1,5 +1,5 @@
 import axiosInstance from "../../utils/axiosInstance";
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import ParoleRequestForm from "@/parole/ParoleRequestForm";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';

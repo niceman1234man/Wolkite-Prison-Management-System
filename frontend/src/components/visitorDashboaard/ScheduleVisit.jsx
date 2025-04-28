@@ -5,7 +5,7 @@ import { format } from "date-fns";
 import { FaSpinner } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
-function ScheduleVisit({ schedule, onSuccess, onCancel }) {
+function ScheduleVisit({ schedule, onSuccess, onCancel, isPoliceOfficer }) {
   const navigate = useNavigate();
   const [inmates, setInmates] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -27,7 +27,9 @@ function ScheduleVisit({ schedule, onSuccess, onCancel }) {
     idNumber: "",
     idExpiryDate: "",
     idPhoto: null,
-    visitorPhoto: null
+    visitorPhoto: null,
+    idPhotoPreview: null,
+    visitorPhotoPreview: null
   });
 
   useEffect(() => {
@@ -58,17 +60,51 @@ function ScheduleVisit({ schedule, onSuccess, onCancel }) {
         idNumber: schedule.idNumber || "",
         idExpiryDate: schedule.idExpiryDate ? format(new Date(schedule.idExpiryDate), "yyyy-MM-dd") : "",
         idPhoto: null,
-        visitorPhoto: null
+        visitorPhoto: null,
+        idPhotoPreview: null,
+        visitorPhotoPreview: null
       });
     }
   }, [schedule, navigate]);
+
+  useEffect(() => {
+    return () => {
+      // Cleanup preview URLs when component unmounts
+      if (formData.idPhotoPreview) {
+        URL.revokeObjectURL(formData.idPhotoPreview);
+      }
+      if (formData.visitorPhotoPreview) {
+        URL.revokeObjectURL(formData.visitorPhotoPreview);
+      }
+    };
+  }, []);
 
   const fetchInmates = async () => {
     try {
       setInmatesLoading(true);
       const response = await axiosInstance.get("/visitor/schedule/inmates");
+      console.log("Inmates API response:", response.data);
+      
       if (response.data?.success) {
-        setInmates(response.data.data || []);
+        // The API returns data in 'inmates' property
+        const inmatesData = response.data.inmates || [];
+        
+        // Format the inmate data to have consistent properties
+        const formattedInmates = inmatesData.map(inmate => {
+          // Create fullName from firstName, middleName, lastName
+          const fullName = [inmate.firstName, inmate.middleName, inmate.lastName]
+            .filter(Boolean)
+            .join(" ");
+            
+          return {
+            _id: inmate._id,
+            fullName: fullName || "Unknown",
+            prisonerId: inmate.inmateId || "No ID"
+          };
+        });
+        
+        console.log("Processed inmates:", formattedInmates.length);
+        setInmates(formattedInmates);
       } else {
         // Handle empty response gracefully
         setInmates([]);
@@ -127,21 +163,39 @@ function ScheduleVisit({ schedule, onSuccess, onCancel }) {
   const handleFileChange = (e) => {
     const { name, files } = e.target;
     const file = files[0];
-    if (file) {
-      if (!file.type.startsWith('image/')) {
-        toast.error('Please upload an image file');
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        toast.error('File size should be less than 5MB');
-        return;
-      }
+    
+    if (!file) {
       setFormData(prev => ({
         ...prev,
-        [name]: file
+        [name]: null
       }));
-      toast.success(`${name === 'idPhoto' ? 'ID' : 'Visitor'} photo uploaded successfully`);
+      return;
     }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error(`Please upload a valid image file for ${name === 'idPhoto' ? 'ID' : 'visitor'} photo`);
+      e.target.value = ''; // Reset the input
+      return;
+    }
+
+    // Validate file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error(`${name === 'idPhoto' ? 'ID' : 'Visitor'} photo must be less than 5MB`);
+      e.target.value = ''; // Reset the input
+      return;
+    }
+
+    // Create a preview URL for the image
+    const previewUrl = URL.createObjectURL(file);
+    
+    setFormData(prev => ({
+      ...prev,
+      [name]: file,
+      [`${name}Preview`]: previewUrl // Store the preview URL
+    }));
+
+    toast.success(`${name === 'idPhoto' ? 'ID' : 'Visitor'} photo uploaded successfully`);
   };
 
   const resetForm = () => {
@@ -161,7 +215,9 @@ function ScheduleVisit({ schedule, onSuccess, onCancel }) {
       idNumber: "",
       idExpiryDate: "",
       idPhoto: null,
-      visitorPhoto: null
+      visitorPhoto: null,
+      idPhotoPreview: null,
+      visitorPhotoPreview: null
     });
     setError(null);
     
@@ -187,12 +243,25 @@ function ScheduleVisit({ schedule, onSuccess, onCancel }) {
       !formData.phone ||
       !formData.idType ||
       !formData.idNumber ||
-      !formData.idExpiryDate ||
-      (!schedule && !formData.idPhoto)
+      !formData.idExpiryDate
     ) {
       setError("Please fill in all required fields");
       toast.error("Please fill in all required fields");
       return false;
+    }
+
+    // Validate photos for new schedules
+    if (!schedule) {
+      if (!formData.idPhoto) {
+        setError("Please upload an ID photo");
+        toast.error("ID photo is required");
+        return false;
+      }
+      if (!formData.visitorPhoto) {
+        setError("Please upload a visitor photo");
+        toast.error("Visitor photo is required");
+        return false;
+      }
     }
 
     // Validate phone number
@@ -227,11 +296,6 @@ function ScheduleVisit({ schedule, onSuccess, onCancel }) {
       // toast.warning("No inmate selected. Your request will be processed without an inmate assignment.");
     }
 
-    // If this is a new schedule and no photo is provided
-    if (!schedule && !formData.visitorPhoto) {
-      toast.warning("No photo uploaded. Your request will be processed without a visitor photo.");
-    }
-
     // All validations passed
     setError(null);
     return true;
@@ -250,34 +314,56 @@ function ScheduleVisit({ schedule, onSuccess, onCancel }) {
       navigate("/login");
       return;
     }
-  
+
     try {
       setLoading(true);
       setError(null);
       
       const loadingId = toast.loading(schedule ? "Updating visit..." : "Scheduling visit...");
-  
+
       // Create FormData object
       const formDataToSend = new FormData();
-  
+
       // Format dates properly
       const visitDateObj = new Date(formData.visitDate);
       const idExpiryDateObj = new Date(formData.idExpiryDate);
-  
+
       // Validate dates
       if (isNaN(visitDateObj.getTime()) || isNaN(idExpiryDateObj.getTime())) {
         toast.dismiss(loadingId);
         toast.error("Invalid date format");
         throw new Error("Invalid date format");
       }
-  
+
       // Check if ID expiry date is in the future
       if (idExpiryDateObj <= new Date()) {
         toast.dismiss(loadingId);
         toast.error("ID expiry date must be in the future");
         return;
       }
-  
+
+      // Get user ID from localStorage to manually include it
+      let userId = null;
+      try {
+        const userString = localStorage.getItem('user');
+        if (userString) {
+          const userData = JSON.parse(userString);
+          userId = userData.id || userData._id;
+          if (userId) {
+            formDataToSend.append('userId', userId);
+            console.log('Added userId to form data:', userId);
+          }
+        }
+      } catch (e) {
+        console.error('Error getting user data from localStorage:', e);
+      }
+      
+      // If this is being submitted by a police officer and we have a userId, use that
+      if (isPoliceOfficer && userId) {
+        formDataToSend.append('createdBy', userId);
+        console.log('Added createdBy to form data (police officer):', userId);
+      }
+      
       // Append all form fields
       if (formData.inmateId !== "default_inmate") {
         formDataToSend.append('inmateId', formData.inmateId);
@@ -295,21 +381,37 @@ function ScheduleVisit({ schedule, onSuccess, onCancel }) {
       formDataToSend.append('idType', formData.idType);
       formDataToSend.append('idNumber', formData.idNumber);
       formDataToSend.append('idExpiryDate', idExpiryDateObj.toISOString());
-  
-      // Append photos if they exist
-      if (formData.idPhoto) {
+
+      // Ensure photos are properly appended for new schedules
+      if (!schedule) {
+        // For new schedules, both photos are required
+        if (!formData.idPhoto || !formData.visitorPhoto) {
+          toast.dismiss(loadingId);
+          toast.error("Both ID photo and visitor photo are required for new schedules");
+          return;
+        }
         formDataToSend.append('idPhoto', formData.idPhoto);
-      }
-      if (formData.visitorPhoto) {
         formDataToSend.append('visitorPhoto', formData.visitorPhoto);
+      } else {
+        // For updates, only append if new photos are provided
+        if (formData.idPhoto) {
+          formDataToSend.append('idPhoto', formData.idPhoto);
+        }
+        if (formData.visitorPhoto) {
+          formDataToSend.append('visitorPhoto', formData.visitorPhoto);
+        }
       }
-  
+
       // Log form data for debugging
       console.log('Form data being sent:');
-      for (let pair of formDataToSend.entries()) {
-        console.log(pair[0] + ': ', pair[1]);
+      for (let [key, value] of formDataToSend.entries()) {
+        if (value instanceof File) {
+          console.log(key + ': File -', value.name, value.type, value.size + ' bytes');
+        } else {
+          console.log(key + ':', value);
+        }
       }
-  
+
       let response;
       if (schedule && schedule._id) {
         response = await axiosInstance.put(
@@ -334,7 +436,7 @@ function ScheduleVisit({ schedule, onSuccess, onCancel }) {
           }
         );
       }
-  
+
       // First dismiss only the loading toast
       toast.dismiss(loadingId);
       
@@ -343,12 +445,12 @@ function ScheduleVisit({ schedule, onSuccess, onCancel }) {
         toast.success(
           schedule ? "Visit updated successfully!" : "Visit scheduled successfully!",
           {
-            duration: 5000, // Show for 5 seconds
+            duration: 5000,
             position: "top-center",
             style: {
               padding: '16px',
               fontWeight: 'bold',
-              backgroundColor: '#10B981', // Green background
+              backgroundColor: '#10B981',
               color: 'white'
             },
           }
@@ -357,7 +459,6 @@ function ScheduleVisit({ schedule, onSuccess, onCancel }) {
         resetForm();
         
         if (onSuccess) {
-          // Pass the response data to the parent component
           onSuccess(response.data);
         }
       } else {
@@ -366,7 +467,6 @@ function ScheduleVisit({ schedule, onSuccess, onCancel }) {
         toast.error(errorMessage);
       }
     } catch (error) {
-      // Dismiss all toasts to avoid conflicts
       toast.dismiss();
       console.error('Error scheduling visit:', error);
       
@@ -482,8 +582,8 @@ function ScheduleVisit({ schedule, onSuccess, onCancel }) {
             >
               <option value="">Select ID type</option>
               <option value="passport">Passport</option>
-              <option value="nationalId">National ID</option>
-              <option value="driversLicense">Driver's License</option>
+              <option value="national_id">National ID</option>
+              <option value="drivers_license">Driver's License</option>
               <option value="other">Other</option>
             </select>
           </div>
@@ -614,9 +714,13 @@ function ScheduleVisit({ schedule, onSuccess, onCancel }) {
             className="w-full p-2 border rounded-md focus:ring-teal-500 focus:border-teal-500"
           >
             <option value="">Select relationship</option>
-            <option value="family">Family</option>
+            <option value="parent">Parent</option>
+            <option value="spouse">Spouse</option>
+            <option value="child">Child</option>
+            <option value="sibling">Sibling</option>
+            <option value="relative">Relative</option>
             <option value="friend">Friend</option>
-            <option value="lawyer">Lawyer</option>
+            <option value="legal">Legal Representative</option>
             <option value="other">Other</option>
           </select>
         </div>
@@ -657,39 +761,93 @@ function ScheduleVisit({ schedule, onSuccess, onCancel }) {
           <h3 className="text-lg font-semibold mb-4">Photo Upload</h3>
           
           {/* ID Photo */}
-          <div className="mb-4">
+          <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Upload ID Photo
+              Upload ID Photo {!schedule && <span className="text-red-500">*</span>}
             </label>
-            <input
-              type="file"
-              name="idPhoto"
-              onChange={handleFileChange}
-              accept="image/*"
-              required={!schedule}
-              className="w-full p-2 border rounded-md focus:ring-teal-500 focus:border-teal-500"
-            />
-            <p className="mt-1 text-sm text-gray-500">
-              {schedule ? "Upload a new ID photo only if you want to replace the existing one." : "Please upload a clear photo of your ID. Maximum file size: 5MB"}
-            </p>
+            <div className="space-y-2">
+              <input
+                type="file"
+                name="idPhoto"
+                onChange={handleFileChange}
+                accept="image/*"
+                required={!schedule}
+                className="w-full p-2 border rounded-md focus:ring-teal-500 focus:border-teal-500"
+              />
+              {formData.idPhotoPreview && (
+                <div className="relative w-40 h-40 mt-2 border rounded-lg overflow-hidden">
+                  <img
+                    src={formData.idPhotoPreview}
+                    alt="ID Preview"
+                    className="w-full h-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      URL.revokeObjectURL(formData.idPhotoPreview);
+                      setFormData(prev => ({
+                        ...prev,
+                        idPhoto: null,
+                        idPhotoPreview: null
+                      }));
+                    }}
+                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+              <p className="text-sm text-gray-500">
+                {schedule ? "Upload a new ID photo only if you want to replace the existing one." : "Please upload a clear photo of your ID. Maximum file size: 5MB"}
+              </p>
+            </div>
           </div>
 
           {/* Visitor Photo */}
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Upload Visitor Photo
+              Upload Visitor Photo {!schedule && <span className="text-red-500">*</span>}
             </label>
-            <input
-              type="file"
-              name="visitorPhoto"
-              onChange={handleFileChange}
-              accept="image/*"
-              required={!schedule}
-              className="w-full p-2 border rounded-md focus:ring-teal-500 focus:border-teal-500"
-            />
-            <p className="mt-1 text-sm text-gray-500">
-              {schedule ? "Upload a new photo only if you want to replace the existing one." : "Please upload a clear photo of yourself. Maximum file size: 5MB"}
-            </p>
+            <div className="space-y-2">
+              <input
+                type="file"
+                name="visitorPhoto"
+                onChange={handleFileChange}
+                accept="image/*"
+                required={!schedule}
+                className="w-full p-2 border rounded-md focus:ring-teal-500 focus:border-teal-500"
+              />
+              {formData.visitorPhotoPreview && (
+                <div className="relative w-40 h-40 mt-2 border rounded-lg overflow-hidden">
+                  <img
+                    src={formData.visitorPhotoPreview}
+                    alt="Visitor Preview"
+                    className="w-full h-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      URL.revokeObjectURL(formData.visitorPhotoPreview);
+                      setFormData(prev => ({
+                        ...prev,
+                        visitorPhoto: null,
+                        visitorPhotoPreview: null
+                      }));
+                    }}
+                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+              <p className="text-sm text-gray-500">
+                {schedule ? "Upload a new photo only if you want to replace the existing one." : "Please upload a clear photo of yourself. Maximum file size: 5MB"}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -746,5 +904,6 @@ export default ScheduleVisit;
 ScheduleVisit.defaultProps = {
   schedule: null,
   onSuccess: () => {},
-  onCancel: null
+  onCancel: null,
+  isPoliceOfficer: false
 }; 

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   FaTimes,
   FaEdit,
@@ -20,6 +20,7 @@ import {
 } from "react-icons/fa";
 import { format } from "date-fns";
 import '../../../styles/responsive.css';
+import { getImageUrl, getPlaceholderUrl, handleImageError } from '../../../utils/imageUtils';
 
 const ScheduleDetailModal = ({
   isOpen,
@@ -65,13 +66,37 @@ const ScheduleDetailModal = ({
   const getImageUrl = (imagePath) => {
     if (!imagePath) return null;
     
+    console.log("Processing image path:", imagePath);
+    
+    // If it already starts with http/https, it's a full URL
     if (imagePath.startsWith('http')) {
       return imagePath;
-    } else {
-      // Don't use process.env as it's causing errors in the build
-      return `http://localhost:5001${imagePath}`;
     }
+    
+    // If it's a relative path starting with /uploads or /api
+    if (imagePath.startsWith('/uploads') || imagePath.startsWith('/api')) {
+      // Try to get the API URL from environment, fallback to localhost
+      const apiBaseUrl = import.meta.env?.VITE_API_URL || 'http://localhost:5001';
+      return `${apiBaseUrl}${imagePath}`;
+    }
+    
+    // For other relative paths, just prepend the API base URL
+    const apiBaseUrl = import.meta.env?.VITE_API_URL || 'http://localhost:5001';
+    return `${apiBaseUrl}${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
   };
+
+  // Debug image paths
+  useEffect(() => {
+    console.log("Schedule in detail modal:", schedule);
+    console.log("ID Photo path:", schedule.idPhoto);
+    console.log("Visitor Photo path:", schedule.visitorPhoto);
+    if (schedule.idPhoto) {
+      console.log("ID Photo URL from getImageUrl:", getImageUrl(schedule.idPhoto));
+    }
+    if (schedule.visitorPhoto) {
+      console.log("Visitor Photo URL from getImageUrl:", getImageUrl(schedule.visitorPhoto));
+    }
+  }, [schedule]);
 
   // Get status badge color and style
   const getStatusBadge = (status) => {
@@ -226,6 +251,31 @@ const ScheduleDetailModal = ({
     }
   };
 
+  // Add a function to get CSS classes for rejection section
+  const getRejectionDisplaySection = () => {
+    const isRejected = schedule.status?.toLowerCase() === 'rejected';
+    const rejectionReason = schedule.rejectionReason || schedule.formattedRejectionInfo;
+    
+    if (!isRejected || !rejectionReason) return null;
+    
+    return (
+      <div className="lg:col-span-3 mb-1">
+        <div className="bg-gradient-to-r from-red-50 to-gray-50 rounded-lg sm:rounded-xl p-3 sm:p-6 border-l-4 border-red-500 shadow-sm">
+          <h3 className="text-base sm:text-lg font-semibold text-red-800 mb-3 sm:mb-4 flex items-center border-b border-red-200 pb-2">
+            <FaTimesCircle className="text-red-600 mr-2 text-sm sm:text-base" />
+            Visit Rejected
+          </h3>
+          <div className="bg-white bg-opacity-70 p-3 sm:p-4 rounded-lg shadow-sm border border-red-100">
+            <p className="text-sm font-medium text-red-800 mb-2">Reason for Rejection:</p>
+            <p className="text-sm sm:text-base text-red-700 whitespace-pre-line">
+              {rejectionReason}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-2 sm:p-4 z-50 backdrop-blur-sm overflow-y-auto">
       <div className="bg-white rounded-xl w-full max-w-5xl max-h-[95vh] overflow-hidden shadow-2xl flex flex-col my-2 sm:my-4">
@@ -296,6 +346,9 @@ const ScheduleDetailModal = ({
         {/* Modal Content scrollable area */}
         <div className="flex-1 overflow-y-auto">
           <div className="p-3 sm:p-6 grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+            {/* Rejection Reason Section - if applicable */}
+            {getRejectionDisplaySection()}
+            
             {/* Left Column - Visitor Information */}
             <div className="lg:col-span-2 space-y-4 sm:space-y-6">
               {/* Personal Information Section */}
@@ -362,6 +415,42 @@ const ScheduleDetailModal = ({
                 </div>
               </div>
 
+              {/* ID Photo Section */}
+              {schedule.idPhoto && (
+                <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg sm:rounded-xl p-3 sm:p-6 border border-blue-100 shadow-sm mt-4">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4 flex items-center border-b pb-2">
+                    <FaIdCard className="text-blue-600 mr-2 text-sm sm:text-base" />
+                    ID Photo
+                  </h3>
+                  <div className="flex justify-center">
+                    <img
+                      src={getImageUrl(schedule.idPhoto)}
+                      alt="ID"
+                      className="w-48 h-48 object-cover rounded-lg shadow-md border border-gray-200 hover:border-blue-300 transition-all hover:shadow-lg"
+                      onError={(e) => handleImageError(e, 'ID Photo', schedule.idPhoto)}
+                    />
+                  </div>
+                </div>
+              )}
+              
+              {/* Visitor Photo Section */}
+              {schedule.visitorPhoto && (
+                <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg sm:rounded-xl p-3 sm:p-6 border border-blue-100 shadow-sm mt-4">
+                  <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4 flex items-center border-b pb-2">
+                    <FaUserCircle className="text-blue-600 mr-2 text-sm sm:text-base" />
+                    Visitor Photo
+                  </h3>
+                  <div className="flex justify-center">
+                    <img
+                      src={getImageUrl(schedule.visitorPhoto)}
+                      alt="Visitor"
+                      className="w-48 h-48 object-cover rounded-lg shadow-md border border-gray-200 hover:border-blue-300 transition-all hover:shadow-lg"
+                      onError={(e) => handleImageError(e, 'Visitor Photo', schedule.visitorPhoto)}
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Visit Details Section */}
               <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg sm:rounded-xl p-3 sm:p-6 border border-blue-100 shadow-sm">
                 <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-3 sm:mb-4 flex items-center border-b pb-2">
@@ -406,6 +495,15 @@ const ScheduleDetailModal = ({
                       {schedule.inmateId?.fullName || 'Not specified'}
                     </p>
                   </div>
+                  
+                  {/* Inmate ID */}
+                  <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-gray-100 hover:border-teal-200 transition-colors">
+                    <p className="text-xs sm:text-sm font-medium text-gray-500 mb-1">Inmate ID</p>
+                    <p className="text-sm sm:text-base font-semibold text-gray-800">
+                      {schedule.inmateId?.prisonerId || schedule.inmateId?._id || 'Not specified'}
+                    </p>
+                  </div>
+                  
                   <div className="bg-white p-3 sm:p-4 rounded-lg shadow-sm border border-gray-100 hover:border-teal-200 transition-colors">
                     <p className="text-xs sm:text-sm font-medium text-gray-500 mb-1">Relationship</p>
                     <p className="text-sm sm:text-base font-semibold text-gray-800 capitalize">

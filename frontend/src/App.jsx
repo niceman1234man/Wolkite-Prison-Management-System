@@ -190,7 +190,7 @@ function App() {
                 <Route path="notices" element={<DashboardNoticeList dashboardType="admin" />} />
                 <Route path="notices/view/:id" element={<NoticeView />} />
                 <Route path="archive" element={<ArchivePage />} />
-                <Route path="archive/:id" element={<PoliceArchiveDetailPage />} />
+                <Route path="archive/:id" element={<ArchiveDetail />} />
               </Route>
 
               {/* Inspector Dashboard Routes */}
@@ -201,6 +201,8 @@ function App() {
                 <Route path="reports" element={<Reports />} />
                 <Route path="parole-committee" element={<ParoleCommite />} />
                 <Route path="homepage-settings" element={<InspectorHomepageSettings />} />
+                <Route path="archive" element={<ArchivePage />} />
+                <Route path="archive/:id" element={<ArchiveDetail />} />
               </Route>
 
               {/* System Dashboard Routes */}
@@ -230,6 +232,8 @@ function App() {
                 <Route path="settingsPage" element={<SettingPage />} />
                 <Route path="notices" element={<DashboardNoticeList dashboardType="court" />} />
                 <Route path="notices/view/:id" element={<NoticeView />} />
+                <Route path="archive" element={<ArchivePage />} />
+                <Route path="archive/:id" element={<ArchiveDetail />} />
               </Route>
 
               {/* Woreda Dashboard Routes */}
@@ -252,7 +256,7 @@ function App() {
                 <Route path="notices" element={<DashboardNoticeList dashboardType="woreda" />} />
                 <Route path="notices/view/:id" element={<NoticeView />} />
                 <Route path="archive" element={<ArchivePage />} />
-               
+                <Route path="archive/:id" element={<ArchiveDetail />} />
               </Route>
 
               {/* Visitor Dashboard Routes */}
@@ -300,6 +304,11 @@ function App() {
               <Route path="/archive" element={
                 <PrivateRoute allowedRoles={['admin', 'inspector', 'system', 'woreda', 'police-officer', 'security']}>
                   <ArchivePage />
+                </PrivateRoute>
+              } />
+              <Route path="/archive/:id" element={
+                <PrivateRoute allowedRoles={['admin', 'inspector', 'system', 'woreda', 'police-officer', 'security']}>
+                  <ArchiveDetail />
                 </PrivateRoute>
               } />
             </Route>

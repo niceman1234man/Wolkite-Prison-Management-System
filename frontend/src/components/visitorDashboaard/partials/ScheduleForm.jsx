@@ -677,26 +677,21 @@ const ScheduleForm = ({
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Don't allow new schedule creation if there's a pending schedule
-    // But make an exception for rescheduling
-    const isRescheduling = schedule?.isReschedule;
-    if (!schedule && hasPendingSchedule && !isRescheduling) {
-      toast.error("You already have a pending visit schedule. Please wait for approval or cancel your existing schedule before creating a new one.");
-      return;
-    }
-
-    setLoading(true);
-    
-    // Validate form
-    const formErrors = validateForm();
-    if (Object.keys(formErrors).length > 0) {
-      setErrors(formErrors);
-      setLoading(false);
-      return;
-    }
-
     try {
-      // Get user ID from localStorage
+      setLoading(true);
+      
+      // Determine if this is a rescheduling
+      const isRescheduling = schedule?.isReschedule || false;
+      
+      // Validate all steps before submission
+      for (let i = 1; i <= 3; i++) {
+        if (!validateStep(i)) {
+          setStep(i);
+          setLoading(false);
+          return;
+        }
+      }
+
       const userStr = localStorage.getItem('user');
       if (!userStr) {
         toast.error("User information not found. Please log in again.");
@@ -712,23 +707,34 @@ const ScheduleForm = ({
         return;
       }
 
-      // Add user ID to form data
-      const submitData = {
-        ...formData,
-        userId: userId
-      };
+      // Create FormData object for file upload
+      const formDataToSubmit = new FormData();
+      
+      // Add all form fields to FormData
+      Object.keys(formData).forEach(key => {
+        if (key === 'visitorPhoto' || key === 'idPhoto') {
+          // Only append files if they exist and are File objects
+          if (formData[key] instanceof File) {
+            formDataToSubmit.append(key, formData[key]);
+          }
+        } else {
+          formDataToSubmit.append(key, formData[key]);
+        }
+      });
 
-      // Add special flags for rescheduling to bypass backend validations
+      // Add user ID to form data
+      formDataToSubmit.append('userId', userId);
+
+      // Add special flags for rescheduling
       if (isRescheduling) {
-        submitData.isReschedule = true;
-        submitData.bypassPendingCheck = true;
-        // Include original schedule ID to help backend tracking
-        if (schedule.originalScheduleId) {
-          submitData.originalScheduleId = schedule.originalScheduleId;
+        formDataToSubmit.append('isReschedule', 'true');
+        formDataToSubmit.append('bypassPendingCheck', 'true');
+        if (schedule?.originalScheduleId) {
+          formDataToSubmit.append('originalScheduleId', schedule.originalScheduleId);
         }
       }
       
-      // Determine if this is a rescheduling (no _id) or updating an existing schedule
+      // Determine if this is updating an existing schedule
       const hasId = !!schedule?._id;
       
       // Use different endpoints for update vs create
@@ -737,9 +743,16 @@ const ScheduleForm = ({
       
       console.log(`Using ${method.toUpperCase()} to ${isRescheduling ? 'reschedule visit' : (schedule ? 'update schedule' : 'create schedule')} at endpoint: ${endpoint}`);
       console.log("Schedule data:", schedule ? { hasId: hasId, isReschedule: isRescheduling } : "No schedule");
-      console.log("Submit data includes special flags:", { isReschedule: submitData.isReschedule, bypassPendingCheck: submitData.bypassPendingCheck });
+      console.log("Submit data includes special flags:", { isReschedule: formDataToSubmit.get('isReschedule'), bypassPendingCheck: formDataToSubmit.get('bypassPendingCheck') });
 
-      const response = await axiosInstance[method](endpoint, submitData);
+      // Add headers for multipart/form-data
+      const config = {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      };
+
+      const response = await axiosInstance[method](endpoint, formDataToSubmit, config);
       if (response.data.success) {
         toast.success(isRescheduling 
           ? "Visit rescheduled successfully!" 

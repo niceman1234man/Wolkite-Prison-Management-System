@@ -34,7 +34,7 @@ import '../../styles/responsive.css';
 import { format, parseISO, isAfter, isPast, differenceInDays } from 'date-fns';
 import { useSelector } from "react-redux";
 
-const PoliceVisitorManagement = () => {
+const PoliceVisitorManagement = ({ refreshTrigger = 0 }) => {
   // State management
   const [visitors, setVisitors] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -63,6 +63,49 @@ const PoliceVisitorManagement = () => {
   // Confirm Modal state
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [visitorToDelete, setVisitorToDelete] = useState(null);
+  
+  // Rejection Modal state
+  const [showRejectionModal, setShowRejectionModal] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [visitorToReject, setVisitorToReject] = useState(null);
+
+  // Add a safe render helper function near the top of the component, after the state declarations
+  // Helper function to safely render potentially object values
+  const safeRender = (value) => {
+    if (value === null || value === undefined) return 'N/A';
+    if (typeof value === 'object') {
+      // For objects, try to return a meaningful string representation
+      if (value.name) return value.name;
+      if (value.fullName) return value.fullName;
+      if (value._id) return value._id;
+      // Return an empty string rather than trying to render the object
+      return JSON.stringify(value);
+    }
+    return value;
+  };
+
+  // Update selected visitor state to include proper data handling
+  const handleViewDetails = (visitor) => {
+    // Create a sanitized copy of the visitor data with safe values
+    const sanitizedVisitor = {
+      ...visitor,
+      // Ensure these fields are strings or simple values
+      _id: visitor._id?.toString() || visitor._id,
+      inmateId: typeof visitor.inmateId === 'object' ? visitor.inmateId?._id : visitor.inmateId,
+      inmate: visitor.inmate || null,
+      inmateFullName: visitor.inmate 
+        ? `${visitor.inmate.firstName || ''} ${visitor.inmate.middleName || ''} ${visitor.inmate.lastName || ''}`.trim()
+        : (visitor.inmateId?.fullName || visitor.inmateFullName || null),
+      visitorDetails: visitor.visitorDetails || {},
+      // Add a full name field for convenience
+      fullName: `${visitor.visitorDetails?.firstName || visitor.firstName || ''} ${visitor.visitorDetails?.middleName || visitor.middleName || ''} ${visitor.visitorDetails?.lastName || visitor.lastName || ''}`.trim(),
+      // Make sure nested objects have safe string representations
+      approvedBy: typeof visitor.approvedBy === 'object' ? visitor.approvedBy?.name || 'Unknown' : visitor.approvedBy || 'Unknown'
+    };
+    
+    setSelectedVisitor(sanitizedVisitor);
+    setShowDetailModal(true);
+  };
 
   // Fetch visitors data
   const fetchVisitors = useCallback(async () => {
@@ -120,10 +163,10 @@ const PoliceVisitorManagement = () => {
     }
   }, []);
 
-  // Fetch data on component mount
+  // Fetch data on component mount and when refreshTrigger changes
   useEffect(() => {
     fetchVisitors();
-  }, [fetchVisitors]);
+  }, [fetchVisitors, refreshTrigger]);
 
   // Add this effect to handle clicking outside the dropdown
   useEffect(() => {
@@ -230,7 +273,10 @@ const PoliceVisitorManagement = () => {
       if (newStatus === "approved") {
         endpoint = `/visitor/schedule/${visitorId}/approve`;
       } else if (newStatus === "rejected") {
-        endpoint = `/visitor/schedule/${visitorId}/reject`;
+        // For rejection, open the rejection reason modal
+        setVisitorToReject(visitorId);
+        setShowRejectionModal(true);
+        return; // Exit early, actual rejection will be handled by confirmRejection
       } else if (newStatus === "pending") {
         // For pending status, we'll update the schedule directly
         endpoint = `/visitor/schedule/${visitorId}`;
@@ -255,6 +301,43 @@ const PoliceVisitorManagement = () => {
       console.error("Error updating status:", error);
       toast.error(error.response?.data?.message || "Failed to update status");
     }
+  };
+
+  // Handle rejection confirmation
+  const handleConfirmRejection = async () => {
+    if (!visitorToReject || !rejectionReason.trim()) {
+      toast.error("Please provide a reason for rejection");
+      return;
+    }
+
+    try {
+      const response = await axiosInstance.put(`/visitor/schedule/${visitorToReject}/reject`, {
+        rejectionReason: rejectionReason.trim()
+      });
+
+      if (response.data.success) {
+        toast.success("Schedule rejected successfully");
+        fetchVisitors(); // Refresh the list
+        setShowRejectionModal(false);
+        setRejectionReason("");
+        setVisitorToReject(null);
+        
+        // If the rejection was for the currently selected visitor in detail view, close the detail modal
+        if (selectedVisitor && selectedVisitor._id === visitorToReject) {
+          setSelectedVisitor(null);
+        }
+      }
+    } catch (error) {
+      console.error("Error rejecting visitor:", error);
+      toast.error(error.response?.data?.message || "Failed to reject visitor");
+    }
+  };
+
+  // Handle rejection cancellation
+  const handleCancelRejection = () => {
+    setShowRejectionModal(false);
+    setRejectionReason("");
+    setVisitorToReject(null);
   };
 
   // Format date
@@ -542,6 +625,94 @@ const PoliceVisitorManagement = () => {
     setCurrentSlide((prev) => (prev - 1 + totalSlides) % totalSlides);
   };
 
+  const handleSubmit = async (formData) => {
+    try {
+      const form = new FormData();
+      
+      // Add all form fields
+      Object.keys(formData).forEach(key => {
+        if (key !== 'idPhoto' && key !== 'visitorPhoto') {
+          form.append(key, formData[key]);
+        }
+      });
+      
+      // Add photos if present
+      if (formData.idPhoto) {
+        form.append('idPhoto', formData.idPhoto);
+      }
+      if (formData.visitorPhoto) {
+        form.append('visitorPhoto', formData.visitorPhoto);
+      }
+      
+      const response = await axiosInstance.post('/visitor/schedule', form, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      if (response.data.success) {
+        toast.success('Visitor schedule created successfully');
+        fetchVisitors(); // Refresh the list
+      }
+    } catch (error) {
+      console.error('Error submitting visitor schedule:', error);
+      toast.error(error.response?.data?.message || 'Failed to create visitor schedule');
+    }
+  };
+
+  const handleUpdate = async (id, formData) => {
+    try {
+      const form = new FormData();
+      
+      // Add all form fields
+      Object.keys(formData).forEach(key => {
+        if (key !== 'idPhoto' && key !== 'visitorPhoto') {
+          form.append(key, formData[key]);
+        }
+      });
+      
+      // Add photos if present
+      if (formData.idPhoto) {
+        form.append('idPhoto', formData.idPhoto);
+      }
+      if (formData.visitorPhoto) {
+        form.append('visitorPhoto', formData.visitorPhoto);
+      }
+      
+      const response = await axiosInstance.put(`/visitor/schedule/${id}`, form, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      
+      if (response.data.success) {
+        toast.success('Visitor schedule updated successfully');
+        fetchVisitors(); // Refresh the list
+      }
+    } catch (error) {
+      console.error('Error updating visitor schedule:', error);
+      toast.error(error.response?.data?.message || 'Failed to update visitor schedule');
+    }
+  };
+
+  // Add getImageUrl helper function after the state declarations
+  const getImageUrl = (imagePath) => {
+    if (!imagePath) return null;
+    
+    // If it already starts with http/https, it's a full URL
+    if (imagePath.startsWith('http')) {
+      return imagePath;
+    }
+    
+    // If it's a relative path starting with /uploads or /api
+    if (imagePath.startsWith('/uploads') || imagePath.startsWith('/api')) {
+      return `http://localhost:5001${imagePath}`;
+    }
+    
+    // For other relative paths, just prepend the API base URL
+    return `http://localhost:5001/${imagePath.startsWith('/') ? imagePath.slice(1) : imagePath}`;
+  };
+
   // Render loading state
   if (loading) {
     return (
@@ -618,13 +789,12 @@ const PoliceVisitorManagement = () => {
             <a
               href="/police-officer/archive"
               className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1 rounded-md text-sm flex items-center"
-              title="View Archive"
+              title="View archived visitor records including rejected visits with reasons"
             >
               <FaArchive className="mr-1" /> Archives
             </a>
           </div>
         </div>
-
         {/* Filters */}
         <div className="mb-6">
           <div className="flex flex-col sm:flex-row gap-4">
@@ -672,12 +842,51 @@ const PoliceVisitorManagement = () => {
                 <div className="flex justify-between items-start mb-4">
                   <div>
                     <h3 className="text-lg font-semibold text-gray-800">
-                      {`${visitor.visitorDetails.firstName || ''} ${visitor.visitorDetails.middleName || ''} ${visitor.visitorDetails.lastName || ''}`}
+                      {`${visitor.visitorDetails?.firstName || ''} ${visitor.visitorDetails?.middleName || ''} ${visitor.visitorDetails?.lastName || ''}`}
                     </h3>
-                    <p className="text-gray-600">{visitor.visitorDetails.phone || 'N/A'}</p>
+                    <p className="text-gray-600">{visitor.visitorDetails?.phone || 'N/A'}</p>
                   </div>
                   <StatusBadge status={visitor.status || 'Pending'} />
                 </div>
+
+                {/* Photos Section */}
+                {(visitor.visitorPhoto || visitor.idPhoto) && (
+                  <div className="flex space-x-2 mb-4">
+                    {visitor.visitorPhoto && (
+                      <div className="relative">
+                        <img 
+                          src={getImageUrl(visitor.visitorPhoto)} 
+                          alt="Visitor" 
+                          className="w-16 h-16 object-cover rounded-md border border-gray-200"
+                          onError={(e) => {
+                            console.error("Failed to load visitor photo:", e);
+                            e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150"%3E%3Crect width="150" height="150" fill="%23f0f0f0"/%3E%3Ctext x="50%25" y="50%25" font-family="Arial" font-size="14" text-anchor="middle" dominant-baseline="middle" fill="%23a0a0a0"%3ENo Photo%3C/text%3E%3C/svg%3E';
+                          }}
+                        />
+                        <span className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs py-1 text-center rounded-b-md">
+                          Photo
+                        </span>
+                      </div>
+                    )}
+                    {visitor.idPhoto && (
+                      <div className="relative">
+                        <img 
+                          src={getImageUrl(visitor.idPhoto)} 
+                          alt="ID" 
+                          className="w-16 h-16 object-cover rounded-md border border-gray-200"
+                          onError={(e) => {
+                            console.error("Failed to load ID photo:", e);
+                            e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="150" height="150" viewBox="0 0 150 150"%3E%3Crect width="150" height="150" fill="%23f0f0f0"/%3E%3Ctext x="50%25" y="50%25" font-family="Arial" font-size="14" text-anchor="middle" dominant-baseline="middle" fill="%23a0a0a0"%3ENo ID%3C/text%3E%3C/svg%3E';
+                          }}
+                        />
+                        <span className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs py-1 text-center rounded-b-md">
+                          ID
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="space-y-2 mb-4">
                   <p className="text-gray-700">
                     <span className="font-medium">Purpose:</span> {visitor.purpose || 'N/A'}
@@ -686,15 +895,17 @@ const PoliceVisitorManagement = () => {
                     <span className="font-medium">Visit Date:</span> {formatDate(visitor.visitDate)}
                   </p>
                   <p className="text-gray-700">
-                    <span className="font-medium">ID:</span> {visitor.visitorDetails.idNumber || 'N/A'}
+                    <span className="font-medium">ID:</span> {visitor.visitorDetails?.idNumber || 'N/A'}
                   </p>
+                  {visitor.status?.toLowerCase() === 'rejected' && visitor.rejectionReason && (
+                    <p className="text-red-600">
+                      <span className="font-medium">Rejection Reason:</span> {visitor.rejectionReason}
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button
-                    onClick={() => {
-                      setSelectedVisitor(visitor);
-                      setShowDetailModal(true);
-                    }}
+                    onClick={() => handleViewDetails(visitor)}
                     className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm flex items-center"
                   >
                     <FaEye className="mr-1" /> View
@@ -767,17 +978,20 @@ const PoliceVisitorManagement = () => {
               <table className="w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" style={{ width: '30%' }} onClick={() => handleSort("visitorDetails.firstName")}>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" style={{ width: '25%' }} onClick={() => handleSort("visitorDetails.firstName")}>
                       Name {getSortIcon("visitorDetails.firstName")}
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" style={{ width: '20%' }} onClick={() => handleSort("visitorDetails.phone")}>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" style={{ width: '15%' }} onClick={() => handleSort("visitorDetails.phone")}>
                       Phone {getSortIcon("visitorDetails.phone")}
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" style={{ width: '20%' }} onClick={() => handleSort("visitDate")}>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" style={{ width: '15%' }} onClick={() => handleSort("visitDate")}>
                       Visit Date {getSortIcon("visitDate")}
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" style={{ width: '15%' }} onClick={() => handleSort("status")}>
                       Status {getSortIcon("status")}
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '15%' }}>
+                      Reason
                     </th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider" style={{ width: '15%', minWidth: '150px' }}>
                       Actions
@@ -787,30 +1001,60 @@ const PoliceVisitorManagement = () => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredVisitors.map((visitor) => (
                     <tr key={visitor._id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 whitespace-nowrap" style={{ width: '30%' }}>
+                      <td className="px-4 py-3 whitespace-nowrap" style={{ width: '25%' }}>
                         <div className="text-sm font-medium text-gray-900">
-                          {`${visitor.visitorDetails.firstName || ''} ${visitor.visitorDetails.middleName || ''} ${visitor.visitorDetails.lastName || ''}`}
+                          {`${visitor.visitorDetails?.firstName || ''} ${visitor.visitorDetails?.middleName || ''} ${visitor.visitorDetails?.lastName || ''}`}
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
-                          ID: {visitor.visitorDetails.idNumber || 'N/A'}
+                          ID: {visitor.visitorDetails?.idNumber || 'N/A'}
+                          {/* Photo Indicators */}
+                          <div className="flex space-x-2 mt-1">
+                            {visitor.visitorPhoto && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                <FaUser className="mr-1" size={10} />
+                                Photo
+                              </span>
+                            )}
+                            {visitor.idPhoto && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                <FaIdCard className="mr-1" size={10} />
+                                ID
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap" style={{ width: '20%' }}>
-                        <div className="text-sm text-gray-500">{visitor.visitorDetails.phone || 'N/A'}</div>
+                      <td className="px-4 py-3 whitespace-nowrap" style={{ width: '15%' }}>
+                        <div className="text-sm text-gray-500">{visitor.visitorDetails?.phone || 'N/A'}</div>
                       </td>
-                      <td className="px-4 py-3 whitespace-nowrap" style={{ width: '20%' }}>
+                      <td className="px-4 py-3 whitespace-nowrap" style={{ width: '15%' }}>
                         <div className="text-sm text-gray-500">{formatDate(visitor.visitDate)}</div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap" style={{ width: '15%' }}>
                         <StatusBadge status={visitor.status || 'Pending'} />
                       </td>
+                      <td className="px-4 py-3" style={{ width: '15%' }}>
+                        {visitor.status?.toLowerCase() === 'rejected' ? (
+                          <div 
+                            className="text-sm text-red-600 max-w-xs truncate"
+                            title={`Rejected: ${visitor.rejectionReason || 'No reason provided'}${visitor.approvedAt ? `\nDate: ${formatDate(visitor.approvedAt)}` : ''}`}
+                          >
+                            {visitor.rejectionReason || 'No reason provided'}
+                          </div>
+                        ) : visitor.status?.toLowerCase() === 'approved' ? (
+                          <div className="text-sm text-green-600">
+                            Approved
+                          </div>
+                        ) : (
+                          <div className="text-sm text-gray-500">
+                            {visitor.status?.toLowerCase() === 'pending' ? 'Awaiting review' : '-'}
+                          </div>
+                        )}
+                      </td>
                       <td className="px-4 py-3 whitespace-nowrap text-center" style={{ width: '15%', minWidth: '150px' }}>
                         <div className="flex justify-center gap-2">
                           <button
-                            onClick={() => {
-                              setSelectedVisitor(visitor);
-                              setShowDetailModal(true);
-                            }}
+                            onClick={() => handleViewDetails(visitor)}
                             className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded-md text-sm flex items-center"
                             title="View Details"
                           >
@@ -943,19 +1187,24 @@ const PoliceVisitorManagement = () => {
                     <div className="space-y-4">
                       <div className="bg-gray-50 p-4 rounded-lg">
                         <h3 className="text-lg font-semibold text-gray-800 mb-4">Visitor Photos</h3>
-                        <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <p className="text-sm text-gray-500 mb-2">Profile Photo</p>
                             <div className="w-full h-48 bg-gray-200 rounded-lg overflow-hidden">
-                              {selectedVisitor.visitorPhoto ? (
+                              {selectedVisitor?.visitorPhoto ? (
                                 <img 
-                                  src={`${import.meta.env.VITE_API_URL}${selectedVisitor.visitorPhoto}`} 
+                                  src={getImageUrl(selectedVisitor.visitorPhoto)} 
                                   alt="Profile" 
-                                  className="w-full h-full object-cover"
+                                  className="w-full h-full object-contain"
+                                  onError={(e) => {
+                                    console.error("Failed to load visitor photo:", e);
+                                    e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"%3E%3Crect width="300" height="300" fill="%23f0f0f0"/%3E%3Ctext x="50%25" y="50%25" font-family="Arial" font-size="18" text-anchor="middle" dominant-baseline="middle" fill="%23a0a0a0"%3ENo Profile Photo%3C/text%3E%3C/svg%3E';
+                                  }}
                                 />
                               ) : (
-                                <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                <div className="flex items-center justify-center h-full text-gray-400">
                                   <FaUser size={48} />
+                                  <p className="mt-2">No profile photo</p>
                                 </div>
                               )}
                             </div>
@@ -963,15 +1212,20 @@ const PoliceVisitorManagement = () => {
                           <div>
                             <p className="text-sm text-gray-500 mb-2">ID Photo</p>
                             <div className="w-full h-48 bg-gray-200 rounded-lg overflow-hidden">
-                              {selectedVisitor.idPhoto ? (
+                              {selectedVisitor?.idPhoto ? (
                                 <img 
-                                  src={`${import.meta.env.VITE_API_URL}${selectedVisitor.idPhoto}`} 
+                                  src={getImageUrl(selectedVisitor.idPhoto)} 
                                   alt="ID" 
-                                  className="w-full h-full object-cover"
+                                  className="w-full h-full object-contain"
+                                  onError={(e) => {
+                                    console.error("Failed to load ID photo:", e);
+                                    e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"%3E%3Crect width="300" height="300" fill="%23f0f0f0"/%3E%3Ctext x="50%25" y="50%25" font-family="Arial" font-size="18" text-anchor="middle" dominant-baseline="middle" fill="%23a0a0a0"%3ENo ID Photo%3C/text%3E%3C/svg%3E';
+                                  }}
                                 />
                               ) : (
-                                <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                <div className="flex items-center justify-center h-full text-gray-400">
                                   <FaIdCard size={48} />
+                                  <p className="mt-2">No ID photo</p>
                                 </div>
                               )}
                             </div>
@@ -990,10 +1244,13 @@ const PoliceVisitorManagement = () => {
                             <div>
                               <p className="text-sm text-gray-500">Full Name</p>
                               <p className="font-medium text-gray-900">
-                                {`${selectedVisitor.firstName || ''} ${selectedVisitor.middleName || ''} ${selectedVisitor.lastName || ''}`}
+                                {`${selectedVisitor.visitorDetails?.firstName || selectedVisitor.firstName || ''} 
+                                  ${selectedVisitor.visitorDetails?.middleName || selectedVisitor.middleName || ''} 
+                                  ${selectedVisitor.visitorDetails?.lastName || selectedVisitor.lastName || ''}`}
                               </p>
                             </div>
                           </div>
+
                           <div className="flex items-start">
                             <FaIdCard className="mt-1 mr-3 text-gray-500" />
                             <div>
@@ -1065,7 +1322,9 @@ const PoliceVisitorManagement = () => {
                             <div>
                               <p className="text-sm text-gray-500">Inmate Name</p>
                               <p className="font-medium text-gray-900">
-                                {`${selectedVisitor.inmate?.firstName || ''} ${selectedVisitor.inmate?.middleName || ''} ${selectedVisitor.inmate?.lastName || ''}`}
+                                {selectedVisitor.inmate 
+                                  ? `${selectedVisitor.inmate.firstName || ''} ${selectedVisitor.inmate.middleName || ''} ${selectedVisitor.inmate.lastName || ''}`.trim()
+                                  : selectedVisitor.inmateFullName || 'N/A'}
                               </p>
                             </div>
                           </div>
@@ -1073,14 +1332,9 @@ const PoliceVisitorManagement = () => {
                             <FaIdCard className="mt-1 mr-3 text-gray-500" />
                             <div>
                               <p className="text-sm text-gray-500">Inmate ID</p>
-                              <p className="font-medium text-gray-900">{selectedVisitor.inmateId || 'N/A'}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-start">
-                            <FaMapMarkerAlt className="mt-1 mr-3 text-gray-500" />
-                            <div>
-                              <p className="text-sm text-gray-500">Cell Block</p>
-                              <p className="font-medium text-gray-900">{selectedVisitor.inmate?.cellBlock || 'N/A'}</p>
+                              <p className="font-medium text-gray-900">
+                                {selectedVisitor.inmate?.inmateId || (typeof selectedVisitor.inmateId === 'object' ? selectedVisitor.inmateId._id : selectedVisitor.inmateId) || 'N/A'}
+                              </p>
                             </div>
                           </div>
                           <div className="flex items-start">
@@ -1103,15 +1357,15 @@ const PoliceVisitorManagement = () => {
                         <div className="bg-gray-50 p-4 rounded-lg">
                           <h3 className="text-lg font-semibold text-gray-800 mb-4">Approval Details</h3>
                           <div className="space-y-3">
-                            {selectedVisitor.approvedBy && (
-                              <div className="flex items-start">
-                                <FaUser className="mt-1 mr-3 text-gray-500" />
-                                <div>
-                                  <p className="text-sm text-gray-500">Approved By</p>
-                                  <p className="font-medium text-gray-900">{selectedVisitor.approvedBy?.name || 'Unknown'}</p>
-                                </div>
+                            <div className="flex items-start">
+                              <FaUser className="mt-1 mr-3 text-gray-500" />
+                              <div>
+                                <p className="text-sm text-gray-500">Approved By</p>
+                                <p className="font-medium text-gray-900">
+                                  {safeRender(selectedVisitor.approvedBy)}
+                                </p>
                               </div>
-                            )}
+                            </div>
                             {selectedVisitor.approvedAt && (
                               <div className="flex items-start">
                                 <FaCalendarAlt className="mt-1 mr-3 text-gray-500" />
@@ -1126,7 +1380,7 @@ const PoliceVisitorManagement = () => {
                                 <FaTimes className="mt-1 mr-3 text-red-500" />
                                 <div>
                                   <p className="text-sm text-gray-500">Rejection Reason</p>
-                                  <p className="font-medium text-red-600">{selectedVisitor.rejectionReason}</p>
+                                  <p className="font-medium text-red-600 whitespace-pre-wrap">{selectedVisitor.rejectionReason}</p>
                                 </div>
                               </div>
                             )}
@@ -1200,6 +1454,38 @@ const PoliceVisitorManagement = () => {
         onConfirm={handleConfirmDelete}
         onCancel={handleCancelDelete}
       />
+
+      {/* Rejection Reason Modal */}
+      {showRejectionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Provide Rejection Reason</h2>
+            <p className="text-gray-600 mb-4">Please provide a reason for rejecting this visitor request:</p>
+            <textarea
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="Enter rejection reason..."
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent mb-4"
+              rows={4}
+            />
+            <div className="flex justify-end gap-4">
+              <button
+                onClick={handleCancelRejection}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmRejection}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg flex items-center"
+                disabled={!rejectionReason.trim()}
+              >
+                <FaTimes className="mr-2" /> Reject Visit
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

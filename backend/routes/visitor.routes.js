@@ -1,10 +1,11 @@
-const express = require("express");
+import express from 'express';
+import { check } from 'express-validator';
+import * as visitorController from '../controller/visitor.controller.js';
+import * as visitorScheduleController from '../controller/visitorSchedule.controller.js';
+import authMiddleware from '../middleware/auth.middleware.js';
+import upload from '../middleware/upload.middleware.js';
+
 const router = express.Router();
-const visitorController = require("../controller/visitor.controller");
-const { check } = require("express-validator");
-const authMiddleware = require("../middleware/auth.middleware");
-const visitorScheduleController = require("../controller/visitorSchedule.controller");
-const upload = require("../middleware/upload.middleware");
 
 // Visitor login - public route
 router.post(
@@ -51,13 +52,20 @@ router.post(
 );
 
 // VISITOR SCHEDULE ROUTES
-// Create visitor schedule
+// Create visitor schedule with photo upload
 router.post(
-  "/schedule",
+  '/schedule',
+  authMiddleware,
+  upload.fields([
+    { name: 'idPhoto', maxCount: 1 },
+    { name: 'visitorPhoto', maxCount: 1 }
+  ]),
   [
-    authMiddleware,
-    check("date", "Date is required").not().isEmpty(),
-    check("purpose", "Purpose is required").not().isEmpty(),
+    check('visitDate', 'Visit date is required').not().isEmpty(),
+    check('purpose', 'Purpose is required').not().isEmpty(),
+    check('relationship', 'Relationship is required').not().isEmpty(),
+    check('idType', 'ID type is required').not().isEmpty(),
+    check('idNumber', 'ID number is required').not().isEmpty(),
   ],
   visitorScheduleController.createVisitorSchedule
 );
@@ -75,10 +83,14 @@ router.get(
   visitorScheduleController.getVisitorScheduleById
 );
 
-// Update visitor schedule
+// Update visitor schedule with photo upload
 router.put(
-  "/schedule/schedule/:id",
+  '/schedule/:id',
   authMiddleware,
+  upload.fields([
+    { name: 'idPhoto', maxCount: 1 },
+    { name: 'visitorPhoto', maxCount: 1 }
+  ]),
   visitorScheduleController.updateSchedule
 );
 

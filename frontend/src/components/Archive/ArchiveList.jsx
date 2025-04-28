@@ -420,6 +420,8 @@ const ArchiveList = ({ standalone = true, initialFilters = null }) => {
     
     if (role === 'police-officer') {
       navigate(`/policeOfficer-dashboard/archive/${item._id}`);
+    } else if (role === 'security') {
+      navigate(`/securityStaff-dashboard/archive/${item._id}`);
     } else {
       navigate(`/policeOfficer-dashboard/archive/${item._id}`);
     }
