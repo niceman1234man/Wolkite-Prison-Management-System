@@ -98,7 +98,7 @@ const InmateBehaviorGraph = () => {
     
     let filtered = [...behaviorData];
     
-    // Apply search filter if search query exists
+   
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(log => 
