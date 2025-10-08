@@ -5,8 +5,7 @@ import { CSVLink } from "react-csv";
 import jsPDF from "jspdf";
 import "jspdf-autotable";
 import axiosInstance from "../../utils/axiosInstance.js";
-import NoticeButton from "../../utils/noticeButtons.jsx"; // 🛠️ Import reusable notice button
-import NoticeModal from "../modals/noticeModal.jsx"; // 🛠️ Import notice modal
+
 import useNotices from "../../hooks/useNotice.jsx"; // 🛠️ Import the custom notice hook
 import { useSelector } from "react-redux";
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from "recharts"; // Import recharts components
