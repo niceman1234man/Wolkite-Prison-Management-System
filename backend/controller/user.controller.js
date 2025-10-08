@@ -514,7 +514,7 @@ export const ForgotPassword = async (req, res) => {
           },
       });
 
-      const resetUrl = `http://localhost:5173/reset-password/${user._id}/${accessToken}`;
+      const resetUrl = `${process.env.FRONTEND_URL}/reset-password/${user._id}/${accessToken}`;
       const mailOptions = {
           from: process.env.USER_EMAIL,
           to: user.email,
