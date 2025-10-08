@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const BASE_URL = "http://localhost:5001/api";
+const BASE_URL = "https://wolkite-prison-management-system.onrender.com/api";
 
 const axiosInstance = axios.create({
   baseURL: BASE_URL,
