@@ -17,7 +17,8 @@ export const createAccount = async (req, res) => {
       email,
       gender,
       prison,
-      role, 
+      role,
+      password, 
   
     } = req.body;
     
@@ -30,6 +31,9 @@ export const createAccount = async (req, res) => {
     if (isUser) {
       return res.status(400).json({ error: true, message: "User already exists" });
     }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
    
     const newUser = new User({
       firstName,
@@ -40,6 +44,9 @@ export const createAccount = async (req, res) => {
       prison,
       role,
       photo,
+      password: hashedPassword,
+      passwordChanged: false, // Force password change on first login
+      passwordSent: false, // Flag to indicate if password has been sent via email
      
     });
 
