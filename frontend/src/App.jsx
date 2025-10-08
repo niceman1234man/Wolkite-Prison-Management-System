@@ -111,7 +111,7 @@ import SecurityStaffReport from "./components/SecurityStaff/SecurityStaffReport"
 import { Toaster } from 'react-hot-toast';
 import { SocketProvider } from './context/SocketContext';
 import AuthContext from './context/authContext';
-import PoliceVisitorManagementPage from "./components/policeofficerdashboard/PoliceVisitorManagementPage";
+import PoliceVisitorManagementPage from "./components/PoliceOfficerDashboard/PoliceVisitorManagementPage.jsx";
 import ActivityLog from "./components/Accounts/Log";
 import ArchivePage from './components/Archive/ArchivePage';
 import ArchiveDetail from './components/Archive/ArchiveDetail';
