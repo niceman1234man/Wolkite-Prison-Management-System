@@ -80,9 +80,6 @@ app.use(
   })
 );
 
-// VERY IMPORTANT: Handle preflight requests
-app.options("*", cors());
-
 // Serve static files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
