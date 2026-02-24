@@ -71,9 +71,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use(
   cors({
     origin: [
-      "https://gurage-zone-prison-management.netlify.app",
-      "http://localhost:5173"
-    ],
+      "hhttps://gurage-zone-prison-management.netlify.app"],
+      
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
