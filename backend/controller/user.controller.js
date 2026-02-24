@@ -1,4 +1,4 @@
-import { User } from "../model/user.model.js";
+import User from '../models/User.js';
 import Message from '../model/Message.js';
 
 import jwt from "jsonwebtoken";
@@ -19,6 +19,7 @@ export const createAccount = async (req, res) => {
       prison,
       role,
       password, 
+      phone
   
     } = req.body;
     
@@ -42,6 +43,7 @@ export const createAccount = async (req, res) => {
       email,
       gender,
       prison,
+      phone,
       role,
       photo,
       password: hashedPassword,
