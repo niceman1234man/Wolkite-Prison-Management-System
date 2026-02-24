@@ -70,10 +70,18 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(
   cors({
-    origin: ["https://gurage-zone-prison-management.netlify.app"],
+    origin: [
+      "https://gurage-zone-prison-management.netlify.app",
+      "http://localhost:5173"
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
 );
+
+// VERY IMPORTANT: Handle preflight requests
+app.options("*", cors());
 
 // Serve static files
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
