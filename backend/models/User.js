@@ -49,7 +49,7 @@ const userSchema = new mongoose.Schema({
   resetPasswordExpires: Date,
   role: {
     type: String,
-    enum: ['user', 'admin','security','court','woreda','police-officer'],
+    enum: ['user', 'admin','security','court','woreda','police-officer','inspector'],
     default: 'user'
   },
   lastLogin: Date,
