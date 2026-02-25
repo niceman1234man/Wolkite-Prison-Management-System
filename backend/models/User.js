@@ -28,11 +28,7 @@ const userSchema = new mongoose.Schema({
     lowercase: true,
     match: [/^[\w-]+(\.[\w-]+)*@([\w-]+\.)+[a-zA-Z]{2,7}$/, 'Please enter a valid email']
   },
-  password: {
-    type: String,
-    required: [true, 'Password is required'],
-    minlength: [8, 'Password must be at least 8 characters long']
-  },
+
   phone: {
     type: String,
     required: [true, 'Phone number is required'],
@@ -52,6 +48,34 @@ const userSchema = new mongoose.Schema({
     enum: ['user', 'admin','security','court','woreda','police-officer','inspector'],
     default: 'user'
   },
+  isactivated:{
+    type:Boolean,
+    default:false,
+    },
+    prison:{
+        type:String ,
+        default:null,
+    },
+    photo:{
+        type:String ,
+        default:"default-avatar.png",
+    },
+    password:{
+        type:String ,
+        
+    },
+    lastLogin:{
+        type:Date,
+        default:null
+    },
+    loginCount:{
+        type:Number,
+        default:0
+    },
+    passwordSent: {
+        type: Boolean,
+        default: false
+    },
   lastLogin: Date,
   createdAt: {
     type: Date,
